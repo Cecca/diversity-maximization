@@ -11,16 +11,11 @@ object DistanceTest extends Properties("Distances") {
     for(data <- Gen.listOfN(dim, Arbitrary.arbitrary[Double]))
       yield new Point(data.toArray)
 
-  val pointTriplet = for {
-    dim <- Gen.choose(2, 10)
-    a   <- pointGen(dim)
-    b   <- pointGen(dim)
-    c   <- pointGen(dim)
-  } yield (a, b, c)
-
-  property("triangle inequality") =
-    forAll(pointTriplet) { case (a, b, c) =>
-      euclidean(a, b) <= euclidean(a, c) + euclidean(c, b)
+  property("triangle inequality 2") =
+    forAll(Gen.choose(2, 10)) { dim =>
+      forAll(pointGen(dim), pointGen(dim), pointGen(dim)) { (a, b, c) =>
+        euclidean(a, b) <= euclidean(a, c) + euclidean(c, b)
+      }
     }
 
 }
