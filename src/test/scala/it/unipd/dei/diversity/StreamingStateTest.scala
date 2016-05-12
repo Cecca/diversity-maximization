@@ -35,6 +35,21 @@ class StreamingStateTest extends FreeSpec with Matchers {
         }
       }
     }
+
+    "after initialization, the threshold must be the minimum distance" in {
+      val kPrime = 10
+      val points = (0 to kPrime).view.map(_ => Point.random(4))
+      val sState = new StreamingState(kPrime, 0, Distance.euclidean)
+
+      sState.isInitializing should be (true)
+      points.foreach { p =>
+        sState.update(p) should be (true)
+      }
+      sState.isInitializing should be (false)
+
+      sState.getThreshold should be (StreamingState.minDistance(
+        sState.kernel, Distance.euclidean))
+    }
   }
 
 }

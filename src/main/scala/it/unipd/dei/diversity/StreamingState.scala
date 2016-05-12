@@ -4,6 +4,18 @@ import scala.reflect.ClassTag
 
 object StreamingState {
 
+  def minDistance[T](points: Array[T],
+                     distance: (T, T) => Double): Double =
+    points.flatMap { p1 =>
+      points.flatMap { p2 =>
+        if (p1 != p2) {
+          Iterable(distance(p1, p2))
+        } else {
+          Iterable.empty
+        }
+      }
+    }.min
+
   def closestPointIndex[T](point: T,
                            points: Array[T],
                            distance: (T, T) => Double,
@@ -56,6 +68,8 @@ class StreamingState[T:ClassTag](val kernelSize: Int,
   val delegateCounts = Array.ofDim[Int](kernel.length)
 
   def isInitializing: Boolean = _initializing
+
+  def getThreshold: Double = threshold
 
   def initializationStep(point: T): Unit = {
     require(_initializing)
