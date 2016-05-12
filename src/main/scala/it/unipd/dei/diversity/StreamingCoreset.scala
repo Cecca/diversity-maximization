@@ -89,6 +89,8 @@ class StreamingCoreset[T:ClassTag](val kernelSize: Int,
       }
     }
 
+  def points: Iterator[T] = kernelPoints ++ delegatePoints
+
   def kernelPoints: Iterator[T] =
     new Iterator[T] {
       val maxIdx = _insertionIdx
@@ -228,7 +230,5 @@ class StreamingCoreset[T:ClassTag](val kernelSize: Int,
   private def closestKernelPoint(point: T): (Int, Double) = {
     StreamingCoreset.closestPointIndex(point, _kernel, distance, 0, _insertionIdx)
   }
-
-  def coreset(): Iterator[T] = kernelPoints ++ delegatePoints
 
 }
