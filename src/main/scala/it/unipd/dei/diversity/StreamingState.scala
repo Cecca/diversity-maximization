@@ -2,7 +2,6 @@ package it.unipd.dei.diversity
 
 import java.util.ConcurrentModificationException
 
-import scala.collection.mutable.ArrayBuffer
 import scala.reflect.ClassTag
 
 object StreamingState {
@@ -60,52 +59,29 @@ class StreamingState[T:ClassTag](val kernelSize: Int,
   var _initializing = true
 
   // Keeps track of the first available position for insertion
-  var insertionIdx: Int = 0
+  var _insertionIdx: Int = 0
 
-  var threshold: Double = Double.PositiveInfinity
+  var _threshold: Double = Double.PositiveInfinity
 
-  val kernel = Array.ofDim[T](kernelSize + 1)
+  val _kernel = Array.ofDim[T](kernelSize + 1)
 
   // Kernel points are not explicitly stored as delegates.
-  val delegates: Array[Array[T]] = Array.ofDim[T](kernel.length, numDelegates)
-  val delegateCounts = Array.ofDim[Int](kernel.length)
+  val _delegates: Array[Array[T]] = Array.ofDim[T](_kernel.length, numDelegates)
+  val _delegateCounts = Array.ofDim[Int](_kernel.length)
 
-  def isInitializing: Boolean = _initializing
+  def initializing: Boolean = _initializing
 
-  def getThreshold: Double = threshold
-
-  def initializationStep(point: T): Unit = {
-    require(_initializing)
-    kernel(insertionIdx) = point
-    val (_, minDist) = closestKernelPoint(point)
-    if (minDist < threshold) {
-      threshold = minDist
-    }
-    insertionIdx += 1
-    if (insertionIdx == kernel.length) {
-      _initializing = false
-    }
-  }
-
-  def addDelegate(index: Int, point: T): Boolean = {
-    if (delegateCounts(index) < numDelegates) {
-      delegates(index)(delegateCounts(index)) = point
-      delegateCounts(index) += 1
-      true
-    } else {
-      false
-    }
-  }
+  def threshold: Double = _threshold
 
   def delegatesOf(index: Int): Iterator[T] =
     new Iterator[T] {
       var itIdx = 0
-      val maxIdx = delegateCounts(index)
+      val maxIdx = _delegateCounts(index)
 
       override def hasNext: Boolean = itIdx < maxIdx
 
       override def next(): T = {
-        val elem = delegates(index)(itIdx)
+        val elem = _delegates(index)(itIdx)
         itIdx += 1
         elem
       }
@@ -113,36 +89,59 @@ class StreamingState[T:ClassTag](val kernelSize: Int,
 
   def kernelPoints: Iterator[T] =
     new Iterator[T] {
-      val maxIdx = insertionIdx
+      val maxIdx = _insertionIdx
       var itIdx = 0
 
       override def hasNext: Boolean = {
-        if (insertionIdx != maxIdx) {
+        if (_insertionIdx != maxIdx) {
           throw new ConcurrentModificationException()
         }
         itIdx < maxIdx
       }
 
       override def next(): T = {
-        val elem = kernel(itIdx)
+        val elem = _kernel(itIdx)
         itIdx += 1
         elem
       }
     }
 
   def delegatePoints: Iterator[T] =
-    (0 until insertionIdx).iterator.flatMap { idx =>
+    (0 until _insertionIdx).iterator.flatMap { idx =>
       delegatesOf(idx)
     }
+
+  def initializationStep(point: T): Unit = {
+    require(_initializing)
+    _kernel(_insertionIdx) = point
+    val (_, minDist) = closestKernelPoint(point)
+    if (minDist < _threshold) {
+      _threshold = minDist
+    }
+    _insertionIdx += 1
+    if (_insertionIdx == _kernel.length) {
+      _initializing = false
+    }
+  }
+
+  def addDelegate(index: Int, point: T): Boolean = {
+    if (_delegateCounts(index) < numDelegates) {
+      _delegates(index)(_delegateCounts(index)) = point
+      _delegateCounts(index) += 1
+      true
+    } else {
+      false
+    }
+  }
 
   def updateStep(point: T): Boolean = {
     require(!_initializing)
     // Find distance to the closest kernel point
     val (minIdx, minDist) = closestKernelPoint(point)
-    if (minDist > 2*threshold) {
+    if (minDist > 2*_threshold) {
       // Pick the point as a center
-      kernel(insertionIdx) = point
-      insertionIdx += 1
+      _kernel(_insertionIdx) = point
+      _insertionIdx += 1
       true
     } else {
       // Add as a delegate, if possible
@@ -151,14 +150,14 @@ class StreamingState[T:ClassTag](val kernelSize: Int,
   }
 
   def swapData(i: Int, j: Int): Unit = {
-    swap(kernel, i, j)
-    swap(delegateCounts, i, j)
-    swap(delegates, i, j)
+    swap(_kernel, i, j)
+    swap(_delegateCounts, i, j)
+    swap(_delegates, i, j)
   }
 
   def mergeDelegates(center: Int, merged: Int): Unit = {
     // Try to add the merged point as a delegate of the center
-    addDelegate(center, kernel(merged))
+    addDelegate(center, _kernel(merged))
     val dels = delegatesOf(merged)
     // Add delegates while we have space
     while(dels.hasNext && addDelegate(center, dels.next())) {}
@@ -173,17 +172,17 @@ class StreamingState[T:ClassTag](val kernelSize: Int,
     //
     // The boundaries between these regions are, respectively, the
     // indexes `bottomIdx` and `topIdx`
-    require(insertionIdx == kernel.length)
-    threshold *= 2
+    require(_insertionIdx == _kernel.length)
+    _threshold *= 2
 
     var bottomIdx = 0
-    var topIdx = kernel.length - 1
+    var topIdx = _kernel.length - 1
     while(bottomIdx < topIdx) {
-      val pivot = kernel(bottomIdx)
+      val pivot = _kernel(bottomIdx)
       var candidateIdx = bottomIdx+1
       // Discard the points that are too close to the pivot
       while (candidateIdx <= topIdx) {
-        if (distance(pivot, kernel(candidateIdx)) <= threshold) {
+        if (distance(pivot, _kernel(candidateIdx)) <= _threshold) {
           // Merge the delegate sets of the pivot and the to-be-discarded candidate
           mergeDelegates(bottomIdx, candidateIdx)
           // Move the candidate (and all its data) to the end of the array
@@ -198,7 +197,7 @@ class StreamingState[T:ClassTag](val kernelSize: Int,
       bottomIdx += 1
     }
     // Set the new insertionIdx
-    insertionIdx = bottomIdx + 1
+    _insertionIdx = bottomIdx + 1
   }
 
   /**
@@ -206,7 +205,7 @@ class StreamingState[T:ClassTag](val kernelSize: Int,
     * Return true if the point is added to the inner core-set
     */
   def update(point: T): Boolean = {
-    while (insertionIdx == kernel.length) {
+    while (_insertionIdx == _kernel.length) {
       merge()
     }
 
@@ -219,7 +218,7 @@ class StreamingState[T:ClassTag](val kernelSize: Int,
   }
 
   private def closestKernelPoint(point: T): (Int, Double) = {
-    StreamingState.closestPointIndex(point, kernel, distance, 0, insertionIdx)
+    StreamingState.closestPointIndex(point, _kernel, distance, 0, _insertionIdx)
   }
 
   def coreset(): Iterator[T] = kernelPoints ++ delegatePoints
