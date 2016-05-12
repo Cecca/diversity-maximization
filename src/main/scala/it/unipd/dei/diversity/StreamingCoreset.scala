@@ -143,7 +143,12 @@ class StreamingCoreset[T: ClassTag](val kernelSize: Int,
   def initializationStep(point: T): Unit = {
     require(_initializing)
     _kernel(_insertionIdx) = point
-    val (_, minDist) = closestKernelPoint(point)
+    val minDist =
+      if (numKernelPoints > 0) {
+        closestKernelPoint(point)._2
+      } else {
+        Double.PositiveInfinity
+      }
     if (minDist < _threshold) {
       _threshold = minDist
     }
@@ -243,6 +248,7 @@ class StreamingCoreset[T: ClassTag](val kernelSize: Int,
     * Return true if the point is added to the inner core-set
     */
   def update(point: T): Boolean = {
+    // the _insertionIdx variable is modified inside the merge() method
     while (_insertionIdx == _kernel.length) {
       merge()
     }
@@ -256,7 +262,9 @@ class StreamingCoreset[T: ClassTag](val kernelSize: Int,
   }
 
   private def closestKernelPoint(point: T): (Int, Double) = {
-    StreamingCoreset.closestPointIndex(point, _kernel, distance, 0, _insertionIdx)
+    kernelPoints.zipWithIndex.map { case (kp, idx) =>
+      (idx, distance(kp, point))
+    }.minBy(_._2)
   }
 
 }

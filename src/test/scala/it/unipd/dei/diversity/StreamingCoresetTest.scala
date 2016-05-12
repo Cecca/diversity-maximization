@@ -21,7 +21,7 @@ class StreamingCoresetTest extends FreeSpec with Matchers {
 
     "after initialization, should reject the already seen points" in {
       val kPrime = 10
-      val points = (0 to kPrime).view.map(_ => Point.random(4))
+      val points = (0 to kPrime).map(_ => Point.random(4)).toList
       val coreset = new StreamingCoreset[Point](kPrime, 0, Distance.euclidean)
 
       coreset.initializing should be (true)
