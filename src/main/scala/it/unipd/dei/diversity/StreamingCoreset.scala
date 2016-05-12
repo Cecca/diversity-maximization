@@ -117,6 +117,13 @@ class StreamingCoreset[T:ClassTag](val kernelSize: Int,
 
   def minKernelDistance: Double = minDistance(kernelPoints.toArray, distance)
 
+  def delegatesRadius: Double =
+    delegatePoints.map { dp =>
+      kernelPoints.map { kp =>
+        distance(dp, kp)
+      }.min
+    }.max
+
   def initializationStep(point: T): Unit = {
     require(_initializing)
     _kernel(_insertionIdx) = point
