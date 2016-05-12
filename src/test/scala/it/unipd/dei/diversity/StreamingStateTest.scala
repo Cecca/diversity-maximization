@@ -57,7 +57,23 @@ class StreamingStateTest extends FreeSpec with Matchers {
       val sState = new StreamingState[Point](2, 1, Distance.euclidean)
       sState.addDelegate(0, Point(0)) should be (true)
       sState.addDelegate(0, Point(1)) should be (false)
-      sState.addDelegate(1, Point(0)) should be (true)
+      sState.addDelegate(1, Point(3)) should be (true)
+    }
+  }
+
+  "The delegate merging" - {
+    "Should add only the delegates there's space for" in {
+      val sState = new StreamingState[Point](2, 3, Distance.euclidean)
+      sState.kernel(0) = Point(0)
+      sState.addDelegate(0, Point(1)) should be (true)
+      sState.addDelegate(0, Point(2)) should be (true)
+      sState.kernel(1) = Point(3)
+      sState.addDelegate(1, Point(4)) should be (true)
+      sState.addDelegate(1, Point(5)) should be (true)
+      sState.addDelegate(1, Point(6)) should be (true)
+
+      sState.mergeDelegates(0, 1)
+      sState.delegatesOf(0).toList should be (List(Point(1), Point(2), Point(3)))
     }
   }
 
