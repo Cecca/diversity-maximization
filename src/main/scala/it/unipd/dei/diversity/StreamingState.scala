@@ -1,12 +1,14 @@
 package it.unipd.dei.diversity
 
+import scala.reflect.ClassTag
+
 object StreamingState {
 
-  def closestPointIndex(point: Point,
-                        points: Array[Point],
-                        distance: (Point, Point) => Double,
-                        from: Int,
-                        until: Int): (Int, Double) = {
+  def closestPointIndex[T](point: T,
+                           points: Array[T],
+                           distance: (T, T) => Double,
+                           from: Int,
+                           until: Int): (Int, Double) = {
     require(from <= until)
     require(until < points.length)
     var minDist = Double.PositiveInfinity
@@ -34,9 +36,9 @@ object StreamingState {
 
 }
 
-class StreamingState(val kernelSize: Int,
-                     val numDelegates: Int,
-                     val distance: (Point, Point) => Double) {
+class StreamingState[T:ClassTag](val kernelSize: Int,
+                                 val numDelegates: Int,
+                                 val distance: (T, T) => Double) {
   import StreamingState.swap
 
   // When true, accept all the incoming points
@@ -47,15 +49,15 @@ class StreamingState(val kernelSize: Int,
 
   private var threshold: Double = Double.PositiveInfinity
 
-  val kernel = Array.ofDim[Point](kernelSize + 1)
+  val kernel = Array.ofDim[T](kernelSize + 1)
 
   // Kernel points are not explicitly stored as delegates.
-  val delegates: Array[Array[Point]] = Array.ofDim[Point](kernel.length, numDelegates)
+  val delegates: Array[Array[T]] = Array.ofDim[T](kernel.length, numDelegates)
   val delegateCounts = Array.ofDim[Int](kernel.length)
 
   def isInitializing: Boolean = _initializing
 
-  def initializationStep(point: Point): Unit = {
+  def initializationStep(point: T): Unit = {
     require(_initializing)
     kernel(insertionIdx) = point
     val (_, minDist) = closestKernelPoint(point)
@@ -68,7 +70,7 @@ class StreamingState(val kernelSize: Int,
     }
   }
 
-  def updateStep(point: Point): Boolean = {
+  def updateStep(point: T): Boolean = {
     require(!_initializing)
     // Find distance to the closest kernel point
     val (minIdx, minDist) = closestKernelPoint(point)
@@ -151,7 +153,7 @@ class StreamingState(val kernelSize: Int,
     * This method implements the modified doubling algorithm.
     * Return true if the point is added to the inner core-set
     */
-  def update(point: Point): Boolean = {
+  def update(point: T): Boolean = {
     while (insertionIdx == kernel.length) {
       merge()
     }
@@ -164,12 +166,12 @@ class StreamingState(val kernelSize: Int,
     }
   }
 
-  private def closestKernelPoint(point: Point): (Int, Double) = {
+  private def closestKernelPoint(point: T): (Int, Double) = {
     StreamingState.closestPointIndex(point, kernel, distance, 0, insertionIdx)
   }
 
-  def coreset(): Array[Point] = {
-    val result = Array.ofDim[Point](kernel.length*numDelegates)
+  def coreset(): Array[T] = {
+    val result = Array.ofDim[T](kernel.length*numDelegates)
     var idx = 0
     kernel.foreach { p =>
       result(idx) = p
