@@ -4,7 +4,7 @@ import java.util.ConcurrentModificationException
 
 import scala.reflect.ClassTag
 
-object StreamingState {
+object StreamingCoreset {
 
   def minDistance[T](points: Array[T],
                      distance: (T, T) => Double): Double =
@@ -50,10 +50,10 @@ object StreamingState {
 
 }
 
-class StreamingState[T:ClassTag](val kernelSize: Int,
-                                 val numDelegates: Int,
-                                 val distance: (T, T) => Double) {
-  import StreamingState.swap
+class StreamingCoreset[T:ClassTag](val kernelSize: Int,
+                                   val numDelegates: Int,
+                                   val distance: (T, T) => Double) {
+  import StreamingCoreset._
 
   // When true, accept all the incoming points
   var _initializing = true
@@ -72,6 +72,8 @@ class StreamingState[T:ClassTag](val kernelSize: Int,
   def initializing: Boolean = _initializing
 
   def threshold: Double = _threshold
+
+  def numKernelPoints: Int = _insertionIdx
 
   def delegatesOf(index: Int): Iterator[T] =
     new Iterator[T] {
@@ -110,6 +112,8 @@ class StreamingState[T:ClassTag](val kernelSize: Int,
     (0 until _insertionIdx).iterator.flatMap { idx =>
       delegatesOf(idx)
     }
+
+  def minKernelDistance: Double = minDistance(kernelPoints.toArray, distance)
 
   def initializationStep(point: T): Unit = {
     require(_initializing)
@@ -197,7 +201,11 @@ class StreamingState[T:ClassTag](val kernelSize: Int,
       bottomIdx += 1
     }
     // Set the new insertionIdx
-    _insertionIdx = bottomIdx + 1
+    _insertionIdx = bottomIdx
+
+    // Check the invariant of the minimum distance between kernel points
+    assert(numKernelPoints == 1 || minKernelDistance >= threshold,
+      s"minKernelDist=$minKernelDistance, threshold=$threshold")
   }
 
   /**
@@ -218,7 +226,7 @@ class StreamingState[T:ClassTag](val kernelSize: Int,
   }
 
   private def closestKernelPoint(point: T): (Int, Double) = {
-    StreamingState.closestPointIndex(point, _kernel, distance, 0, _insertionIdx)
+    StreamingCoreset.closestPointIndex(point, _kernel, distance, 0, _insertionIdx)
   }
 
   def coreset(): Iterator[T] = kernelPoints ++ delegatePoints
