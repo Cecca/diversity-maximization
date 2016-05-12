@@ -94,6 +94,21 @@ class StreamingState[T:ClassTag](val kernelSize: Int,
     }
   }
 
+  def delegatesOf(index: Int): Iterator[T] =
+    new Iterator[T] {
+      var itIdx = 0
+      val maxIdx = delegateCounts(index)
+
+      override def hasNext: Boolean = itIdx < maxIdx
+
+      override def next(): T = {
+        val elem = delegates(index)(itIdx)
+        itIdx += 1
+        elem
+      }
+    }
+
+
   def updateStep(point: T): Boolean = {
     require(!_initializing)
     // Find distance to the closest kernel point
@@ -116,19 +131,11 @@ class StreamingState[T:ClassTag](val kernelSize: Int,
   }
 
   def mergeDelegates(center: Int, merged: Int): Unit = {
-    var maxDelegatesToAdd =
-      math.min(numDelegates - delegateCounts(center), delegateCounts(merged))
-    if (maxDelegatesToAdd > 0) {
-      delegates(center)(delegateCounts(center)) = kernel(merged)
-      delegateCounts(center) += 1
-      maxDelegatesToAdd -= 1
-      var idx = 0
-      while (idx < maxDelegatesToAdd) {
-        delegates(center)(delegateCounts(center)) = delegates(merged)(idx)
-        idx += 1
-        delegateCounts(center) += 1
-      }
-    }
+    // Try to add the merged point as a delegate of the center
+    addDelegate(center, kernel(merged))
+    val dels = delegatesOf(merged)
+    // Add delegates while we have space
+    while(dels.hasNext && addDelegate(center, dels.next())) {}
   }
 
   def merge(): Unit = {
