@@ -39,8 +39,6 @@ class StreamingState(val kernelSize: Int,
                      val distance: (Point, Point) => Double) {
   import StreamingState.swap
 
-  private var _spaceDimension: Int = -1
-
   // When true, accept all the incoming points
   private var _initializing = true
 
@@ -55,13 +53,7 @@ class StreamingState(val kernelSize: Int,
   val delegates: Array[Array[Point]] = Array.ofDim[Point](kernel.length, numDelegates)
   val delegateCounts = Array.ofDim[Int](kernel.length)
 
-  private def checkDimension(point: Point): Boolean =
-    if (_spaceDimension < 0) {
-      _spaceDimension = point.dimension
-      true
-    } else {
-      _spaceDimension == point.dimension
-    }
+  def isInitializing: Boolean = _initializing
 
   def initializationStep(point: Point): Unit = {
     require(_initializing)
@@ -76,7 +68,7 @@ class StreamingState(val kernelSize: Int,
     }
   }
 
-  def updateStep(point: Point): Unit = {
+  def updateStep(point: Point): Boolean = {
     require(!_initializing)
     // Find distance to the closest kernel point
     val (minIdx, minDist) = closestKernelPoint(point)
@@ -84,12 +76,15 @@ class StreamingState(val kernelSize: Int,
       // Pick the point as a center
       kernel(insertionIdx) = point
       insertionIdx += 1
+      true
     } else if (delegateCounts(minIdx) < numDelegates) {
       // Add the point as a delegate
       delegates(minIdx)(delegateCounts(minIdx)) = point
       delegateCounts(minIdx) += 1
+      true
     } else {
       // Just ignore the point
+      false
     }
   }
 
@@ -153,17 +148,17 @@ class StreamingState(val kernelSize: Int,
   }
 
   /**
-    * This method implements the modified doubling algorithm
+    * This method implements the modified doubling algorithm.
+    * Return true if the point is added to the inner core-set
     */
-  def update(point: Point): Unit = {
-    require(checkDimension(point))
-
+  def update(point: Point): Boolean = {
     while (insertionIdx == kernel.length) {
       merge()
     }
 
     if (_initializing) {
       initializationStep(point)
+      true
     } else {
       updateStep(point)
     }
