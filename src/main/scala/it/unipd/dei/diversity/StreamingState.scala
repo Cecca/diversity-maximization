@@ -1,5 +1,8 @@
 package it.unipd.dei.diversity
 
+import java.util.ConcurrentModificationException
+
+import scala.collection.mutable.ArrayBuffer
 import scala.reflect.ClassTag
 
 object StreamingState {
@@ -54,12 +57,12 @@ class StreamingState[T:ClassTag](val kernelSize: Int,
   import StreamingState.swap
 
   // When true, accept all the incoming points
-  private var _initializing = true
+  var _initializing = true
 
   // Keeps track of the first available position for insertion
-  private var insertionIdx: Int = 0
+  var insertionIdx: Int = 0
 
-  private var threshold: Double = Double.PositiveInfinity
+  var threshold: Double = Double.PositiveInfinity
 
   val kernel = Array.ofDim[T](kernelSize + 1)
 
@@ -108,6 +111,29 @@ class StreamingState[T:ClassTag](val kernelSize: Int,
       }
     }
 
+  def kernelPoints: Iterator[T] =
+    new Iterator[T] {
+      val maxIdx = insertionIdx
+      var itIdx = 0
+
+      override def hasNext: Boolean = {
+        if (insertionIdx != maxIdx) {
+          throw new ConcurrentModificationException()
+        }
+        itIdx < maxIdx
+      }
+
+      override def next(): T = {
+        val elem = kernel(itIdx)
+        itIdx += 1
+        elem
+      }
+    }
+
+  def delegatePoints: Iterator[T] =
+    (0 until insertionIdx).iterator.flatMap { idx =>
+      delegatesOf(idx)
+    }
 
   def updateStep(point: T): Boolean = {
     require(!_initializing)
@@ -196,22 +222,6 @@ class StreamingState[T:ClassTag](val kernelSize: Int,
     StreamingState.closestPointIndex(point, kernel, distance, 0, insertionIdx)
   }
 
-  def coreset(): Array[T] = {
-    val result = Array.ofDim[T](kernel.length*numDelegates)
-    var idx = 0
-    kernel.foreach { p =>
-      result(idx) = p
-      idx += 1
-    }
-    delegates.zip(delegateCounts).foreach { case (dl, count) =>
-      var cnt = count - 1
-      while (cnt >= 0) {
-        result(idx) = dl(cnt)
-        cnt -= 1
-        idx += 1
-      }
-    }
-    result
-  }
+  def coreset(): Iterator[T] = kernelPoints ++ delegatePoints
 
 }
