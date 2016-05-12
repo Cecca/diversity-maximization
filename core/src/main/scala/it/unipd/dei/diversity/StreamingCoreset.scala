@@ -2,23 +2,11 @@ package it.unipd.dei.diversity
 
 import java.util.ConcurrentModificationException
 
+import it.unipd.dei.diversity.Utils._
+
 import scala.reflect.ClassTag
 
 object StreamingCoreset {
-
-  def minDistance[T](points: Array[T],
-                     distance: (T, T) => Double): Double = {
-    require(points.length >= 2, "At least two points are needed")
-    points.flatMap { p1 =>
-      points.flatMap { p2 =>
-        if (p1 != p2) {
-          Iterable(distance(p1, p2))
-        } else {
-          Iterable.empty
-        }
-      }
-    }.min
-  }
 
   def closestPointIndex[T](point: T,
                            points: Array[T],
