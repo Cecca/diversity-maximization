@@ -52,4 +52,11 @@ class StreamingStateTest extends FreeSpec with Matchers {
     }
   }
 
+  "The delegate merging" - {
+    "Should do nothing if there is no space for new delegates" in {
+      val sState = new StreamingState(2, 1, Distance.euclidean)
+      
+    }
+  }
+
 }

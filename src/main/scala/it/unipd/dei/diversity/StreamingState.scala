@@ -84,6 +84,16 @@ class StreamingState[T:ClassTag](val kernelSize: Int,
     }
   }
 
+  def addDelegate(index: Int, point: T): Boolean = {
+    if (delegateCounts(index) < numDelegates) {
+      delegates(index)(delegateCounts(index)) = point
+      delegateCounts(index) += 1
+      true
+    } else {
+      false
+    }
+  }
+
   def updateStep(point: T): Boolean = {
     require(!_initializing)
     // Find distance to the closest kernel point
@@ -93,14 +103,9 @@ class StreamingState[T:ClassTag](val kernelSize: Int,
       kernel(insertionIdx) = point
       insertionIdx += 1
       true
-    } else if (delegateCounts(minIdx) < numDelegates) {
-      // Add the point as a delegate
-      delegates(minIdx)(delegateCounts(minIdx)) = point
-      delegateCounts(minIdx) += 1
-      true
     } else {
-      // Just ignore the point
-      false
+      // Add as a delegate, if possible
+      addDelegate(minIdx, point)
     }
   }
 
