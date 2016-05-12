@@ -8,9 +8,11 @@ lazy val commonSettings = Seq(
   )
 )
 
-
 lazy val root = (project in file(".")).
+  aggregate(core)
+
+lazy val core = (project in file("core")).
   settings(commonSettings: _*).
   settings(
-    name := "diversity-maximization"
+      name := "diversity-maximization-core"
   )
