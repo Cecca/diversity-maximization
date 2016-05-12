@@ -47,8 +47,7 @@ class StreamingCoresetTest extends FreeSpec with Matchers {
       }
       coreset.initializing should be (false)
 
-      coreset.threshold should be (StreamingCoreset.minDistance[Point](
-        coreset._kernel, Distance.euclidean))
+      coreset.threshold should be (coreset.minKernelDistance)
     }
   }
 
@@ -64,10 +63,10 @@ class StreamingCoresetTest extends FreeSpec with Matchers {
   "The delegate merging" - {
     "Should add only the delegates there's space for" in {
       val coreset = new StreamingCoreset[Point](2, 3, Distance.euclidean)
-      coreset._kernel(0) = Point(0)
+      coreset.setKernelPoint(0, Point(0))
       coreset.addDelegate(0, Point(1)) should be (true)
       coreset.addDelegate(0, Point(2)) should be (true)
-      coreset._kernel(1) = Point(3)
+      coreset.setKernelPoint(1, Point(3))
       coreset.addDelegate(1, Point(4)) should be (true)
       coreset.addDelegate(1, Point(5)) should be (true)
       coreset.addDelegate(1, Point(6)) should be (true)

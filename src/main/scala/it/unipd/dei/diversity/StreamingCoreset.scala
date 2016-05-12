@@ -50,31 +50,42 @@ object StreamingCoreset {
 
 }
 
-class StreamingCoreset[T:ClassTag](val kernelSize: Int,
-                                   val numDelegates: Int,
-                                   val distance: (T, T) => Double) {
+class StreamingCoreset[T: ClassTag](val kernelSize: Int,
+                                    val numDelegates: Int,
+                                    val distance: (T, T) => Double) {
+
   import StreamingCoreset._
 
   // When true, accept all the incoming points
-  var _initializing = true
+  private var _initializing = true
 
   // Keeps track of the first available position for insertion
-  var _insertionIdx: Int = 0
+  private var _insertionIdx: Int = 0
 
-  var _threshold: Double = Double.PositiveInfinity
+  private var _threshold: Double = Double.PositiveInfinity
 
-  val _kernel = Array.ofDim[T](kernelSize + 1)
+  private val _kernel = Array.ofDim[T](kernelSize + 1)
 
   // Kernel points are not explicitly stored as delegates.
-  val _delegates: Array[Array[T]] = Array.ofDim[T](_kernel.length, numDelegates)
-  val _delegateCounts = Array.ofDim[Int](_kernel.length)
+  private val _delegates: Array[Array[T]] = Array.ofDim[T](_kernel.length, numDelegates)
+  private val _delegateCounts = Array.ofDim[Int](_kernel.length)
 
+  private[diversity]
   def initializing: Boolean = _initializing
 
+  private[diversity]
   def threshold: Double = _threshold
 
+  private[diversity]
   def numKernelPoints: Int = _insertionIdx
 
+  /* Only for testing */
+  private[diversity]
+  def setKernelPoint(index: Int, point: T): Unit = {
+    _kernel(index) = point
+  }
+
+  private[diversity]
   def delegatesOf(index: Int): Iterator[T] =
     new Iterator[T] {
       var itIdx = 0
@@ -91,6 +102,7 @@ class StreamingCoreset[T:ClassTag](val kernelSize: Int,
 
   def points: Iterator[T] = kernelPoints ++ delegatePoints
 
+  private[diversity]
   def kernelPoints: Iterator[T] =
     new Iterator[T] {
       val maxIdx = _insertionIdx
@@ -110,13 +122,16 @@ class StreamingCoreset[T:ClassTag](val kernelSize: Int,
       }
     }
 
+  private[diversity]
   def delegatePoints: Iterator[T] =
     (0 until _insertionIdx).iterator.flatMap { idx =>
       delegatesOf(idx)
     }
 
+  private[diversity]
   def minKernelDistance: Double = minDistance(kernelPoints.toArray, distance)
 
+  private[diversity]
   def delegatesRadius: Double =
     delegatePoints.map { dp =>
       kernelPoints.map { kp =>
@@ -124,6 +139,7 @@ class StreamingCoreset[T:ClassTag](val kernelSize: Int,
       }.min
     }.max
 
+  private[diversity]
   def initializationStep(point: T): Unit = {
     require(_initializing)
     _kernel(_insertionIdx) = point
@@ -137,6 +153,7 @@ class StreamingCoreset[T:ClassTag](val kernelSize: Int,
     }
   }
 
+  private[diversity]
   def addDelegate(index: Int, point: T): Boolean = {
     if (_delegateCounts(index) < numDelegates) {
       _delegates(index)(_delegateCounts(index)) = point
@@ -147,11 +164,12 @@ class StreamingCoreset[T:ClassTag](val kernelSize: Int,
     }
   }
 
+  private[diversity]
   def updateStep(point: T): Boolean = {
     require(!_initializing)
     // Find distance to the closest kernel point
     val (minIdx, minDist) = closestKernelPoint(point)
-    if (minDist > 2*_threshold) {
+    if (minDist > 2 * _threshold) {
       // Pick the point as a center
       _kernel(_insertionIdx) = point
       _insertionIdx += 1
@@ -162,20 +180,23 @@ class StreamingCoreset[T:ClassTag](val kernelSize: Int,
     }
   }
 
+  private[diversity]
   def swapData(i: Int, j: Int): Unit = {
     swap(_kernel, i, j)
     swap(_delegateCounts, i, j)
     swap(_delegates, i, j)
   }
 
+  private[diversity]
   def mergeDelegates(center: Int, merged: Int): Unit = {
     // Try to add the merged point as a delegate of the center
     addDelegate(center, _kernel(merged))
     val dels = delegatesOf(merged)
     // Add delegates while we have space
-    while(dels.hasNext && addDelegate(center, dels.next())) {}
+    while (dels.hasNext && addDelegate(center, dels.next())) {}
   }
 
+  private[diversity]
   def merge(): Unit = {
     // Use the `kernel` array as if divided in 3 zones:
     //
@@ -190,9 +211,9 @@ class StreamingCoreset[T:ClassTag](val kernelSize: Int,
 
     var bottomIdx = 0
     var topIdx = _kernel.length - 1
-    while(bottomIdx < topIdx) {
+    while (bottomIdx < topIdx) {
       val pivot = _kernel(bottomIdx)
-      var candidateIdx = bottomIdx+1
+      var candidateIdx = bottomIdx + 1
       // Discard the points that are too close to the pivot
       while (candidateIdx <= topIdx) {
         if (distance(pivot, _kernel(candidateIdx)) <= _threshold) {
