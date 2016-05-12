@@ -7,7 +7,8 @@ import scala.reflect.ClassTag
 object StreamingCoreset {
 
   def minDistance[T](points: Array[T],
-                     distance: (T, T) => Double): Double =
+                     distance: (T, T) => Double): Double = {
+    require(points.length >= 2, "At least two points are needed")
     points.flatMap { p1 =>
       points.flatMap { p2 =>
         if (p1 != p2) {
@@ -17,6 +18,7 @@ object StreamingCoreset {
         }
       }
     }.min
+  }
 
   def closestPointIndex[T](point: T,
                            points: Array[T],
@@ -56,6 +58,11 @@ class StreamingCoreset[T: ClassTag](val kernelSize: Int,
 
   import StreamingCoreset._
 
+  private def farnessInvariant: Boolean =
+    (numKernelPoints == 1) || (minKernelDistance >= threshold)
+
+  private def radiusInvariant: Boolean = delegatesRadius <= 2*threshold
+
   // When true, accept all the incoming points
   private var _initializing = true
 
@@ -86,6 +93,12 @@ class StreamingCoreset[T: ClassTag](val kernelSize: Int,
   }
 
   private[diversity]
+  def addKernelPoint(point: T): Unit = {
+    _kernel(_insertionIdx) = point
+    _insertionIdx += 1
+  }
+
+  private[diversity]
   def delegatesOf(index: Int): Iterator[T] =
     new Iterator[T] {
       var itIdx = 0
@@ -105,11 +118,11 @@ class StreamingCoreset[T: ClassTag](val kernelSize: Int,
   private[diversity]
   def kernelPoints: Iterator[T] =
     new Iterator[T] {
-      val maxIdx = _insertionIdx
+      val maxIdx = numKernelPoints
       var itIdx = 0
 
       override def hasNext: Boolean = {
-        if (_insertionIdx != maxIdx) {
+        if (numKernelPoints != maxIdx) {
           throw new ConcurrentModificationException()
         }
         itIdx < maxIdx
@@ -124,35 +137,53 @@ class StreamingCoreset[T: ClassTag](val kernelSize: Int,
 
   private[diversity]
   def delegatePoints: Iterator[T] =
-    (0 until _insertionIdx).iterator.flatMap { idx =>
+    (0 until numKernelPoints).iterator.flatMap { idx =>
       delegatesOf(idx)
     }
 
   private[diversity]
   def minKernelDistance: Double = minDistance(kernelPoints.toArray, distance)
 
+  /**
+    * Find the maximum minimum distance between delegates and kernel points
+    */
   private[diversity]
-  def delegatesRadius: Double =
-    delegatePoints.map { dp =>
-      kernelPoints.map { kp =>
-        distance(dp, kp)
-      }.min
-    }.max
+  def delegatesRadius: Double = {
+    var radius = 0.0
+    delegatePoints.foreach { dp =>
+      var curRadius = 0.0
+      kernelPoints.foreach { kp =>
+        val d = distance(kp, dp)
+        if (d < curRadius) {
+          curRadius = d
+        }
+      }
+      if (curRadius > radius) {
+        radius = curRadius
+      }
+    }
+    radius
+  }
+
+  private def closestKernelDistance(point: T): Double = {
+    var m = Double.PositiveInfinity
+    kernelPoints.foreach { kp =>
+      val d = distance(kp, point)
+      if (d < m) {
+        m = d
+      }
+    }
+    m
+  }
 
   private[diversity]
   def initializationStep(point: T): Unit = {
     require(_initializing)
-    _kernel(_insertionIdx) = point
-    val minDist =
-      if (numKernelPoints > 0) {
-        closestKernelPoint(point)._2
-      } else {
-        Double.PositiveInfinity
-      }
+    val minDist = closestKernelDistance(point)
     if (minDist < _threshold) {
       _threshold = minDist
     }
-    _insertionIdx += 1
+    addKernelPoint(point)
     if (_insertionIdx == _kernel.length) {
       _initializing = false
     }
@@ -169,6 +200,22 @@ class StreamingCoreset[T: ClassTag](val kernelSize: Int,
     }
   }
 
+  private def closestKernelPoint(point: T): (Int, Double) = {
+    var idx = 0
+    var mDist = Double.PositiveInfinity
+    var mIdx = 0
+    val kps = kernelPoints
+    while(kps.hasNext) {
+      val d = distance(kps.next(), point)
+      if (d < mDist) {
+        mDist = d
+        mIdx = idx
+      }
+      idx += 1
+    }
+    (mIdx, mDist)
+  }
+
   private[diversity]
   def updateStep(point: T): Boolean = {
     require(!_initializing)
@@ -176,8 +223,7 @@ class StreamingCoreset[T: ClassTag](val kernelSize: Int,
     val (minIdx, minDist) = closestKernelPoint(point)
     if (minDist > 2 * _threshold) {
       // Pick the point as a center
-      _kernel(_insertionIdx) = point
-      _insertionIdx += 1
+      addKernelPoint(point)
       true
     } else {
       // Add as a delegate, if possible
@@ -199,6 +245,15 @@ class StreamingCoreset[T: ClassTag](val kernelSize: Int,
     val dels = delegatesOf(merged)
     // Add delegates while we have space
     while (dels.hasNext && addDelegate(center, dels.next())) {}
+  }
+
+  private[diversity]
+  def resetData(from: Int): Unit = {
+    var idx = from
+    while (idx < _kernel.length) {
+      _delegateCounts(idx) = 0
+      idx += 1
+    }
   }
 
   private[diversity]
@@ -235,12 +290,15 @@ class StreamingCoreset[T: ClassTag](val kernelSize: Int,
       // Move to the next point to be retained
       bottomIdx += 1
     }
+    // Reset the data related to excluded points
+    resetData(topIdx+1)
     // Set the new insertionIdx
     _insertionIdx = bottomIdx
 
     // Check the invariant of the minimum distance between kernel points
-    assert(numKernelPoints == 1 || minKernelDistance >= threshold,
-      s"minKernelDist=$minKernelDistance, threshold=$threshold")
+    assert(farnessInvariant, "Farness after merge")
+    // Check the invariant of radius
+    assert(radiusInvariant, "Radius after merge")
   }
 
   /**
@@ -259,12 +317,6 @@ class StreamingCoreset[T: ClassTag](val kernelSize: Int,
     } else {
       updateStep(point)
     }
-  }
-
-  private def closestKernelPoint(point: T): (Int, Double) = {
-    kernelPoints.zipWithIndex.map { case (kp, idx) =>
-      (idx, distance(kp, point))
-    }.minBy(_._2)
   }
 
 }

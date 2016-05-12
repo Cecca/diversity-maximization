@@ -25,7 +25,8 @@ object StreamingCoresetChecks extends Properties("StreamingCoreset") {
           coreset.update(Point.random(1))
         }
 
-        coreset.delegatesRadius <= 2 * coreset.threshold
+        (coreset.delegatesRadius <= 2 * coreset.threshold) :|
+          s"Radius: ${coreset.delegatesRadius} > 2*threshold: ${coreset.threshold}"
       }
     }
 
