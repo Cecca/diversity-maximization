@@ -70,4 +70,20 @@ object Diversity {
     tree(kSubset, distance)
   }
 
+  def star[T: ClassTag](points: IndexedSeq[T],
+                        distance: (T, T) => Double): Double = {
+    // Try all the points as centers, looking for the
+    // one that minimizes the distance to all the others
+    points.view.map { center =>
+      points.view.map { p => distance(center, p) }.sum
+    }.min
+  }
+
+  def star[T: ClassTag](points: IndexedSeq[T],
+                        k: Int,
+                        distance: (T, T) => Double): Double = {
+    val kSubset = MatchingHeuristic.run(points, k, distance)
+    star(kSubset, distance)
+  }
+
 }
