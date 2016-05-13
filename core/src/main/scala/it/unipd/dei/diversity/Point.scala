@@ -10,6 +10,9 @@ class Point(val data: Array[Double]) {
 
   def apply(idx: Int): Double = data(idx)
 
+  def normalize(factor: Double): Point =
+    Point(data.map{x => x/factor})
+
   override def equals(other: Any): Boolean =
     other match {
       case that: Point =>
@@ -34,5 +37,13 @@ object Point {
     Point((0 until dimension).view.map { _ =>
       Random.nextDouble()
     }.toArray)
+
+  def randomGaussian(dimension: Int): Point =
+    Point((0 until dimension).view.map { _ =>
+      Random.nextGaussian()
+    }.toArray)
+
+  def zero(dimension: Int): Point =
+    Point(Array.fill[Double](dimension)(0.0))
 
 }
