@@ -130,7 +130,7 @@ class StreamingCoreset[T: ClassTag](val kernelSize: Int,
     }
 
   private[diversity]
-  def minKernelDistance: Double = minDistance(kernelPoints.toArray, distance)
+  def minKernelDistance: Double = minDistance(kernelPoints.toArray[T], distance)
 
   /**
     * Find the maximum minimum distance between delegates and kernel points

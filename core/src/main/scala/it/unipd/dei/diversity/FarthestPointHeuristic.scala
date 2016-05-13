@@ -5,9 +5,9 @@ import scala.reflect.ClassTag
 
 object FarthestPointHeuristic {
 
-  def run[T: ClassTag](points: Array[T],
+  def run[T: ClassTag](points: IndexedSeq[T],
                        k: Int,
-                       distance: (T, T) => Double): Array[T] = {
+                       distance: (T, T) => Double): IndexedSeq[T] = {
     if (points.length <= k) {
       points
     } else {
@@ -36,9 +36,9 @@ object FarthestPointHeuristic {
    * albeit slower, implementation of the algorithm
    */
   private[diversity]
-  def runSlow[T: ClassTag](points: Array[T],
+  def runSlow[T: ClassTag](points: IndexedSeq[T],
                            k:Int,
-                           distance: (T, T) => Double): Array[T] = {
+                           distance: (T, T) => Double): IndexedSeq[T] = {
     if (points.length <= k) {
       points
     } else {
@@ -54,7 +54,7 @@ object FarthestPointHeuristic {
         }.maxBy(_._2)
         result.append(farthest)
       }
-      result.toArray
+      result.toArray[T]
     }
   }
 

@@ -2,7 +2,7 @@ package it.unipd.dei.diversity
 
 object Utils {
 
-  def minDistance[T](points: Array[T],
+  def minDistance[T](points: IndexedSeq[T],
                      distance: (T, T) => Double): Double = {
     require(points.length >= 2, "At least two points are needed")
     points.flatMap { p1 =>
@@ -16,8 +16,8 @@ object Utils {
     }.min
   }
 
-  def maxMinDistance[T](pointsA: Array[T],
-                        pointsB: Array[T],
+  def maxMinDistance[T](pointsA: IndexedSeq[T],
+                        pointsB: IndexedSeq[T],
                         distance: (T, T) => Double): Double = {
     require(pointsA.nonEmpty && pointsB.nonEmpty, "At least two points are needed")
     pointsA.map { p1 =>
