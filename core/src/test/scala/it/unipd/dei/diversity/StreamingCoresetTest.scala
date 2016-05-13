@@ -19,23 +19,6 @@ class StreamingCoresetTest extends FreeSpec with Matchers {
       coreset.initializing should be (false)
     }
 
-    "after initialization, should reject the already seen points" in {
-      val kPrime = 10
-      val points = (0 to kPrime).map(_ => Point.random(4)).toList
-      val coreset = new StreamingCoreset[Point](kPrime, 0, Distance.euclidean)
-
-      coreset.initializing should be (true)
-      points.foreach { p =>
-        coreset.update(p) should be (true)
-      }
-      coreset.initializing should be (false)
-      points.zipWithIndex.foreach { case (p, idx) =>
-        withClue(s"Stream index $idx:") {
-          coreset.update(p) should be (false)
-        }
-      }
-    }
-
     "after initialization, the threshold must be the minimum distance" in {
       val kPrime = 10
       val points = (0 to kPrime).view.map(_ => Point.random(4))
