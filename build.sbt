@@ -23,6 +23,7 @@ lazy val experiments = (project in file("experiments")).
   settings(
     name := "diversity-maximization-experiments",
     libraryDependencies ++= Seq(
-      "it.unipd.dei" % "experiment-reporter" % "0.2.0"
+      "it.unipd.dei" % "experiment-reporter" % "0.2.0",
+      "org.rogach" %% "scallop" % "1.0.1"
     )
   )
