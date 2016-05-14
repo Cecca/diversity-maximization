@@ -34,6 +34,10 @@ object Main {
 
     val points = coreset.points.toArray
 
+    println("Apply greedy algorithms on the coreset")
+    val farthestSubset = FarthestPointHeuristic.run(points, k, distance)
+    val matchingSubset = MatchingHeuristic.run(points, k, distance)
+
     experiment.append("main",
       jMap(
         "throughput"         -> 1000.0 * cnt / time,
@@ -41,10 +45,10 @@ object Main {
         "certificate-clique" -> source.cliqueDiversity,
         "certificate-tree"   -> source.treeDiversity,
         "certificate-star"   -> source.starDiversity,
-        "computed-edge"      -> Diversity.edge(points, k, distance),
-        "computed-clique"    -> Diversity.clique(points, k, distance),
-        "computed-tree"      -> Diversity.tree(points, k, distance),
-        "computed-star"      -> Diversity.star(points, k, distance)
+        "computed-edge"      -> Diversity.edge(farthestSubset, distance),
+        "computed-clique"    -> Diversity.clique(matchingSubset, distance),
+        "computed-tree"      -> Diversity.tree(farthestSubset, distance),
+        "computed-star"      -> Diversity.star(matchingSubset, distance)
       ))
   }
 
@@ -57,7 +61,7 @@ object Main {
     val numPoints = opts.numPoints()
     val kernelSize = opts.kernelSize()
 
-    println(s"Stream of $numPoints points: looking for $k most diverse")
+    println(s"Stream of $numPoints points: looking for $k most diverse (kernel size $kernelSize)")
 
     val experiment = new Experiment()
 
