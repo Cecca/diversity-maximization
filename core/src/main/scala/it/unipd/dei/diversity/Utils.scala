@@ -2,6 +2,14 @@ package it.unipd.dei.diversity
 
 object Utils {
 
+  def pairs[T](points: IndexedSeq[T]): Iterator[(T, T)] =
+    {
+      for {
+        i <- points.indices
+        j <- (i+1) until points.size
+      } yield (points(i), points(j))
+    }.iterator
+
   def minDistance[T](points: IndexedSeq[T],
                      distance: (T, T) => Double): Double = {
     require(points.length >= 2, "At least two points are needed")
