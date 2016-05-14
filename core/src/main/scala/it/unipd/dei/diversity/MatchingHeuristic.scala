@@ -14,7 +14,8 @@ object MatchingHeuristic {
     } else {
       val result = mutable.Set[T]()
       val candidates = mutable.Set[T](points :_*)
-      while (result.size < k/2) {
+      var idx = 0
+      while (idx < k/2) {
         // Find the pair of candidates with maximum distance
         val (a, b, _) = {
           for {
@@ -28,6 +29,7 @@ object MatchingHeuristic {
         // Remove the pair from the candidates
         candidates.remove(a)
         candidates.remove(b)
+        idx += 1
       }
       // If k is odd, add an arbitrary point to the result
       if (k % 2 != 0) {

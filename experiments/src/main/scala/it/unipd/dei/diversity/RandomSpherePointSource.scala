@@ -61,24 +61,6 @@ object RandomSpherePointSource {
          |Estimated remote-tree:   ${Diversity.tree(points, s.k, Distance.euclidean)}
          |Estimated remote-star:   ${Diversity.star(points, s.k, Distance.euclidean)}
        """.stripMargin)
-
-    println("======================")
-    println(Diversity.clique(points, s.k, Distance.euclidean))
-    val matching = MatchingHeuristic.run(points, s.k, s.distance)
-    // AHAH! Here is the culprit, the matching has less points than expected!
-    require(matching.length == s.k, s"Unexpected length ${matching.length} != ${s.k}")
-    val pairs = Utils.pairs(matching).toSeq
-    require(pairs.length == s.k*(s.k-1)/2.0,
-      s"actual pairs: ${pairs.length}, expected ${s.k*(s.k-1)/2.0}")
-    println(pairs.map { case (p1, p2) =>
-        s.distance(p1, p2)
-    }.sum)
-    println(pairs.map { case (p1, p2) =>
-        s.distance(p1, p2)
-    }.min)
-    println(pairs.map { case (p1, p2) =>
-        s.distance(p1, p2)
-    }.min * pairs.length)
   }
 
 }
