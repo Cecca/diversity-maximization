@@ -25,13 +25,11 @@ object Diversity {
   }
 
   def clique[T: ClassTag](points: IndexedSeq[T],
-                          distance: (T, T) => Double): Double = {
-    points.flatMap { p1 =>
-      points.map { p2 =>
-        distance(p1, p2)
-      }
-    }.sum / 2 // divide by two in order not to consider each pair twice
-  }
+                          distance: (T, T) => Double): Double =
+    Utils.pairs(points).map { case (p1, p2) =>
+      distance(p1, p2)
+    }.sum
+
 
   def clique[T: ClassTag](points: IndexedSeq[T],
                           k: Int,
