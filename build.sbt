@@ -24,7 +24,8 @@ lazy val experiments = (project in file("experiments")).
     name := "diversity-maximization-experiments",
     libraryDependencies ++= Seq(
       "it.unipd.dei" % "experiment-reporter" % "0.2.0",
-      "org.rogach" %% "scallop" % "1.0.1"
+      "org.rogach" %% "scallop" % "1.0.1",
+      "it.unimi.dsi" % "dsiutils" % "2.3.2"
     )
   ).
   enablePlugins(BuildInfoPlugin).

@@ -1,7 +1,8 @@
 package it.unipd.dei.diversity
 
-import it.unipd.dei.experiment.Experiment
+import it.unimi.dsi.logging.ProgressLogger
 import it.unipd.dei.diversity.ExperimentUtil._
+import it.unipd.dei.experiment.Experiment
 import org.rogach.scallop.ScallopConf
 
 object Main {
@@ -18,10 +19,15 @@ object Main {
     var cnt = 0
     val start = System.currentTimeMillis()
 
+    val pl = new ProgressLogger("points")
+    pl.expectedUpdates = numPoints
+    pl.start("Start stream processing")
     while(source.hasNext) {
       coreset.update(source.next())
+      pl.update()
       cnt += 1
     }
+    pl.stop("Complete stream processing")
 
     val end = System.currentTimeMillis()
     val time = end - start
@@ -51,6 +57,8 @@ object Main {
     val numPoints = opts.numPoints()
     val kernelSize = opts.kernelSize()
 
+    println(s"Stream of $numPoints points: looking for $k most diverse")
+
     val experiment = new Experiment()
 
     experiment
@@ -65,6 +73,7 @@ object Main {
     runRandomSpherePoints(dim, k, numPoints, kernelSize, experiment)
 
     experiment.saveAsJsonFile()
+    println("Done.")
   }
 
 }
