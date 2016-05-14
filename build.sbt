@@ -26,4 +26,13 @@ lazy val experiments = (project in file("experiments")).
       "it.unipd.dei" % "experiment-reporter" % "0.2.0",
       "org.rogach" %% "scallop" % "1.0.1"
     )
+  ).
+  enablePlugins(BuildInfoPlugin).
+  settings(
+    buildInfoKeys := Seq[BuildInfoKey](
+      version,
+      "gitRevision" -> "git rev-parse HEAD".!!.trim,
+      "gitRevCount" -> "git log --oneline".!!.split("\n").length
+    ),
+    buildInfoPackage := "it.unipd.dei.diversity"
   )

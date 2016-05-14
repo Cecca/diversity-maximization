@@ -54,6 +54,9 @@ object Main {
     val experiment = new Experiment()
 
     experiment
+      .tag("version", BuildInfo.version)
+      .tag("git-revision", BuildInfo.gitRevision)
+      .tag("git-revcount", BuildInfo.gitRevCount)
       .tag("space-dimension", dim)
       .tag("k", k)
       .tag("num-points", numPoints)
