@@ -64,7 +64,7 @@ object Main {
 
     runRandomSpherePoints(dim, k, numPoints, kernelSize, experiment)
 
-    println(experiment.toSimpleString)
+    experiment.saveAsJsonFile()
   }
 
 }
