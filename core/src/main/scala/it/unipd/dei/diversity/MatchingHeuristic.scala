@@ -13,22 +13,34 @@ object MatchingHeuristic {
       points
     } else {
       val result = mutable.Set[T]()
-      val candidates = mutable.Set[T](points :_*)
+      val candidates = mutable.ArrayBuffer[T](points :_*)
       var idx = 0
       while (idx < k/2) {
         // Find the pair of candidates with maximum distance
-        val (a, b, _) = {
-          for {
-            p1 <- candidates
-            p2 <- candidates
-          } yield (p1, p2, distance(p1, p2))
-        }.view.maxBy(_._3)
+        var maxDist = 0.0
+        var a = candidates.head
+        var b = candidates.head
+        var i = 0
+        while (i<candidates.size) {
+          var j = i +1
+          while (j < candidates.size) {
+            val d = distance(candidates(i), candidates(j))
+            if (d > maxDist) {
+              a = candidates(i)
+              b = candidates(j)
+              maxDist = d
+            }
+            j += 1
+          }
+          i += 1
+        }
+
         // Add the maximum distance pair to the result
         result.add(a)
         result.add(b)
         // Remove the pair from the candidates
-        candidates.remove(a)
-        candidates.remove(b)
+        candidates.remove(candidates.indexOf(a))
+        candidates.remove(candidates.indexOf(b))
         idx += 1
       }
       // If k is odd, add an arbitrary point to the result
