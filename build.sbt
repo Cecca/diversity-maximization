@@ -11,11 +11,22 @@ lazy val commonSettings = Seq(
 lazy val root = (project in file(".")).
   aggregate(core)
 
+/** Configuration for benchmarks */
+lazy val Benchmark = config("bench") extend Test
+
 lazy val core = (project in file("core")).
   settings(commonSettings: _*).
   settings(
-    name := "diversity-maximization-core"
-  )
+    name := "diversity-maximization-core",
+    libraryDependencies ++= Seq(
+      "com.storm-enroute" %% "scalameter" % "0.7"
+    ),
+    testFrameworks in Benchmark += new TestFramework("org.scalameter.ScalaMeterFramework"),
+    parallelExecution in Benchmark := false,
+    logBuffered in Benchmark := false
+  ).
+  configs(Benchmark).
+  settings(inConfig(Benchmark)(Defaults.testSettings): _*)
 
 lazy val experiments = (project in file("experiments")).
   dependsOn(core).
