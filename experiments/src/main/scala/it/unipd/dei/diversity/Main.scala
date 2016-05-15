@@ -19,22 +19,17 @@ object Main {
     var cnt = 0
     val start = System.currentTimeMillis()
 
-    val pl = new ProgressLogger("points")
-    pl.expectedUpdates = numPoints
-    pl.start("Start stream processing")
     while(source.hasNext) {
       coreset.update(source.next())
-      pl.update()
       cnt += 1
     }
-    pl.stop("Complete stream processing")
 
     val end = System.currentTimeMillis()
     val time = end - start
 
     val points = coreset.points.toArray
 
-    println("Apply greedy algorithms on the coreset")
+//    println("Apply greedy algorithms on the coreset")
     val farthestSubset = FarthestPointHeuristic.run(points, k, distance)
     val matchingSubset = MatchingHeuristic.run(points, k, distance)
 
@@ -56,40 +51,53 @@ object Main {
     val opts = new Conf(args)
     opts.verify()
 
-    val dim = opts.spaceDimension()
-    val k = opts.k()
-    val numPoints = opts.numPoints()
-    val kernelSize = opts.kernelSize()
+    val dimList = opts.spaceDimension().split(",").map{_.toInt}
+    val kList = opts.k().split(",").map{_.toInt}
+    val numPointsList = opts.numPoints().split(",").map{_.toInt}
+    val kernelSizeList = opts.kernelSize().split(",").map{_.toInt}
 
-    println(s"Stream of $numPoints points: looking for $k most diverse (kernel size $kernelSize)")
-
-    val experiment = new Experiment()
-
-    experiment
-      .tag("version", BuildInfo.version)
-      .tag("git-revision", BuildInfo.gitRevision)
-      .tag("git-revcount", BuildInfo.gitRevCount)
-      .tag("space-dimension", dim)
-      .tag("k", k)
-      .tag("num-points", numPoints)
-      .tag("kernel-size", kernelSize)
-
-    runRandomSpherePoints(dim, k, numPoints, kernelSize, experiment)
-
-    experiment.saveAsJsonFile()
-    println("Done.")
+    val pl = new ProgressLogger("experiments")
+    pl.expectedUpdates =
+      dimList.length*kList.length*numPointsList.length*kernelSizeList.length
+    pl.start(s"Starting ${pl.expectedUpdates} experiments")
+    for {
+      dim      <- dimList
+      k        <- kList
+      n        <- numPointsList
+      kernSize <- kernelSizeList
+    } {
+      try {
+//        println(s"Stream of $n points: looking for $k most diverse (kernel size $kernSize)")
+        val experiment = new Experiment()
+          .tag("version", BuildInfo.version)
+          .tag("git-revision", BuildInfo.gitRevision)
+          .tag("git-revcount", BuildInfo.gitRevCount)
+          .tag("space-dimension", dim)
+          .tag("k", k)
+          .tag("num-points", n)
+          .tag("kernel-size", kernSize)
+        runRandomSpherePoints(dim, k, n, kernSize, experiment)
+        experiment.saveAsJsonFile()
+      } catch {
+        case e: Exception =>
+          println(s"Error: ${e.getMessage}")
+          e.printStackTrace()
+      }
+      pl.update()
+    }
+    pl.stop("Done")
   }
 
 }
 
 class Conf(args: Array[String]) extends ScallopConf(args) {
 
-  val spaceDimension = opt[Int](default = Some(2))
+  lazy val spaceDimension = opt[String](default = Some("2"))
 
-  val k = opt[Int](required = true)
+  lazy val k = opt[String](required = true)
 
-  val kernelSize = opt[Int](required = true)
+  lazy val kernelSize = opt[String](required = true)
 
-  val numPoints = opt[Int](required = true)
+  lazy val numPoints = opt[String](required = true)
 
 }
