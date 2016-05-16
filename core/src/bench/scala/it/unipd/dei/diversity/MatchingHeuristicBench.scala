@@ -2,6 +2,10 @@ package it.unipd.dei.diversity
 
 import org.scalameter.api._
 
+/**
+  * Compare the matching heuristic implementation with the time it
+  * takes to sum all the pairwise distances for k times.
+  */
 object MatchingHeuristicBench extends Bench.OfflineReport {
 
   val distance: (Point, Point) => Double = Distance.euclidean
@@ -20,15 +24,19 @@ object MatchingHeuristicBench extends Bench.OfflineReport {
   performance of "matching" in {
     measure method "baseline" in {
       using(params) in { case (points, k) =>
-        var sum = 0.0
-        var i = 0
-        while (i<points.length) {
-          var j = i +1
-          while (j < points.length) {
-            sum += distance(points(i), points(j))
-            j += 1
+        var h = 0
+        while(h < k) {
+          var sum = 0.0
+          var i = 0
+          while (i < points.length) {
+            var j = i + 1
+            while (j < points.length) {
+              sum += distance(points(i), points(j))
+              j += 1
+            }
+            i += 1
           }
-          i += 1
+          h += 1
         }
       }
     }
