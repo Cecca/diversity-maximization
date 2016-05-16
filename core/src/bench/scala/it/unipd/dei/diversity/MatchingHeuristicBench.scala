@@ -7,7 +7,7 @@ object MatchingHeuristicBench extends Bench.OfflineReport {
   val distance: (Point, Point) => Double = Distance.euclidean
 
   val sets: Gen[Array[Point]] = for {
-    size <- Gen.range("size")(100, 200, 100)
+    size <- Gen.range("size")(100, 500, 100)
   } yield Array.ofDim[Point](size).map{_ => Point.random(10)}
 
   val ks: Gen[Int] = Gen.range("k")(10, 10, 10)
