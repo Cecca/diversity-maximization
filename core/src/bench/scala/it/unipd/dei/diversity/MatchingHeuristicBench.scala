@@ -10,7 +10,7 @@ object MatchingHeuristicBench extends Bench.OfflineReport {
     size <- Gen.range("size")(100, 500, 100)
   } yield Array.ofDim[Point](size).map{_ => Point.random(10)}
 
-  val ks: Gen[Int] = Gen.range("k")(10, 10, 10)
+  val ks: Gen[Int] = Gen.range("k")(10, 90, 10)
 
   val params: Gen[(Array[Point], Int)] = for {
     points <- sets

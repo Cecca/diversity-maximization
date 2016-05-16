@@ -1,6 +1,5 @@
 package it.unipd.dei.diversity
 
-import scala.collection.mutable
 import scala.reflect.ClassTag
 
 
@@ -12,9 +11,7 @@ object MatchingHeuristic {
     if (points.size <= k) {
       points
     } else {
-//      val result = mutable.Set[T]()
       val result = Array.ofDim[T](k)
-//      val candidates = mutable.ArrayBuffer[T](points :_*)
       val flags = Array.fill[Boolean](points.length)(true)
       var idx = 0
       while (idx < k/2) {
@@ -47,8 +44,6 @@ object MatchingHeuristic {
         // Remove the pair from the candidates
         flags(a) = false
         flags(b) = false
-//        candidates.remove(candidates.indexOf(a))
-//        candidates.remove(candidates.indexOf(b))
         idx += 1
       }
       // If k is odd, add an arbitrary point to the result
