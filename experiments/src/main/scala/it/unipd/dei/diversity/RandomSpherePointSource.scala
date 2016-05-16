@@ -35,7 +35,7 @@ class RandomSpherePointSource(val dim: Int,
     } else {
       // Generate a random point inside the sphere
       val p = Point.randomGaussian(dim)
-      p.normalize(distance(p, zero) / Random.nextDouble())
+      p.normalize(distance(p, zero) / (0.8 * Random.nextDouble()))
     }
   }
 
