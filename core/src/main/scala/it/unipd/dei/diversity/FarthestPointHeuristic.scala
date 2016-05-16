@@ -18,12 +18,23 @@ object FarthestPointHeuristic {
       while (i < k) {
         var farthest = points(0)
         var dist = 0.0
-        points.foreach { p =>
-          val closestCtrDist = result.slice(0, i).view.map{q => distance(p, q)}.min
-          if (closestCtrDist > dist) {
-            dist = closestCtrDist
-            farthest = p
+
+        var h = 0
+        while (h < points.length) {
+          var minDist = Double.PositiveInfinity
+          var j = 0
+          while (j<i) {
+            val d = distance(result(j), points(h))
+            if (d < minDist){
+              minDist = d
+            }
+            j += 1
           }
+          if (minDist > dist) {
+            dist = minDist
+            farthest = points(h)
+          }
+          h += 1
         }
         result(i) = farthest
         i += 1
