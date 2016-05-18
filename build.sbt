@@ -1,7 +1,7 @@
 lazy val commonSettings = Seq(
   organization := "it.unipd.dei",
   version := "0.1.0",
-  scalaVersion := "2.11.7",
+  scalaVersion := "2.11.8",
   libraryDependencies ++= Seq(
     "org.scalatest" %% "scalatest" % "2.2.6" % "test",
     "org.scalacheck" %% "scalacheck" % "1.13.0" % "test"
@@ -36,7 +36,9 @@ lazy val experiments = (project in file("experiments")).
     libraryDependencies ++= Seq(
       "it.unipd.dei" % "experiment-reporter" % "0.2.0",
       "org.rogach" %% "scallop" % "1.0.1",
-      "it.unimi.dsi" % "dsiutils" % "2.3.2"
+      "it.unimi.dsi" % "dsiutils" % "2.3.2",
+      "com.typesafe.akka" %% "akka-stream" % "2.4.5",
+      "io.dropwizard.metrics" % "metrics-core" % "3.1.0"
     )
   ).
   enablePlugins(BuildInfoPlugin).
