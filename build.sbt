@@ -38,7 +38,8 @@ lazy val experiments = (project in file("experiments")).
       "org.rogach" %% "scallop" % "1.0.1",
       "it.unimi.dsi" % "dsiutils" % "2.3.2",
       "com.typesafe.akka" %% "akka-stream" % "2.4.5",
-      "io.dropwizard.metrics" % "metrics-core" % "3.1.0"
+      "io.dropwizard.metrics" % "metrics-core" % "3.1.0",
+      "org.apache.spark" %% "spark-core" % "1.6.1"
     )
   ).
   enablePlugins(BuildInfoPlugin).
