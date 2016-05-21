@@ -11,7 +11,9 @@ object Distance {
       sum += diff*diff
       i += 1
     }
-    math.sqrt(sum)
+    val res = math.sqrt(sum)
+    assert(res < Double.PositiveInfinity, "The distance cannot be infinite! Check your inputs.")
+    res
   }
 
 }
