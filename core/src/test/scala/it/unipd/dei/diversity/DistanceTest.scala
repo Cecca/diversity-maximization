@@ -8,7 +8,7 @@ import Distance.euclidean
 object DistanceTest extends Properties("Distances") {
 
   def pointGen(dim: Int) =
-    for(data <- Gen.listOfN(dim, Arbitrary.arbitrary[Double]))
+    for(data <- Gen.listOfN(dim, Gen.choose[Double](0.0, Long.MaxValue.toDouble)))
       yield new Point(data.toArray)
 
   property("triangle inequality") =
