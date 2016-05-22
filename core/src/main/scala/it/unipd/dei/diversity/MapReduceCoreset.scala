@@ -24,27 +24,27 @@ object MapReduceCoreset {
 
       var pointIdx = 0
       while (pointIdx < points.length) {
-        if (!kernel.contains(points(pointIdx))) {
-          // Find the closest center
-          var centerIdx = 0
-          var minDist = Double.PositiveInfinity
-          var minIdx = -1
-          while (centerIdx < kernel.length) {
-            val dist = distance(points(pointIdx), kernel(centerIdx))
-            if (dist < minDist) {
-              minDist = dist
-              minIdx = centerIdx
-            }
-            centerIdx += 1
+        // Find the closest center
+        var centerIdx = 0
+        var minDist = Double.PositiveInfinity
+        var minIdx = -1
+        while (centerIdx < kernel.length) {
+          val dist = distance(points(pointIdx), kernel(centerIdx))
+          if (dist < minDist) {
+            minDist = dist
+            minIdx = centerIdx
           }
-          // Add the point to the solution if there is space in the delegate count
-          if (counters(minIdx) < numDelegates) {
-            assert(minDist < Utils.minDistance(kernel, distance),
-              s"Distance: $minDist, radius ${Utils.minDistance(kernel, distance)}")
-            result(resultIdx) = points(pointIdx)
-            counters(minIdx) += 1
-            resultIdx += 1
-          }
+          centerIdx += 1
+        }
+        // Add the point to the solution if there is space in the delegate count.
+        // Consider only distances greater than zero in order not to add the
+        // centers again.
+        if (minDist > 0.0 && counters(minIdx) < numDelegates) {
+          assert(minDist < Utils.minDistance(kernel, distance),
+            s"Distance: $minDist, radius ${Utils.minDistance(kernel, distance)}")
+          result(resultIdx) = points(pointIdx)
+          counters(minIdx) += 1
+          resultIdx += 1
         }
         pointIdx += 1
       }
