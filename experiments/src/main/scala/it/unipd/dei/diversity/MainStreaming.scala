@@ -6,7 +6,7 @@ import it.unipd.dei.diversity.source.PointSource
 import it.unipd.dei.experiment.Experiment
 import org.rogach.scallop.ScallopConf
 
-object Main {
+object MainStreaming {
 
   def run(source: PointSource, kernelSize: Int, experiment: Experiment) = {
     val coreset = new StreamingCoreset(kernelSize, source.k, source.distance)
@@ -92,18 +92,18 @@ object Main {
     pl.stop("Done")
   }
 
-}
+  class Conf(args: Array[String]) extends ScallopConf(args) {
 
-class Conf(args: Array[String]) extends ScallopConf(args) {
+    lazy val source = opt[String](default = Some("random-gaussian-sphere"))
 
-  lazy val source = opt[String](default = Some("random-gaussian-sphere"))
+    lazy val spaceDimension = opt[String](default = Some("2"))
 
-  lazy val spaceDimension = opt[String](default = Some("2"))
+    lazy val k = opt[String](required = true)
 
-  lazy val k = opt[String](required = true)
+    lazy val kernelSize = opt[String](required = true)
 
-  lazy val kernelSize = opt[String](required = true)
+    lazy val numPoints = opt[String](required = true)
 
-  lazy val numPoints = opt[String](required = true)
+  }
 
 }
