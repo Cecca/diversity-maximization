@@ -25,23 +25,17 @@ class GaussianRandomSpherePointSource(override val dim: Int,
     }.toArray
   }
 
-  private val _toEmit = mutable.Set[Point](certificate :_*)
+  override val points: Iterator[Point] = new Iterator[Point] {
 
-  private val _emissionProb: Double = k.toDouble / n
+    override def hasNext: Boolean = true
 
-  override def hasNext: Boolean = _toEmit.nonEmpty
-
-  override def next(): Point = {
-    if (Random.nextDouble() <= _emissionProb) {
-      val p = _toEmit.head
-      _toEmit.remove(p)
-      p
-    } else {
+    override def next(): Point = {
       // Generate a random point inside the sphere
       val p = Point.randomGaussian(dim)
       val radius = math.min(0.25 * Random.nextGaussian(), 1.0)
       p.normalize(distance(p, zero) / radius)
     }
+
   }
 
 }
