@@ -4,7 +4,7 @@ import java.util
 
 import scala.util.Random
 
-class Point(val data: Array[Double]) {
+class Point(val data: Array[Double]) extends Comparable[Point] with Serializable {
 
   def dimension: Int = data.length
 
@@ -19,6 +19,20 @@ class Point(val data: Array[Double]) {
         this.data.sameElements(that.data)
       case _ => false
     }
+
+  override def compareTo(other: Point): Int = {
+    require(this.dimension == other.dimension)
+    var i: Int = 0
+    while (i < data.length) {
+      if (this.data(i) < other.data(i)) {
+        return -1
+      } else if (this.data(i) > other.data(i)) {
+        return 1
+      }
+      i += 1
+    }
+    0
+  }
 
   override def hashCode(): Int = util.Arrays.hashCode(data)
 
