@@ -36,7 +36,7 @@ lazy val experiments = (project in file("experiments")).
     libraryDependencies ++= Seq(
       "it.unipd.dei" % "experiment-reporter" % "0.2.0",
       "org.rogach" %% "scallop" % "1.0.1",
-      "it.unimi.dsi" % "dsiutils" % "2.3.2",
+      "it.unimi.dsi" % "dsiutils" % "2.3.2" exclude("ch.qos.logback", "logback-classic"),
       "com.typesafe.akka" %% "akka-stream" % "2.4.5",
       "io.dropwizard.metrics" % "metrics-core" % "3.1.0",
       "org.apache.spark" %% "spark-core" % "1.6.1"
