@@ -31,8 +31,16 @@ extends RDD[Point](sc, Nil) {
   override protected def getPartitions: Array[Partition] = {
     val pointsPerSplit = math.ceil(source.n.toDouble / numSplits).toInt
     val certPerSplit = math.ceil(source.certificate.length.toDouble / numSplits).toInt
-    val certParts = source.certificate.grouped(certPerSplit).toArray
-    require(certParts.length == numSplits)
+    require(certPerSplit > 0,
+      s"certPerSplit should be positive, but ${source.certificate.length} / $numSplits = 0")
+    val certParts = Array.fill[Array[Point]](numSplits)(Array.empty[Point])
+    var i = 0
+    for (group <- source.certificate.grouped(certPerSplit)) {
+      certParts(i) = group
+      i += 1
+    }
+    require(certParts.length == numSplits,
+      s"Number of certificate parts=${certParts.length}, number of splits $numSplits")
     val parts = certParts.zipWithIndex.map { case (certPart, idx) =>
       new PointSourcePartition(idx, pointsPerSplit, certPart, source.points).asInstanceOf[Partition]
     }
@@ -48,9 +56,9 @@ object PointSourceRDD {
       .setMaster("local")
     val sc = new SparkContext(conf)
 
-    val source = PointSource("random-gaussian-sphere", 2, 10, 2, Distance.euclidean)
+    val source = PointSource("random-gaussian-sphere", 2, 16, 2, Distance.euclidean)
     println(source.certificate.toSeq)
-    val input = new PointSourceRDD(sc, source, 2)
+    val input = new PointSourceRDD(sc, source, 8)
 
     input.mapPartitions { ps =>
       Iterator(ps.toArray)

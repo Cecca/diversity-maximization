@@ -2,7 +2,7 @@ package it.unipd.dei.diversity
 
 import it.unipd.dei.diversity.source.{PointSource, PointSourceRDD}
 import org.scalacheck.{Gen, Properties}
-import org.scalacheck.Prop._
+import org.scalacheck.Prop.{forAll, BooleanOperators}
 
 class PointSourceRDDTest extends Properties("PointSourceRDD") {
 
@@ -13,7 +13,7 @@ class PointSourceRDDTest extends Properties("PointSourceRDD") {
         val input = new PointSourceRDD(sc, source, sc.defaultParallelism)
 
         val numPoints = input.count()
-        numPoints == size
+        (numPoints >= size) :| s"Number of points $numPoints, size $size"
       }
     }
 
