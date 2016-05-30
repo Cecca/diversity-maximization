@@ -5,7 +5,7 @@ import it.unipd.dei.diversity.{Diversity, Point}
 import scala.collection.mutable
 import scala.util.Random
 
-trait PointSource extends Iterator[Point] {
+trait PointSource extends Iterable[Point] {
 
   val name: String
 
@@ -28,22 +28,24 @@ trait PointSource extends Iterator[Point] {
   lazy val treeDiversity: Double = Diversity.tree(certificate, distance)
 
   /** The random points that are somehow "close" to each other*/
-  val points: Iterator[Point]
+  val points: RandomPointIterator
 
-  // Emission machinery
-  private val _toEmit = mutable.Set[Point](certificate :_*)
-  private val _emissionProb: Double = k.toDouble / n
+  override def iterator: Iterator[Point] = new Iterator[Point] {
 
-  override def hasNext: Boolean = _toEmit.nonEmpty
+    private val _toEmit = mutable.Set[Point](certificate :_*)
+    private val _emissionProb: Double = k.toDouble / n
 
-  override def next(): Point =
-    if (Random.nextDouble() <= _emissionProb) {
-      val p = _toEmit.head
-      _toEmit.remove(p)
-      p
-    } else {
-      points.next()
-    }
+    override def hasNext: Boolean = _toEmit.nonEmpty
+
+    override def next(): Point =
+      if (Random.nextDouble() <= _emissionProb) {
+        val p = _toEmit.head
+        _toEmit.remove(p)
+        p
+      } else {
+        points.next()
+      }
+  }
 
 }
 

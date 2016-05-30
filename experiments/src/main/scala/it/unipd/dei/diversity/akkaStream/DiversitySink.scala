@@ -28,7 +28,7 @@ object DiversitySink {
     val distance: (Point, Point) => Double = Distance.euclidean
 
     val source = Source.fromIterator(
-      () => PointSource("random-gaussian-sphere", 256, 1000000, k, distance))
+      () => PointSource("random-gaussian-sphere", 256, 1000000, k, distance).iterator)
 
     val future = source.async.runWith(DiversitySink(100, k, distance))
     val result = Await.result(future, Duration.Inf)

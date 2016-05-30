@@ -10,11 +10,12 @@ object MainStreaming {
 
   def run(source: PointSource, kernelSize: Int, experiment: Experiment) = {
     val coreset = new StreamingCoreset(kernelSize, source.k, source.distance)
+    val sourceIt = source.iterator
 
     var cnt = 0
     var start = System.currentTimeMillis()
-    while(source.hasNext) {
-      coreset.update(source.next())
+    while(sourceIt.hasNext) {
+      coreset.update(sourceIt.next())
       cnt += 1
     }
     var end = System.currentTimeMillis()

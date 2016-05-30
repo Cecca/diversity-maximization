@@ -25,14 +25,20 @@ class UniformRandomSpherePointSource(override val dim: Int,
     }.toArray
   }
 
-  override val points: Iterator[Point] = new Iterator[Point] {
-    override def hasNext: Boolean = true
+  override val points: RandomPointIterator = new UniformRandomPoint(dim, distance)
+}
 
-    override def next(): Point = {
-      // Generate a random point inside the sphere
-      val p = Point.randomGaussian(dim)
-      p.normalize(distance(p, zero) / (0.8 * Random.nextDouble()))
-    }
+class UniformRandomPoint(val dim:Int,
+                         val distance: (Point, Point) => Double)
+extends RandomPointIterator {
+
+  private val zero = Point.zero(dim)
+
+  override def next(): Point = {
+    // Generate a random point inside the sphere
+    val p = Point.randomGaussian(dim)
+    p.normalize(distance(p, zero) / (0.8 * Random.nextDouble()))
   }
+
 
 }
