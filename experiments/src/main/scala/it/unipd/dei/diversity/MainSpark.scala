@@ -1,6 +1,6 @@
 package it.unipd.dei.diversity
 
-import it.unipd.dei.diversity.source.PointSource
+import it.unipd.dei.diversity.source.{PointSource, PointSourceRDD}
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.{SparkConf, SparkContext}
 import org.rogach.scallop.ScallopConf
@@ -56,7 +56,7 @@ object MainSpark {
           numDelegates: Int,
           distance: (Point, Point) => Double,
           experiment: Experiment) = {
-    val input = sc.parallelize(source.toSeq)
+    val input = new PointSourceRDD(sc, source, sc.defaultParallelism)
     val points = input.mapPartitions { points =>
       val pointsArr: Array[Point] = points.toArray
       val coreset = MapReduceCoreset.run(pointsArr, kernelSize, numDelegates, distance)
