@@ -5,7 +5,8 @@ lazy val commonSettings = Seq(
   libraryDependencies ++= Seq(
     "org.scalatest" %% "scalatest" % "2.2.6" % "test",
     "org.scalacheck" %% "scalacheck" % "1.13.0" % "test"
-  )
+  ),
+  test in assembly := {}
 )
 
 lazy val root = (project in file(".")).
@@ -37,10 +38,10 @@ lazy val experiments = (project in file("experiments")).
       "it.unipd.dei" % "experiment-reporter" % "0.2.0",
       "org.rogach" %% "scallop" % "1.0.1",
       "it.unimi.dsi" % "dsiutils" % "2.3.2" exclude("ch.qos.logback", "logback-classic"),
-      "com.typesafe.akka" %% "akka-stream" % "2.4.5",
-      "io.dropwizard.metrics" % "metrics-core" % "3.1.0",
-      "org.apache.spark" %% "spark-core" % "1.6.1"
-    )
+      "com.typesafe.akka" %% "akka-stream" % "2.4.5" % "provided",
+      "org.apache.spark" %% "spark-core" % "1.6.1" % "provided"
+    ),
+    deploy := deployTaskImpl.value
   ).
   enablePlugins(BuildInfoPlugin).
   settings(
@@ -51,3 +52,18 @@ lazy val experiments = (project in file("experiments")).
     ),
     buildInfoPackage := "it.unipd.dei.diversity"
   )
+
+//////////////////////////////////////////////////////////////////////////////
+// Custom tasks
+
+lazy val deploy = Def.taskKey[Unit]("Deploy the jar")
+
+lazy val deployTaskImpl = Def.task {
+  val log = streams.value.log
+  val account = "ceccarel@stargate.dei.unipd.it"
+  val local = assembly.value.getPath
+  val fname = assembly.value.getName
+  val remote = s"$account:/mnt/gluster/ceccarel/lib/$fname"
+  log.info(s"Deploy $fname to $remote")
+  Seq("rsync", "--progress", "-z", local, remote) !
+}
