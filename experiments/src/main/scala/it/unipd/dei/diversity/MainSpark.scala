@@ -120,6 +120,7 @@ object MainSpark {
           .tag("k", k)
           .tag("num-points", n)
           .tag("kernel-size", kernSize)
+          .tag("algorithm", "MapReduce")
         val source = PointSource(sourceName, dim, n, k, Distance.euclidean)
         run(sc, source, kernSize, k, Distance.euclidean, experiment)
         experiment.saveAsJsonFile()

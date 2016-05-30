@@ -80,6 +80,7 @@ object MainStreaming {
           .tag("k", k)
           .tag("num-points", n)
           .tag("kernel-size", kernSize)
+          .tag("algorithm", "streaming")
         val source = PointSource(sourceName, dim, n, k, Distance.euclidean)
         run(source, kernSize, experiment)
         experiment.saveAsJsonFile()
