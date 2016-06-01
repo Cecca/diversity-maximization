@@ -18,6 +18,10 @@
 
 package it.unipd.dei.diversity
 
+import java.util.concurrent.TimeUnit
+
+import it.unipd.dei.diversity.source.PointSource
+
 import scala.collection.JavaConversions
 
 object ExperimentUtil {
@@ -39,5 +43,38 @@ object ExperimentUtil {
     (tuple._1.toString, second)
   }
 
+  def computeApproximations(pointSource: PointSource,
+                            farthestSubset: IndexedSeq[Point],
+                            matchingSubset: IndexedSeq[Point]) = {
+    val edgeDiversity   = Diversity.edge(farthestSubset, pointSource.distance)
+    val cliqueDiversity = Diversity.clique(matchingSubset, pointSource.distance)
+    val treeDiversity   = Diversity.tree(farthestSubset, pointSource.distance)
+    val starDiversity   = Diversity.star(matchingSubset, pointSource.distance)
+
+    jMap(
+      "certificate-edge"   -> pointSource.edgeDiversity,
+      "certificate-clique" -> pointSource.cliqueDiversity,
+      "certificate-tree"   -> pointSource.treeDiversity,
+      "certificate-star"   -> pointSource.starDiversity,
+      "computed-edge"      -> edgeDiversity,
+      "computed-clique"    -> cliqueDiversity,
+      "computed-tree"      -> treeDiversity,
+      "computed-star"      -> starDiversity,
+      "ratio-edge"         -> pointSource.edgeDiversity.toDouble / edgeDiversity,
+      "ratio-clique"       -> pointSource.cliqueDiversity.toDouble / cliqueDiversity,
+      "ratio-tree"         -> pointSource.treeDiversity.toDouble / treeDiversity,
+      "ratio-star"         -> pointSource.starDiversity.toDouble / starDiversity
+    )
+  }
+
+  def timed[T](fn: => T): (T, Long) = {
+    val start = System.nanoTime()
+    val res = fn
+    val end = System.nanoTime()
+    (res, end - start)
+  }
+
+  def convertDuration(duration: Double, unit: TimeUnit): Double =
+    duration / unit.toNanos(1)
 
 }

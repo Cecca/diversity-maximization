@@ -1,5 +1,7 @@
 package it.unipd.dei.diversity
 
+import java.util.concurrent.TimeUnit
+
 import it.unipd.dei.diversity.source.{PointSource, PointSourceRDD}
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.{SparkConf, SparkContext}
@@ -57,37 +59,37 @@ object MainSpark {
           distance: (Point, Point) => Double,
           experiment: Experiment) = {
     val input = new PointSourceRDD(sc, source, sc.defaultParallelism)
-    val points = input.mapPartitions { points =>
-      val pointsArr: Array[Point] = points.toArray
-      val coreset = MapReduceCoreset.run(pointsArr, kernelSize, numDelegates, distance)
-      Iterator(coreset.sorted)
-    }.reduce { (a, b) =>
-      merge(a, b)
+    val (points, mrTime) = timed {
+      input.mapPartitions { points =>
+        val pointsArr: Array[Point] = points.toArray
+        val coreset = MapReduceCoreset.run(pointsArr, kernelSize, numDelegates, distance)
+        Iterator(coreset.sorted)
+      }.reduce { (a, b) =>
+        merge(a, b)
+      }
     }
 
-    var start = System.currentTimeMillis()
-    val farthestSubset = FarthestPointHeuristic.run(points, source.k, source.distance)
-    var end = System.currentTimeMillis()
-    println(s"Farthest point heuristic computed in ${end - start} milliseconds")
+    val (farthestSubset, farthestSubsetTime) = timed{
+      FarthestPointHeuristic.run(points, source.k, source.distance)
+    }
+    println(s"Farthest heuristic computed in $farthestSubsetTime nanoseconds")
 
-    start = System.currentTimeMillis()
-    val matchingSubset = MatchingHeuristic.run(points, source.k, source.distance)
-    end = System.currentTimeMillis()
-    println(s"Matching heuristic computed in ${end - start} milliseconds")
+    val (matchingSubset, matchingSubsetTime) = timed{
+      MatchingHeuristic.run(points, source.k, source.distance)
+    }
+    println(s"Matching heuristic computed in $matchingSubsetTime nanoseconds")
 
-    experiment.append("main",
+    experiment.append("approximation",
+      computeApproximations(source, farthestSubset, matchingSubset))
+
+    val reportTimeUnit = TimeUnit.MILLISECONDS
+    experiment.append("performance",
       jMap(
-//        "throughput"         -> throughput,
-        "certificate-edge"   -> source.edgeDiversity,
-        "certificate-clique" -> source.cliqueDiversity,
-        "certificate-tree"   -> source.treeDiversity,
-        "certificate-star"   -> source.starDiversity,
-        "computed-edge"      -> Diversity.edge(farthestSubset, source.distance),
-        "computed-clique"    -> Diversity.clique(matchingSubset, source.distance),
-        "computed-tree"      -> Diversity.tree(farthestSubset, source.distance),
-        "computed-star"      -> Diversity.star(matchingSubset, source.distance)
+        "farthest-time"  -> convertDuration(farthestSubsetTime, reportTimeUnit),
+        "matching-time"  -> convertDuration(matchingSubsetTime, reportTimeUnit),
+        "mapreduce-time" -> convertDuration(mrTime, reportTimeUnit)
       ))
-    println(experiment.toSimpleString)
+
   }
 
   def main(args: Array[String]) {
@@ -124,6 +126,7 @@ object MainSpark {
         val source = PointSource(sourceName, dim, n, k, Distance.euclidean)
         run(sc, source, kernSize, k, Distance.euclidean, experiment)
         experiment.saveAsJsonFile()
+        println(experiment.toSimpleString)
       } catch {
         case e: Exception =>
           println(s"Error: ${e.getMessage}")

@@ -2,7 +2,6 @@ package it.unipd.dei.diversity
 
 import java.util.concurrent.TimeUnit
 
-import com.codahale.metrics.{ConsoleReporter, MetricRegistry}
 import it.unimi.dsi.logging.ProgressLogger
 import it.unipd.dei.diversity.ExperimentUtil._
 import it.unipd.dei.diversity.source.PointSource
@@ -10,16 +9,6 @@ import it.unipd.dei.experiment.Experiment
 import org.rogach.scallop.ScallopConf
 
 object MainStreaming {
-
-  def timed[T](fn: => T): (T, Long) = {
-    val start = System.nanoTime()
-    val res = fn
-    val end = System.nanoTime()
-    (res, end - start)
-  }
-
-  def convertDuration(duration: Double, unit: TimeUnit): Double =
-    duration / unit.toNanos(1)
 
   def run(source: PointSource, kernelSize: Int, experiment: Experiment) = {
     val coreset = new StreamingCoreset(kernelSize, source.k, source.distance)
@@ -44,26 +33,8 @@ object MainStreaming {
     }
     println(s"Matching heuristic computed in $matchingSubsetTime nanoseconds")
 
-    val edgeDiversity = Diversity.edge(farthestSubset, source.distance)
-    val cliqueDiversity = Diversity.clique(matchingSubset, source.distance)
-    val treeDiversity = Diversity.tree(farthestSubset, source.distance)
-    val starDiversity = Diversity.star(matchingSubset, source.distance)
-
     experiment.append("approximation",
-      jMap(
-        "certificate-edge"   -> source.edgeDiversity,
-        "certificate-clique" -> source.cliqueDiversity,
-        "certificate-tree"   -> source.treeDiversity,
-        "certificate-star"   -> source.starDiversity,
-        "computed-edge"      -> edgeDiversity,
-        "computed-clique"    -> cliqueDiversity,
-        "computed-tree"      -> treeDiversity,
-        "computed-star"      -> starDiversity,
-        "ratio-edge"         -> source.edgeDiversity.toDouble / edgeDiversity,
-        "ratio-clique"       -> source.cliqueDiversity.toDouble / cliqueDiversity,
-        "ratio-tree"         -> source.treeDiversity.toDouble / treeDiversity,
-        "ratio-star"         -> source.starDiversity.toDouble / starDiversity
-      ))
+      computeApproximations(source, farthestSubset, matchingSubset))
 
     val updatesTimer = coreset.updatesTimer.getSnapshot
     val reportTimeUnit = TimeUnit.MILLISECONDS
