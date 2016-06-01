@@ -37,7 +37,7 @@ lazy val experiments = (project in file("experiments")).
   settings(
     name := "diversity-maximization-experiments",
     libraryDependencies ++= Seq(
-      "it.unipd.dei" % "experiment-reporter" % "0.2.0",
+      "it.unipd.dei" % "experiment-reporter" % "0.3.0",
       "org.rogach" %% "scallop" % "1.0.1",
       "it.unimi.dsi" % "dsiutils" % "2.3.2" exclude("ch.qos.logback", "logback-classic"),
       "com.typesafe.akka" %% "akka-stream" % "2.4.5" % "provided",
