@@ -60,11 +60,16 @@ object MainSpark {
           experiment: Experiment) = {
     val input = new PointSourceRDD(sc, source, sc.defaultParallelism)
     val parallelism = sc.defaultParallelism
+    val localKernelSize = math.ceil(kernelSize/parallelism.toDouble).toInt
+    require(localKernelSize > 0)
     val (points, mrTime) = timed {
       input.mapPartitions { points =>
         val pointsArr: Array[Point] = points.toArray
-        val coreset = MapReduceCoreset.run(pointsArr,
-          kernelSize/parallelism, numDelegates, distance)
+        val coreset = MapReduceCoreset.run(
+          pointsArr,
+          localKernelSize,
+          numDelegates,
+          distance)
         Iterator(coreset.sorted)
       }.reduce { (a, b) =>
         merge(a, b)
