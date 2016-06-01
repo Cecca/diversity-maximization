@@ -53,12 +53,12 @@ object MainStreaming {
   }
 
   def main(args: Array[String]) {
-    val opts = new Conf(args)
+    val opts = new PointsExperimentConf(args)
     opts.verify()
 
     val sourcesList = opts.source().split(",")
     val dimList = opts.spaceDimension().split(",").map{_.toInt}
-    val kList = opts.k().split(",").map{_.toInt}
+    val kList = opts.delegates().split(",").map{_.toInt}
     val numPointsList = opts.numPoints().split(",").map{_.toInt}
     val kernelSizeList = opts.kernelSize().split(",").map{_.toInt}
 
@@ -84,7 +84,7 @@ object MainStreaming {
           .tag("k", k)
           .tag("num-points", n)
           .tag("kernel-size", kernSize)
-          .tag("algorithm", "streaming")
+          .tag("algorithm", "Streaming")
         val source = PointSource(sourceName, dim, n, k, Distance.euclidean)
         run(source, kernSize, experiment)
         experiment.saveAsJsonFile()

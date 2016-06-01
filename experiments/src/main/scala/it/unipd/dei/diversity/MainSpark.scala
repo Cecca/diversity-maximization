@@ -93,7 +93,7 @@ object MainSpark {
   }
 
   def main(args: Array[String]) {
-    val opts = new Conf(args)
+    val opts = new PointsExperimentConf(args)
     opts.verify()
 
     val sourcesList = opts.source().split(",")
@@ -135,20 +135,6 @@ object MainSpark {
     }
 
     sc.stop()
-  }
-
-  class Conf(args: Array[String]) extends ScallopConf(args) {
-
-    lazy val source = opt[String](default = Some("random-gaussian-sphere"))
-
-    lazy val spaceDimension = opt[String](default = Some("2"))
-
-    lazy val delegates = opt[String](required = true)
-
-    lazy val kernelSize = opt[String](required = true)
-
-    lazy val numPoints = opt[String](required = true)
-
   }
 
 }
