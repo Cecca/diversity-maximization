@@ -14,4 +14,6 @@ class PointsExperimentConf(args: Array[String]) extends ScallopConf(args) {
 
   lazy val numPoints = opt[String](required = true)
 
+  lazy val runs = opt[Int](default = Some(1))
+
 }

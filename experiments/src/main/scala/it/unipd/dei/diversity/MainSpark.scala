@@ -108,11 +108,13 @@ object MainSpark {
     val kList = opts.delegates().split(",").map{_.toInt}
     val numPointsList = opts.numPoints().split(",").map{_.toInt}
     val kernelSizeList = opts.kernelSize().split(",").map{_.toInt}
+    val runs = opts.runs()
 
     val sparkConfig = new SparkConf(loadDefaults = true)
       .setAppName("MapReduce coresets")
     val sc = new SparkContext(sparkConfig)
     for {
+      r <- 0 until runs
       sourceName   <- sourcesList
       dim      <- dimList
       k        <- kList

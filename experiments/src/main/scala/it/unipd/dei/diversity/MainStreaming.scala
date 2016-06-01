@@ -61,6 +61,7 @@ object MainStreaming {
     val kList = opts.delegates().split(",").map{_.toInt}
     val numPointsList = opts.numPoints().split(",").map{_.toInt}
     val kernelSizeList = opts.kernelSize().split(",").map{_.toInt}
+    val runs = opts.runs()
 
     val pl = new ProgressLogger("experiments")
     pl.displayFreeMemory = true
@@ -68,6 +69,7 @@ object MainStreaming {
       dimList.length*kList.length*numPointsList.length*kernelSizeList.length
     pl.start(s"Starting ${pl.expectedUpdates} experiments")
     for {
+      r <- 0 until runs
       sourceName   <- sourcesList
       dim      <- dimList
       k        <- kList
