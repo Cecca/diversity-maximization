@@ -59,10 +59,12 @@ object MainSpark {
           distance: (Point, Point) => Double,
           experiment: Experiment) = {
     val input = new PointSourceRDD(sc, source, sc.defaultParallelism)
+    val parallelism = sc.defaultParallelism
     val (points, mrTime) = timed {
       input.mapPartitions { points =>
         val pointsArr: Array[Point] = points.toArray
-        val coreset = MapReduceCoreset.run(pointsArr, kernelSize, numDelegates, distance)
+        val coreset = MapReduceCoreset.run(pointsArr,
+          kernelSize/parallelism, numDelegates, distance)
         Iterator(coreset.sorted)
       }.reduce { (a, b) =>
         merge(a, b)
@@ -117,6 +119,7 @@ object MainSpark {
           .tag("version", BuildInfo.version)
           .tag("git-revision", BuildInfo.gitRevision)
           .tag("git-revcount", BuildInfo.gitRevCount)
+          .tag("parallelism", sc.defaultParallelism)
           .tag("source", sourceName)
           .tag("space-dimension", dim)
           .tag("k", k)
