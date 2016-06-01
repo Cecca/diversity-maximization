@@ -6,7 +6,13 @@ lazy val commonSettings = Seq(
     "org.scalatest" %% "scalatest" % "2.2.6" % "test",
     "org.scalacheck" %% "scalacheck" % "1.13.0" % "test"
   ),
-  test in assembly := {}
+  test in assembly := {},
+  scalacOptions := Seq(
+    "-optimise",
+    "-Xdisable-assertions",
+    "-feature",
+    "-deprecation",
+    "-unchecked")
 )
 
 lazy val root = (project in file(".")).
