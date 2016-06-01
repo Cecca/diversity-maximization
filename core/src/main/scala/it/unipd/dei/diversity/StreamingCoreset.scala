@@ -2,6 +2,7 @@ package it.unipd.dei.diversity
 
 import java.util.ConcurrentModificationException
 
+import com.codahale.metrics.MetricRegistry
 import it.unipd.dei.diversity.Utils._
 
 import scala.reflect.ClassTag
@@ -45,6 +46,9 @@ class StreamingCoreset[T: ClassTag](val kernelSize: Int,
                                     val distance: (T, T) => Double) {
 
   import StreamingCoreset._
+
+  val metricRegistry = new MetricRegistry()
+  val updatesTimer = metricRegistry.timer("StreamingCoreset.update")
 
   private def farnessInvariant: Boolean =
     (numKernelPoints == 1) || (minKernelDistance >= threshold)
@@ -294,17 +298,20 @@ class StreamingCoreset[T: ClassTag](val kernelSize: Int,
     * Return true if the point is added to the inner core-set
     */
   def update(point: T): Boolean = {
+    val t = updatesTimer.time()
     // the _insertionIdx variable is modified inside the merge() method
     while (_insertionIdx == _kernel.length) {
       merge()
     }
 
-    if (_initializing) {
+    val res = if (_initializing) {
       initializationStep(point)
       true
     } else {
       updateStep(point)
     }
+    t.stop()
+    res
   }
 
 }

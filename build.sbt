@@ -20,7 +20,9 @@ lazy val core = (project in file("core")).
   settings(
     name := "diversity-maximization-core",
     libraryDependencies ++= Seq(
-      "com.storm-enroute" %% "scalameter" % "0.7"
+      "com.storm-enroute" %% "scalameter" % "0.7" % "bench",
+      "io.dropwizard.metrics" % "metrics-core" % "3.1.2"
+
     ),
     testFrameworks in Benchmark += new TestFramework("org.scalameter.ScalaMeterFramework"),
     parallelExecution in Benchmark := false,
