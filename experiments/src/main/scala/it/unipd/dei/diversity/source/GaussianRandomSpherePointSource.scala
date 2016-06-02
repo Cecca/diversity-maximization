@@ -18,13 +18,9 @@ class GaussianRandomSpherePointSource(override val dim: Int,
   /**
     * An array of points that are far away from each other.
     */
-  override val certificate: Array[Point] = {
-    (0 until k).map { _ =>
-      val p = Point.randomGaussian(dim)
-      p.normalize(distance(p, zero))
-    }.toArray
-  }
-
+  override val certificate: Array[Point] =
+    new SphereSurface(dim, 1.0, distance).wellSpaced(k, 1024)
+  
   override val points: RandomPointIterator = new GaussianRandomPointIterator(dim, distance)
 
 }
