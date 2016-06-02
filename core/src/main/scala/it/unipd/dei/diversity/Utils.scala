@@ -2,6 +2,10 @@ package it.unipd.dei.diversity
 
 object Utils {
 
+  /**
+    * Generates all the (n choose 2) pairs. The sequence is
+    * required to be indexes in order to be efficiently avoid duplicates
+    */
   def pairs[T](points: IndexedSeq[T]): Iterator[(T, T)] =
     {
       for {
