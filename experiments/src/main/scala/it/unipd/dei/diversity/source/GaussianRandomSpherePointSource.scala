@@ -25,12 +25,12 @@ class GaussianRandomSpherePointSource(override val dim: Int,
     }.toArray
   }
 
-  override val points: RandomPointIterator = new GaussianRandomPoint(dim, distance)
+  override val points: RandomPointIterator = new GaussianRandomPointIterator(dim, distance)
 
 }
 
-class GaussianRandomPoint(val dim:Int,
-                          val distance: (Point, Point) => Double)
+class GaussianRandomPointIterator(val dim:Int,
+                                  val distance: (Point, Point) => Double)
 extends RandomPointIterator {
 
   private val zero = Point.zero(dim)

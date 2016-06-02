@@ -25,11 +25,11 @@ class UniformRandomSpherePointSource(override val dim: Int,
     }.toArray
   }
 
-  override val points: RandomPointIterator = new UniformRandomPoint(dim, distance)
+  override val points: RandomPointIterator = new UniformRandomPointIterator(dim, distance)
 }
 
-class UniformRandomPoint(val dim:Int,
-                         val distance: (Point, Point) => Double)
+class UniformRandomPointIterator(val dim:Int,
+                                 val distance: (Point, Point) => Double)
 extends RandomPointIterator {
 
   private val zero = Point.zero(dim)
