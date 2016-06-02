@@ -33,8 +33,13 @@ class SphereSurface(val dimension: Int,
   def uniformRandom(num: Int): Array[Point] =
     uniformRandom().take(num).toArray
 
+  /**
+    * An array of "well spaced" points. It includes the origin of
+    * the space, since it is a good point to include for the solution
+    * to remote-clique and remote-star.
+    */
   def wellSpaced(num: Int, tentatives: Int): Array[Point] = {
-    val result = ArrayBuffer[Point](point())
+    val result = ArrayBuffer[Point](zero)
     while (result.length < num) {
       val farthest =
         uniformRandom(tentatives).maxBy{ p => minDistance(result, p) }
