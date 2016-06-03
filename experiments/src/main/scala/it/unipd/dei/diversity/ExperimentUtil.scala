@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit
 
 import it.unipd.dei.diversity.source.PointSource
 
-import scala.collection.JavaConversions
+import scala.collection.{JavaConversions, mutable}
 
 object ExperimentUtil {
 
@@ -44,27 +44,42 @@ object ExperimentUtil {
   }
 
   def computeApproximations(pointSource: PointSource,
-                            farthestSubset: IndexedSeq[Point],
-                            matchingSubset: IndexedSeq[Point]) = {
-    val edgeDiversity   = Diversity.edge(farthestSubset, pointSource.distance)
-    val cliqueDiversity = Diversity.clique(matchingSubset, pointSource.distance)
-    val treeDiversity   = Diversity.tree(farthestSubset, pointSource.distance)
-    val starDiversity   = Diversity.star(matchingSubset, pointSource.distance)
+                            farthestSubset: Option[IndexedSeq[Point]],
+                            matchingSubset: Option[IndexedSeq[Point]]) = {
 
-    jMap(
-      "certificate-edge"   -> pointSource.edgeDiversity,
-      "certificate-clique" -> pointSource.cliqueDiversity,
-      "certificate-tree"   -> pointSource.treeDiversity,
-      "certificate-star"   -> pointSource.starDiversity,
-      "computed-edge"      -> edgeDiversity,
-      "computed-clique"    -> cliqueDiversity,
-      "computed-tree"      -> treeDiversity,
-      "computed-star"      -> starDiversity,
-      "ratio-edge"         -> pointSource.edgeDiversity.toDouble / edgeDiversity,
-      "ratio-clique"       -> pointSource.cliqueDiversity.toDouble / cliqueDiversity,
-      "ratio-tree"         -> pointSource.treeDiversity.toDouble / treeDiversity,
-      "ratio-star"         -> pointSource.starDiversity.toDouble / starDiversity
-    )
+    val columns = mutable.ArrayBuffer[(String, Any)]()
+
+    farthestSubset.foreach { fs =>
+      val edgeDiversity = Diversity.edge(fs, pointSource.distance)
+      val treeDiversity = Diversity.tree(fs, pointSource.distance)
+      columns.append(
+        "computed-edge"    -> edgeDiversity,
+        "certificate-edge" -> pointSource.edgeDiversity,
+        "ratio-edge"       -> pointSource.edgeDiversity.toDouble / edgeDiversity,
+        "computed-tree"    -> treeDiversity,
+        "certificate-tree" -> pointSource.treeDiversity,
+        "ratio-tree"       -> pointSource.treeDiversity.toDouble / treeDiversity
+      )
+    }
+
+    matchingSubset.foreach { ms =>
+      val cliqueDiversity = Diversity.clique(ms, pointSource.distance)
+      val starDiversity   = Diversity.star(ms, pointSource.distance)
+      columns.append(
+        "certificate-clique" -> pointSource.cliqueDiversity,
+        "computed-clique"    -> cliqueDiversity,
+        "ratio-clique"       -> pointSource.cliqueDiversity.toDouble / cliqueDiversity,
+        "certificate-star"   -> pointSource.starDiversity,
+        "computed-star"      -> starDiversity,
+        "ratio-star"         -> pointSource.starDiversity.toDouble / starDiversity
+      )
+    }
+
+    if (columns.nonEmpty) {
+      Some(jMap(columns: _*))
+    } else {
+      None
+    }
   }
 
   def timed[T](fn: => T): (T, Long) = {

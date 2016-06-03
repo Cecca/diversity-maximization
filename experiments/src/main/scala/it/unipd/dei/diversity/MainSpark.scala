@@ -57,6 +57,8 @@ object MainSpark {
           kernelSize: Int,
           numDelegates: Int,
           distance: (Point, Point) => Double,
+          computeFarthest: Boolean,
+          computeMatching: Boolean,
           experiment: Experiment) = {
     val input = new PointSourceRDD(sc, source, sc.defaultParallelism)
     val parallelism = sc.defaultParallelism
@@ -76,18 +78,27 @@ object MainSpark {
       }
     }
 
-    val (farthestSubset, farthestSubsetTime) = timed{
-      FarthestPointHeuristic.run(points, source.k, source.distance)
-    }
-    println(s"Farthest heuristic computed in $farthestSubsetTime nanoseconds")
+    val (farthestSubset, farthestSubsetTime): (Option[IndexedSeq[Point]], Long) =
+      if (computeFarthest) {
+        timed {
+          Some(FarthestPointHeuristic.run(points, source.k, source.distance))
+        }
+      } else {
+        (None, 0)
+      }
 
-    val (matchingSubset, matchingSubsetTime) = timed{
-      MatchingHeuristic.run(points, source.k, source.distance)
-    }
-    println(s"Matching heuristic computed in $matchingSubsetTime nanoseconds")
+    val (matchingSubset, matchingSubsetTime): (Option[IndexedSeq[Point]], Long) =
+      if (computeMatching) {
+        timed {
+          Some(MatchingHeuristic.run(points, source.k, source.distance))
+        }
+      } else {
+        (None, 0)
+      }
 
-    experiment.append("approximation",
-      computeApproximations(source, farthestSubset, matchingSubset))
+    computeApproximations(source, farthestSubset, matchingSubset).foreach { row =>
+      experiment.append("approximation", row)
+    }
 
     val reportTimeUnit = TimeUnit.MILLISECONDS
     experiment.append("performance",
@@ -109,6 +120,8 @@ object MainSpark {
     val numPointsList = opts.numPoints().split(",").map{_.toInt}
     val kernelSizeList = opts.kernelSize().split(",").map{_.toInt}
     val runs = opts.runs()
+    val computeFarthest = opts.farthest()
+    val computeMatching = opts.matching()
 
     val sparkConfig = new SparkConf(loadDefaults = true)
       .setAppName("MapReduce coresets")
@@ -133,8 +146,12 @@ object MainSpark {
           .tag("num-points", n)
           .tag("kernel-size", kernSize)
           .tag("algorithm", "MapReduce")
+          .tag("computeFarthest", computeFarthest)
+          .tag("computeMatching", computeMatching)
         val source = PointSource(sourceName, dim, n, k, Distance.euclidean)
-        run(sc, source, kernSize, k, Distance.euclidean, experiment)
+        run(
+          sc, source, kernSize, k, Distance.euclidean,
+          computeFarthest, computeMatching, experiment)
         experiment.saveAsJsonFile()
         println(experiment.toSimpleString)
       } catch {

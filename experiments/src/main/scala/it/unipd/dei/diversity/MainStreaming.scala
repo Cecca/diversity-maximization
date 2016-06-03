@@ -10,7 +10,11 @@ import org.rogach.scallop.ScallopConf
 
 object MainStreaming {
 
-  def run(source: PointSource, kernelSize: Int, experiment: Experiment) = {
+  def run(source: PointSource,
+          kernelSize: Int,
+          computeFarthest: Boolean,
+          computeMatching: Boolean,
+          experiment: Experiment) = {
     val coreset = new StreamingCoreset(kernelSize, source.k, source.distance)
     val sourceIt = source.iterator
 
@@ -19,22 +23,30 @@ object MainStreaming {
         coreset.update(sourceIt.next())
       }
     }
-    println(s"Coreset computed in $coresetTime nanoseconds")
 
     val points = coreset.points.toArray
 
-    val (farthestSubset, farthestSubsetTime) = timed{
-      FarthestPointHeuristic.run(points, source.k, source.distance)
-    }
-    println(s"Farthest heuristic computed in $farthestSubsetTime nanoseconds")
+    val (farthestSubset, farthestSubsetTime): (Option[IndexedSeq[Point]], Long) =
+      if (computeFarthest) {
+        timed {
+          Some(FarthestPointHeuristic.run(points, source.k, source.distance))
+        }
+      } else {
+        (None, 0)
+      }
 
-    val (matchingSubset, matchingSubsetTime) = timed{
-      MatchingHeuristic.run(points, source.k, source.distance)
-    }
-    println(s"Matching heuristic computed in $matchingSubsetTime nanoseconds")
+    val (matchingSubset, matchingSubsetTime): (Option[IndexedSeq[Point]], Long) =
+      if (computeMatching) {
+        timed {
+          Some(MatchingHeuristic.run(points, source.k, source.distance))
+        }
+      } else {
+        (None, 0)
+      }
 
-    experiment.append("approximation",
-      computeApproximations(source, farthestSubset, matchingSubset))
+    computeApproximations(source, farthestSubset, matchingSubset).foreach { row =>
+      experiment.append("approximation", row)
+    }
 
     val updatesTimer = coreset.updatesTimer.getSnapshot
     val reportTimeUnit = TimeUnit.MILLISECONDS
@@ -62,6 +74,8 @@ object MainStreaming {
     val numPointsList = opts.numPoints().split(",").map{_.toInt}
     val kernelSizeList = opts.kernelSize().split(",").map{_.toInt}
     val runs = opts.runs()
+    val computeFarthest = opts.farthest()
+    val computeMatching = opts.matching()
 
     val pl = new ProgressLogger("experiments")
     pl.displayFreeMemory = true
@@ -87,8 +101,10 @@ object MainStreaming {
           .tag("num-points", n)
           .tag("kernel-size", kernSize)
           .tag("algorithm", "Streaming")
+          .tag("computeFarthest", computeFarthest)
+          .tag("computeMatching", computeMatching)
         val source = PointSource(sourceName, dim, n, k, Distance.euclidean)
-        run(source, kernSize, experiment)
+        run(source, kernSize, computeFarthest, computeMatching, experiment)
         experiment.saveAsJsonFile()
         println(experiment.toSimpleString)
       } catch {
@@ -99,20 +115,6 @@ object MainStreaming {
       pl.update()
     }
     pl.stop("Done")
-  }
-
-  class Conf(args: Array[String]) extends ScallopConf(args) {
-
-    lazy val source = opt[String](default = Some("random-gaussian-sphere"))
-
-    lazy val spaceDimension = opt[String](default = Some("2"))
-
-    lazy val k = opt[String](required = true)
-
-    lazy val kernelSize = opt[String](required = true)
-
-    lazy val numPoints = opt[String](required = true)
-
   }
 
 }
