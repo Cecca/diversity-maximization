@@ -4,7 +4,7 @@ import org.rogach.scallop.ScallopConf
 
 class PointsExperimentConf(args: Array[String]) extends ScallopConf(args) {
 
-  lazy val source = opt[String](default = Some("random-gaussian-sphere"))
+  lazy val source = opt[String](default = Some("versor"))
 
   lazy val spaceDimension = opt[String](default = Some("2"))
 

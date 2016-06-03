@@ -56,6 +56,8 @@ object PointSource {
             n: Int,
             k: Int,
             distance: (Point, Point) => Double): PointSource = name match {
+    case "versor" =>
+      new VersorPointSource(dim, n, k, distance)
     case "random-uniform-sphere" =>
       new UniformRandomSpherePointSource(dim, n, k, distance)
     case "random-gaussian-sphere" =>
