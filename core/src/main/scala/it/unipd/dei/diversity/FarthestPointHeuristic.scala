@@ -7,13 +7,29 @@ object FarthestPointHeuristic {
 
   def run[T: ClassTag](points: IndexedSeq[T],
                        k: Int,
+                       distance: (T, T) => Double): IndexedSeq[T] =
+    run(points, k, 0, distance)
+
+
+  def run[T: ClassTag](points: IndexedSeq[T],
+                       k: Int,
+                       start: Point,
+                       distance: (T, T) => Double): IndexedSeq[T] = {
+    val idx = points.indexOf(start)
+    require(idx > 0, "The starting point should be in the collection!")
+    run(points, k, idx, distance)
+  }
+
+  def run[T: ClassTag](points: IndexedSeq[T],
+                       k: Int,
+                       startIdx: Int,
                        distance: (T, T) => Double): IndexedSeq[T] = {
     if (points.length <= k) {
       points
     } else {
       val result = Array.ofDim[T](k)
       // Init the result with an arbitrary point
-      result(0) = points(0)
+      result(0) = points(startIdx)
       var i = 1
       while (i < k) {
         var farthest = points(0)
