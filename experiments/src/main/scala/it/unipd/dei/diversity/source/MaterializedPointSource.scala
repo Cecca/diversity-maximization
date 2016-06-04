@@ -5,7 +5,7 @@ import it.unipd.dei.diversity.{Diversity, FarthestPointHeuristic, MatchingHeuris
 class MaterializedPointSource(override val name: String,
                               override val dim: Int,
                               override val k: Int,
-                              val allPoints: Array[Point],
+                              val allPoints: Vector[Point],
                               override val certificate: Array[Point],
                               override val distance: (Point, Point) => Double)
 extends PointSource {

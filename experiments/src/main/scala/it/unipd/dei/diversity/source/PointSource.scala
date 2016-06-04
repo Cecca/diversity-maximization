@@ -39,7 +39,7 @@ trait PointSource extends Iterable[Point] {
       "materialized-" + name,
       dim,
       k,
-      iterator.toArray,
+      iterator.toVector,
       certificate,
       distance)
   }
