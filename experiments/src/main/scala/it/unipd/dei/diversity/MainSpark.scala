@@ -69,8 +69,9 @@ object MainSpark {
 
     println("Run!!")
     val parallelism = sc.defaultParallelism
-    val localKernelSize = math.ceil(kernelSize/parallelism.toDouble).toInt
-    require(localKernelSize > 0)
+    val localKernelSize = (kernelSize/parallelism.toDouble).toInt
+    require(localKernelSize > 0,
+      "Should have at least one kernel point per partition")
     val (points, mrTime) = timed {
       input.mapPartitions { points =>
         val pointsArr: Array[Point] = points.toArray
