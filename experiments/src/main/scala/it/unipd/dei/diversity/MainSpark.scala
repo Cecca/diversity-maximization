@@ -81,9 +81,9 @@ object MainSpark {
           localKernelSize,
           numDelegates,
           distance)
-        Iterator(coreset.sorted)
+        Iterator(coreset)
       }.reduce { (a, b) =>
-        merge(a, b)
+        (a ++ b).distinct
       }
     }
 
