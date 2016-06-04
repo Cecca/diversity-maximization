@@ -16,7 +16,7 @@ extends PointSource {
 
   override def iterator: Iterator[Point] = allPoints.iterator
 
-  private lazy val farthestSubset = FarthestPointHeuristic.run(allPoints, k, distance)
+  private lazy val farthestSubset = FarthestPointHeuristic.run(allPoints, k, certificate(0), distance)
 
   private lazy val matchingSubset = MatchingHeuristic.run(allPoints, k, distance)
 

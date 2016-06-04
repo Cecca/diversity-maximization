@@ -63,6 +63,7 @@ object MainSpark {
     println("Create input")
     val input = source match {
       case mat: MaterializedPointSource =>
+        println("Using sc.parallelize")
         sc.parallelize(mat.allPoints, sc.defaultParallelism)
       case src => new PointSourceRDD(sc, src, sc.defaultParallelism)
     }
