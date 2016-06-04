@@ -11,9 +11,8 @@ class PointSourcePartition(override val index: Int,
                            val points: RandomPointIterator)
 extends Partition {
 
-  def iterator: Iterator[Point] = {
-    certificatePoints.iterator ++ points.take(size - certificatePoints.length)
-  }
+  def iterator: Iterator[Point] =
+    new InterleavingPointIterator(certificatePoints, points, size)
 
 }
 

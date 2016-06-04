@@ -30,22 +30,8 @@ trait PointSource extends Iterable[Point] {
   /** The random points that are somehow "close" to each other*/
   val points: RandomPointIterator
 
-  override def iterator: Iterator[Point] = new Iterator[Point] {
-
-    private val _toEmit = mutable.Set[Point](certificate :_*)
-    private val _emissionProb: Double = k.toDouble / n
-
-    override def hasNext: Boolean = _toEmit.nonEmpty
-
-    override def next(): Point =
-      if (Random.nextDouble() <= _emissionProb) {
-        val p = _toEmit.head
-        _toEmit.remove(p)
-        p
-      } else {
-        points.next()
-      }
-  }
+  override def iterator: Iterator[Point] =
+    new InterleavingPointIterator(certificate, points, n)
 
 }
 
@@ -66,4 +52,24 @@ object PointSource {
       throw new IllegalArgumentException(s"Unknown source $str")
   }
 
+}
+
+class InterleavingPointIterator(val certificate: Array[Point],
+                                val points: Iterator[Point],
+                                val num: Int)
+extends Iterator[Point] {
+
+  private val _toEmit = mutable.Set[Point](certificate :_*)
+  private val _emissionProb: Double = certificate.length.toDouble / num
+
+  override def hasNext: Boolean = _toEmit.nonEmpty
+
+  override def next(): Point =
+    if (Random.nextDouble() <= _emissionProb) {
+      val p = _toEmit.head
+      _toEmit.remove(p)
+      p
+    } else {
+      points.next()
+    }
 }
