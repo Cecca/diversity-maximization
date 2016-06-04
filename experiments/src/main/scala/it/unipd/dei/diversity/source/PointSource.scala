@@ -33,13 +33,16 @@ trait PointSource extends Iterable[Point] {
   override def iterator: Iterator[Point] =
     new InterleavingPointIterator(certificate, points, n)
 
-  def materialize(): MaterializedPointSource = new MaterializedPointSource(
-    "materialized-"+name,
-    dim,
-    k,
-    iterator.toArray,
-    certificate,
-    distance)
+  def materialize(): MaterializedPointSource = {
+    println("Materializing point source")
+    new MaterializedPointSource(
+      "materialized-" + name,
+      dim,
+      k,
+      iterator.toArray,
+      certificate,
+      distance)
+  }
 
 }
 

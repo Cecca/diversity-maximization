@@ -74,6 +74,7 @@ object MainStreaming {
     val numPointsList = opts.numPoints().split(",").map{_.toInt}
     val kernelSizeList = opts.kernelSize().split(",").map{_.toInt}
     val runs = opts.runs()
+    val materialize = opts.materialize()
     val computeFarthest = opts.farthest()
     val computeMatching = opts.matching()
 
@@ -101,9 +102,15 @@ object MainStreaming {
           .tag("num-points", n)
           .tag("kernel-size", kernSize)
           .tag("algorithm", "Streaming")
+          .tag("materialize", materialize)
           .tag("computeFarthest", computeFarthest)
           .tag("computeMatching", computeMatching)
-        val source = PointSource(sourceName, dim, n, k, Distance.euclidean)
+        val source =
+          if (materialize) {
+            PointSource(sourceName, dim, n, k, Distance.euclidean).materialize()
+          } else {
+            PointSource(sourceName, dim, n, k, Distance.euclidean)
+          }
         run(source, kernSize, computeFarthest, computeMatching, experiment)
         experiment.saveAsJsonFile()
         println(experiment.toSimpleString)

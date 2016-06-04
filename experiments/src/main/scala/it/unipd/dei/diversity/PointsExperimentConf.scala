@@ -16,6 +16,10 @@ class PointsExperimentConf(args: Array[String]) extends ScallopConf(args) {
 
   lazy val runs = opt[Int](default = Some(1))
 
+  lazy val materialize = toggle(
+    default = Some(false),
+    descrYes = "materialize the point source")
+
   lazy val farthest = toggle(
     default=Some(true),
     descrYes = "Compute metrics based on the farthest-point heuristic",

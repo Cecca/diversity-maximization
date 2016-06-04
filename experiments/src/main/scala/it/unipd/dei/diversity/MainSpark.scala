@@ -2,7 +2,7 @@ package it.unipd.dei.diversity
 
 import java.util.concurrent.TimeUnit
 
-import it.unipd.dei.diversity.source.{PointSource, PointSourceRDD}
+import it.unipd.dei.diversity.source.{MaterializedPointSource, PointSource, PointSourceRDD}
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.{SparkConf, SparkContext}
 import org.rogach.scallop.ScallopConf
@@ -60,7 +60,14 @@ object MainSpark {
           computeFarthest: Boolean,
           computeMatching: Boolean,
           experiment: Experiment) = {
-    val input = new PointSourceRDD(sc, source, sc.defaultParallelism)
+    println("Create input")
+    val input = source match {
+      case mat: MaterializedPointSource =>
+        sc.parallelize(mat.allPoints, sc.defaultParallelism)
+      case src => new PointSourceRDD(sc, src, sc.defaultParallelism)
+    }
+
+    println("Run!!")
     val parallelism = sc.defaultParallelism
     val localKernelSize = math.ceil(kernelSize/parallelism.toDouble).toInt
     require(localKernelSize > 0)
@@ -78,6 +85,7 @@ object MainSpark {
       }
     }
 
+    println("Build results")
     val (farthestSubset, farthestSubsetTime): (Option[IndexedSeq[Point]], Long) =
       if (computeFarthest) {
         timed {
@@ -120,6 +128,7 @@ object MainSpark {
     val numPointsList = opts.numPoints().split(",").map{_.toInt}
     val kernelSizeList = opts.kernelSize().split(",").map{_.toInt}
     val runs = opts.runs()
+    val materialize = opts.materialize()
     val computeFarthest = opts.farthest()
     val computeMatching = opts.matching()
 
@@ -146,9 +155,15 @@ object MainSpark {
           .tag("num-points", n)
           .tag("kernel-size", kernSize)
           .tag("algorithm", "MapReduce")
+          .tag("materialize", materialize)
           .tag("computeFarthest", computeFarthest)
           .tag("computeMatching", computeMatching)
-        val source = PointSource(sourceName, dim, n, k, Distance.euclidean)
+        val source =
+          if (materialize) {
+            PointSource(sourceName, dim, n, k, Distance.euclidean).materialize()
+          } else {
+            PointSource(sourceName, dim, n, k, Distance.euclidean)
+          }
         run(
           sc, source, kernSize, k, Distance.euclidean,
           computeFarthest, computeMatching, experiment)
