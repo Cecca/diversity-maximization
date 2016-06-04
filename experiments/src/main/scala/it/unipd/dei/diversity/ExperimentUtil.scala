@@ -53,12 +53,12 @@ object ExperimentUtil {
       val edgeDiversity = Diversity.edge(fs, pointSource.distance)
       val treeDiversity = Diversity.tree(fs, pointSource.distance)
       columns.append(
-        "computed-edge"    -> edgeDiversity,
-        "certificate-edge" -> pointSource.edgeDiversity,
-        "ratio-edge"       -> pointSource.edgeDiversity.toDouble / edgeDiversity,
-        "computed-tree"    -> treeDiversity,
-        "certificate-tree" -> pointSource.treeDiversity,
-        "ratio-tree"       -> pointSource.treeDiversity.toDouble / treeDiversity
+        "computed-edge" -> edgeDiversity,
+        "baseline-edge" -> pointSource.edgeDiversity,
+        "ratio-edge"    -> pointSource.edgeDiversity.toDouble / edgeDiversity,
+        "computed-tree" -> treeDiversity,
+        "baseline-tree" -> pointSource.treeDiversity,
+        "ratio-tree"    -> pointSource.treeDiversity.toDouble / treeDiversity
       )
     }
 
@@ -66,12 +66,12 @@ object ExperimentUtil {
       val cliqueDiversity = Diversity.clique(ms, pointSource.distance)
       val starDiversity   = Diversity.star(ms, pointSource.distance)
       columns.append(
-        "certificate-clique" -> pointSource.cliqueDiversity,
-        "computed-clique"    -> cliqueDiversity,
-        "ratio-clique"       -> pointSource.cliqueDiversity.toDouble / cliqueDiversity,
-        "certificate-star"   -> pointSource.starDiversity,
-        "computed-star"      -> starDiversity,
-        "ratio-star"         -> pointSource.starDiversity.toDouble / starDiversity
+        "baseline-clique" -> pointSource.cliqueDiversity,
+        "computed-clique" -> cliqueDiversity,
+        "ratio-clique"    -> pointSource.cliqueDiversity.toDouble / cliqueDiversity,
+        "baseline-star"   -> pointSource.starDiversity,
+        "computed-star"   -> starDiversity,
+        "ratio-star"      -> pointSource.starDiversity.toDouble / starDiversity
       )
     }
 
