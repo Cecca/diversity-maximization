@@ -10,48 +10,6 @@ import ExperimentUtil._
 
 object MainSpark {
 
-  /**
-    * Merge two sorted arrays
-    */
-  def merge(a: Array[Point], b: Array[Point]): Array[Point] = {
-    var i = 0
-    var aIdx = 0
-    var bIdx = 0
-
-    val result: Array[Point] = Array.ofDim(a.length+b.length)
-
-    // merge the first elements
-    while(aIdx < a.length && bIdx < b.length) {
-      if (a(aIdx) == b(bIdx)) {
-        result(i) = a(aIdx)
-        aIdx += 1
-        bIdx += 1
-      } else if(a(aIdx).compareTo(b(bIdx)) < 0) {
-        result(i) = a(aIdx)
-        aIdx += 1
-      } else {
-        result(i) = b(bIdx)
-        bIdx += 1
-      }
-      i += 1
-    }
-
-    // merge the remaining
-    while(aIdx < a.length) {
-      result(i) = a(aIdx)
-      aIdx += 1
-      i += 1
-    }
-    while(bIdx < b.length) {
-      result(i) = b(bIdx)
-      bIdx += 1
-      i += 1
-    }
-
-    result.take(i)
-  }
-
-
   def run(sc: SparkContext,
           source: PointSource,
           kernelSize: Int,
@@ -145,37 +103,31 @@ object MainSpark {
       n        <- numPointsList
       kernSize <- kernelSizeList
     } {
-      try {
-        val experiment = new Experiment()
-          .tag("version", BuildInfo.version)
-          .tag("git-revision", BuildInfo.gitRevision)
-          .tag("git-revcount", BuildInfo.gitRevCount)
-          .tag("parallelism", sc.defaultParallelism)
-          .tag("source", sourceName)
-          .tag("space-dimension", dim)
-          .tag("k", k)
-          .tag("num-points", n)
-          .tag("kernel-size", kernSize)
-          .tag("algorithm", "MapReduce")
-          .tag("materialize", materialize)
-          .tag("computeFarthest", computeFarthest)
-          .tag("computeMatching", computeMatching)
-        val source =
-          if (materialize) {
-            PointSource(sourceName, dim, n, k, Distance.euclidean).materialize()
-          } else {
-            PointSource(sourceName, dim, n, k, Distance.euclidean)
-          }
-        run(
-          sc, source, kernSize, k, Distance.euclidean,
-          computeFarthest, computeMatching, experiment)
-        experiment.saveAsJsonFile()
-        println(experiment.toSimpleString)
-      } catch {
-        case e: Exception =>
-          println(s"Error: ${e.getMessage}")
-          e.printStackTrace()
-      }
+      val experiment = new Experiment()
+        .tag("version", BuildInfo.version)
+        .tag("git-revision", BuildInfo.gitRevision)
+        .tag("git-revcount", BuildInfo.gitRevCount)
+        .tag("parallelism", sc.defaultParallelism)
+        .tag("source", sourceName)
+        .tag("space-dimension", dim)
+        .tag("k", k)
+        .tag("num-points", n)
+        .tag("kernel-size", kernSize)
+        .tag("algorithm", "MapReduce")
+        .tag("materialize", materialize)
+        .tag("computeFarthest", computeFarthest)
+        .tag("computeMatching", computeMatching)
+      val source =
+        if (materialize) {
+          PointSource(sourceName, dim, n, k, Distance.euclidean).materialize()
+        } else {
+          PointSource(sourceName, dim, n, k, Distance.euclidean)
+        }
+      run(
+        sc, source, kernSize, k, Distance.euclidean,
+        computeFarthest, computeMatching, experiment)
+      experiment.saveAsJsonFile()
+      println(experiment.toSimpleString)
     }
 
     sc.stop()

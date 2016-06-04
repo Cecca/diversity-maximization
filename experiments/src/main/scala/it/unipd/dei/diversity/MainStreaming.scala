@@ -91,34 +91,29 @@ object MainStreaming {
       n        <- numPointsList
       kernSize <- kernelSizeList
     } {
-      try {
-        val experiment = new Experiment()
-          .tag("version", BuildInfo.version)
-          .tag("git-revision", BuildInfo.gitRevision)
-          .tag("git-revcount", BuildInfo.gitRevCount)
-          .tag("source", sourceName)
-          .tag("space-dimension", dim)
-          .tag("k", k)
-          .tag("num-points", n)
-          .tag("kernel-size", kernSize)
-          .tag("algorithm", "Streaming")
-          .tag("materialize", materialize)
-          .tag("computeFarthest", computeFarthest)
-          .tag("computeMatching", computeMatching)
-        val source =
-          if (materialize) {
-            PointSource(sourceName, dim, n, k, Distance.euclidean).materialize()
-          } else {
-            PointSource(sourceName, dim, n, k, Distance.euclidean)
-          }
-        run(source, kernSize, computeFarthest, computeMatching, experiment)
-        experiment.saveAsJsonFile()
-        println(experiment.toSimpleString)
-      } catch {
-        case e: Exception =>
-          println(s"Error: ${e.getMessage}")
-          e.printStackTrace()
-      }
+      val experiment = new Experiment()
+        .tag("version", BuildInfo.version)
+        .tag("git-revision", BuildInfo.gitRevision)
+        .tag("git-revcount", BuildInfo.gitRevCount)
+        .tag("source", sourceName)
+        .tag("space-dimension", dim)
+        .tag("k", k)
+        .tag("num-points", n)
+        .tag("kernel-size", kernSize)
+        .tag("algorithm", "Streaming")
+        .tag("materialize", materialize)
+        .tag("computeFarthest", computeFarthest)
+        .tag("computeMatching", computeMatching)
+      val source =
+        if (materialize) {
+          PointSource(sourceName, dim, n, k, Distance.euclidean).materialize()
+        } else {
+          PointSource(sourceName, dim, n, k, Distance.euclidean)
+        }
+      run(source, kernSize, computeFarthest, computeMatching, experiment)
+      experiment.saveAsJsonFile()
+      println(experiment.toSimpleString)
+
       pl.update()
     }
     pl.stop("Done")
