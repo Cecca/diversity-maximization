@@ -28,10 +28,18 @@ trait PointSource extends Iterable[Point] {
   lazy val treeDiversity: Double = Diversity.tree(certificate, distance)
 
   /** The random points that are somehow "close" to each other*/
-  val points: RandomPointIterator
+  def points: RandomPointIterator
 
   override def iterator: Iterator[Point] =
     new InterleavingPointIterator(certificate, points, n)
+
+  def materialize(): MaterializedPointSource = new MaterializedPointSource(
+    "materialized-"+name,
+    dim,
+    k,
+    iterator.toArray,
+    certificate,
+    distance)
 
 }
 
