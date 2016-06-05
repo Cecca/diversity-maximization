@@ -84,38 +84,6 @@ object MainSpark {
 
   }
 
-  def approxTable(farthestSubset: Option[IndexedSeq[Point]],
-                  matchingSubset: Option[IndexedSeq[Point]],
-                  distance: (Point, Point) => Double) = {
-
-    val columns = mutable.ArrayBuffer[(String, Any)]()
-
-    farthestSubset.foreach { fs =>
-      val edgeDiversity = Diversity.edge(fs, distance)
-      val treeDiversity = Diversity.tree(fs, distance)
-      columns.append(
-        "computed-edge" -> edgeDiversity,
-        "computed-tree" -> treeDiversity
-      )
-    }
-
-    matchingSubset.foreach { ms =>
-      val cliqueDiversity = Diversity.clique(ms, distance)
-      val starDiversity   = Diversity.star(ms, distance)
-      columns.append(
-        "computed-clique" -> cliqueDiversity,
-        "computed-star"   -> starDiversity
-      )
-    }
-
-    if (columns.nonEmpty) {
-      Some(jMap(columns: _*))
-    } else {
-      None
-    }
-  }
-
-
   def main(args: Array[String]) {
     val opts = new PointsExperimentConf(args)
     opts.verify()

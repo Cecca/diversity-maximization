@@ -10,17 +10,24 @@ import org.rogach.scallop.ScallopConf
 
 object MainStreaming {
 
-  def run(source: PointSource,
+  def run(sourceName: String,
+          dim: Int,
+          n: Int,
+          k: Int,
+          distance: (Point, Point) => Double,
           kernelSize: Int,
           computeFarthest: Boolean,
           computeMatching: Boolean,
+          directory: String,
           experiment: Experiment) = {
-    val coreset = new StreamingCoreset(kernelSize, source.k, source.distance)
-    val sourceIt = source.iterator
+    val coreset = new StreamingCoreset(kernelSize, k, distance)
+
+    val input = SerializationUtils.sequenceFile(
+      DatasetGenerator.filename(directory, sourceName, dim, n, k))
 
     val (_, coresetTime) = timed {
-      while (sourceIt.hasNext) {
-        coreset.update(sourceIt.next())
+      for (p <- input) {
+        coreset.update(p)
       }
     }
 
@@ -29,7 +36,7 @@ object MainStreaming {
     val (farthestSubset, farthestSubsetTime): (Option[IndexedSeq[Point]], Long) =
       if (computeFarthest) {
         timed {
-          Some(FarthestPointHeuristic.run(points, source.k, source.distance))
+          Some(FarthestPointHeuristic.run(points, k, distance))
         }
       } else {
         (None, 0)
@@ -38,13 +45,13 @@ object MainStreaming {
     val (matchingSubset, matchingSubsetTime): (Option[IndexedSeq[Point]], Long) =
       if (computeMatching) {
         timed {
-          Some(MatchingHeuristic.run(points, source.k, source.distance))
+          Some(MatchingHeuristic.run(points, k, distance))
         }
       } else {
         (None, 0)
       }
 
-    computeApproximations(source, farthestSubset, matchingSubset).foreach { row =>
+    approxTable(farthestSubset, matchingSubset, distance).foreach { row =>
       experiment.append("approximation", row)
     }
 
@@ -77,6 +84,7 @@ object MainStreaming {
     val materialize = opts.materialize()
     val computeFarthest = opts.farthest()
     val computeMatching = opts.matching()
+    val directory = opts.directory()
 
     val pl = new ProgressLogger("experiments")
     pl.displayFreeMemory = true
@@ -104,13 +112,10 @@ object MainStreaming {
         .tag("materialize", materialize)
         .tag("computeFarthest", computeFarthest)
         .tag("computeMatching", computeMatching)
-      val source =
-        if (materialize) {
-          PointSource(sourceName, dim, n, k, Distance.euclidean).materialize()
-        } else {
-          PointSource(sourceName, dim, n, k, Distance.euclidean)
-        }
-      run(source, kernSize, computeFarthest, computeMatching, experiment)
+
+      run(
+        sourceName, dim, n, k, Distance.euclidean, kernSize,
+        computeFarthest, computeMatching, directory, experiment)
       experiment.saveAsJsonFile()
       println(experiment.toSimpleString)
 
