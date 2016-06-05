@@ -11,7 +11,7 @@ class GaussianRandomSpherePointSource(override val dim: Int,
                                       override val distance: (Point, Point) => Double)
   extends PointSource {
 
-  override val name = "sphere-gaussian-random"
+  override val name = "gaussian-random-sphere"
 
   private val zero = Point.zero(dim)
 

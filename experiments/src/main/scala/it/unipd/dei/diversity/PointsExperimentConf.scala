@@ -16,6 +16,8 @@ class PointsExperimentConf(args: Array[String]) extends ScallopConf(args) {
 
   lazy val runs = opt[Int](default = Some(1))
 
+  lazy val directory = opt[String](default = Some("/tmp"))
+
   lazy val materialize = toggle(
     default = Some(false),
     descrYes = "materialize the point source")

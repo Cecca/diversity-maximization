@@ -11,7 +11,7 @@ class UniformRandomSpherePointSource(override val dim: Int,
                                      override val distance: (Point, Point) => Double)
   extends PointSource {
 
-  override val name = "sphere-uniform-random"
+  override val name = "uniform-random-sphere"
 
   private val zero = Point.zero(dim)
 

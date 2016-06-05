@@ -6,6 +6,9 @@ import org.rogach.scallop.ScallopConf
 
 object DatasetGenerator {
 
+  def filename(dir: String, sourceName: String, dim: Int, n: Int, k: Int) =
+    s"$dir/$sourceName-$dim-$n-$k.points"
+
   def main(args: Array[String]) {
 
     val opts = new Conf(args)
@@ -29,9 +32,7 @@ object DatasetGenerator {
       val source = PointSource(sourceName, dim, n, k, Distance.euclidean)
       val rdd = new PointSourceRDD(sc, source, sc.defaultParallelism)
 
-      val filename = s"$outputDir/$sourceName-$dim-$n-$k.points"
-
-      rdd.saveAsObjectFile(filename)
+      rdd.saveAsObjectFile(filename(outputDir, sourceName, dim, n, k))
 
     }
 

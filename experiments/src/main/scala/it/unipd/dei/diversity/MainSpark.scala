@@ -8,26 +8,32 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.rogach.scallop.ScallopConf
 import ExperimentUtil._
 
+import scala.collection.mutable
+
 object MainSpark {
 
   def run(sc: SparkContext,
-          source: PointSource,
+          sourceName: String,
+          dim: Int,
+          n: Int,
           kernelSize: Int,
-          numDelegates: Int,
+          k: Int,
           distance: (Point, Point) => Double,
           computeFarthest: Boolean,
           computeMatching: Boolean,
+          dataDir: String,
           experiment: Experiment) = {
-    println("Create input")
-    val input = source match {
-      case mat: MaterializedPointSource =>
-        println("Using sc.parallelize")
-        sc.parallelize(mat.allPoints, sc.defaultParallelism)
-      case src => new PointSourceRDD(sc, src, sc.defaultParallelism)
-    }
+
+    val distance: (Point, Point) => Double = Distance.euclidean
+
+    val parallelism = sc.defaultParallelism
+
+    println("Read input")
+    val input = sc.objectFile[Point](
+      DatasetGenerator.filename(dataDir, sourceName, dim, n, k),
+      parallelism)
 
     println("Run!!")
-    val parallelism = sc.defaultParallelism
     val localKernelSize = (kernelSize/parallelism.toDouble).toInt
     require(localKernelSize > 0,
       "Should have at least one kernel point per partition")
@@ -37,7 +43,7 @@ object MainSpark {
         val coreset = MapReduceCoreset.run(
           pointsArr,
           localKernelSize,
-          numDelegates,
+          k,
           distance)
         Iterator(coreset)
       }.reduce { (a, b) =>
@@ -49,7 +55,7 @@ object MainSpark {
     val (farthestSubset, farthestSubsetTime): (Option[IndexedSeq[Point]], Long) =
       if (computeFarthest) {
         timed {
-          Some(FarthestPointHeuristic.run(points, source.k, source.distance))
+          Some(FarthestPointHeuristic.run(points, k, distance))
         }
       } else {
         (None, 0)
@@ -58,13 +64,13 @@ object MainSpark {
     val (matchingSubset, matchingSubsetTime): (Option[IndexedSeq[Point]], Long) =
       if (computeMatching) {
         timed {
-          Some(MatchingHeuristic.run(points, source.k, source.distance))
+          Some(MatchingHeuristic.run(points, k, distance))
         }
       } else {
         (None, 0)
       }
 
-    computeApproximations(source, farthestSubset, matchingSubset).foreach { row =>
+    approxTable(farthestSubset, matchingSubset, distance).foreach { row =>
       experiment.append("approximation", row)
     }
 
@@ -77,6 +83,38 @@ object MainSpark {
       ))
 
   }
+
+  def approxTable(farthestSubset: Option[IndexedSeq[Point]],
+                  matchingSubset: Option[IndexedSeq[Point]],
+                  distance: (Point, Point) => Double) = {
+
+    val columns = mutable.ArrayBuffer[(String, Any)]()
+
+    farthestSubset.foreach { fs =>
+      val edgeDiversity = Diversity.edge(fs, distance)
+      val treeDiversity = Diversity.tree(fs, distance)
+      columns.append(
+        "computed-edge" -> edgeDiversity,
+        "computed-tree" -> treeDiversity
+      )
+    }
+
+    matchingSubset.foreach { ms =>
+      val cliqueDiversity = Diversity.clique(ms, distance)
+      val starDiversity   = Diversity.star(ms, distance)
+      columns.append(
+        "computed-clique" -> cliqueDiversity,
+        "computed-star"   -> starDiversity
+      )
+    }
+
+    if (columns.nonEmpty) {
+      Some(jMap(columns: _*))
+    } else {
+      None
+    }
+  }
+
 
   def main(args: Array[String]) {
     val opts = new PointsExperimentConf(args)
@@ -91,6 +129,7 @@ object MainSpark {
     val materialize = opts.materialize()
     val computeFarthest = opts.farthest()
     val computeMatching = opts.matching()
+    val directory = opts.directory()
 
     val sparkConfig = new SparkConf(loadDefaults = true)
       .setAppName("MapReduce coresets")
@@ -117,15 +156,9 @@ object MainSpark {
         .tag("materialize", materialize)
         .tag("computeFarthest", computeFarthest)
         .tag("computeMatching", computeMatching)
-      val source =
-        if (materialize) {
-          PointSource(sourceName, dim, n, k, Distance.euclidean).materialize()
-        } else {
-          PointSource(sourceName, dim, n, k, Distance.euclidean)
-        }
       run(
-        sc, source, kernSize, k, Distance.euclidean,
-        computeFarthest, computeMatching, experiment)
+        sc, sourceName, dim, n, kernSize, k, Distance.euclidean,
+        computeFarthest, computeMatching, directory, experiment)
       experiment.saveAsJsonFile()
       println(experiment.toSimpleString)
     }
