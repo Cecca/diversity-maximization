@@ -23,6 +23,7 @@ object MainSpark {
           computeMatching: Boolean,
           dataDir: String,
           experiment: Experiment) = {
+    require(kernelSize >= k)
 
     val distance: (Point, Point) => Double = Distance.euclidean
 
@@ -34,15 +35,12 @@ object MainSpark {
       parallelism)
 
     println("Run!!")
-    val localKernelSize = (kernelSize/parallelism.toDouble).toInt
-    require(localKernelSize > 0,
-      "Should have at least one kernel point per partition")
     val (points, mrTime) = timed {
       input.mapPartitions { points =>
         val pointsArr: Array[Point] = points.toArray
         val coreset = MapReduceCoreset.run(
           pointsArr,
-          localKernelSize,
+          kernelSize,
           k,
           distance)
         Iterator(coreset)
