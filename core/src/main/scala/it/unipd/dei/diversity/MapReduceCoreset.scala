@@ -1,24 +1,40 @@
 package it.unipd.dei.diversity
 
+import scala.collection.mutable.ArrayBuffer
 import scala.reflect.ClassTag
 
+class MapReduceCoreset[T:ClassTag](val centers: Vector[T],
+                                   val delegates: Vector[T]) extends Serializable {
+
+  def points: Vector[T] = centers ++ delegates
+
+  def length: Int = centers.length + delegates.length
+
+}
+
 object MapReduceCoreset {
+
+  def compose[T:ClassTag](a: MapReduceCoreset[T], b: MapReduceCoreset[T]): MapReduceCoreset[T] =
+    new MapReduceCoreset(
+      (a.centers ++ b.centers).distinct,
+      (a.delegates ++ b.delegates).distinct)
   
   def run[T:ClassTag](points: Array[T],
                       kernelSize: Int,
                       numDelegates: Int,
-                      distance: (T, T) => Double): Array[T] = {
+                      distance: (T, T) => Double): MapReduceCoreset[T] = {
     val resultSize = kernelSize * (numDelegates+1)
     if (points.length < resultSize) {
-      points
+      new MapReduceCoreset(points.take(kernelSize).toVector, points.drop(kernelSize).toVector)
     } else {
       val kernel = FarthestPointHeuristic.run(points, kernelSize, distance)
-      val result = Array.ofDim[T](resultSize)
-      var resultIdx = 0
-      while (resultIdx < kernel.size) {
-        result(resultIdx) = kernel(resultIdx)
-        resultIdx += 1
-      }
+      val delegates = ArrayBuffer[T]()
+//      val result = Array.ofDim[T](resultSize)
+//      var resultIdx = 0
+//      while (resultIdx < kernel.size) {
+//        result(resultIdx) = kernel(resultIdx)
+//        resultIdx += 1
+//      }
 
       val counters = Array.fill[Int](kernel.length)(0)
 
@@ -42,13 +58,15 @@ object MapReduceCoreset {
         if (minDist > 0.0 && counters(minIdx) < numDelegates) {
           assert(minDist < Utils.minDistance(kernel, distance),
             s"Distance: $minDist, radius ${Utils.minDistance(kernel, distance)}")
-          result(resultIdx) = points(pointIdx)
+          delegates.append(points(pointIdx))
+//          result(resultIdx) = points(pointIdx)
           counters(minIdx) += 1
-          resultIdx += 1
+//          resultIdx += 1
         }
         pointIdx += 1
       }
-      result.take(resultIdx)
+//      result.take(resultIdx)
+      new MapReduceCoreset(kernel.toVector, delegates.toVector)
     }
   }
 

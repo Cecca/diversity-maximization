@@ -45,7 +45,7 @@ object MainSpark {
           distance)
         Iterator(coreset)
       }.reduce { (a, b) =>
-        (a ++ b).distinct
+        MapReduceCoreset.compose(a, b)
       }
     }
 
@@ -53,7 +53,7 @@ object MainSpark {
     val (farthestSubset, farthestSubsetTime): (Option[IndexedSeq[Point]], Long) =
       if (computeFarthest) {
         timed {
-          Some(FarthestPointHeuristic.run(points, k, distance))
+          Some(FarthestPointHeuristic.run(points.points, k, distance))
         }
       } else {
         (None, 0)
@@ -62,7 +62,7 @@ object MainSpark {
     val (matchingSubset, matchingSubsetTime): (Option[IndexedSeq[Point]], Long) =
       if (computeMatching) {
         timed {
-          Some(MatchingHeuristic.run(points, k, distance))
+          Some(MatchingHeuristic.run(points.points, k, distance))
         }
       } else {
         (None, 0)

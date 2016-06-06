@@ -27,7 +27,7 @@ object MapReduceCoresetTest extends Properties("MapReduceCoreset") {
         val coreset = MapReduceCoreset.run(
           points.toArray, kernelSize, numDelegates, Distance.euclidean)
 
-        coreset.toSet.size == coreset.length
+        coreset.points.toSet.size == coreset.length
       }
     }
 
