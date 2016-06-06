@@ -2,13 +2,14 @@ package it.unipd.dei.diversity
 
 import scala.collection.mutable.ArrayBuffer
 import scala.reflect.ClassTag
+import scala.util.Random
 
 object FarthestPointHeuristic {
 
   def run[T: ClassTag](points: IndexedSeq[T],
                        k: Int,
                        distance: (T, T) => Double): IndexedSeq[T] =
-    run(points, k, 0, distance)
+    run(points, k, Random.nextInt(points.length), distance)
 
 
   def run[T: ClassTag](points: IndexedSeq[T],
