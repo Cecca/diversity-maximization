@@ -10,7 +10,7 @@ import scala.collection.mutable.ArrayBuffer
   */
 class SphereSurface(val dimension: Int,
                     val radius: Double,
-                    val distance: (Point, Point) => Double) {
+                    val distance: (Point, Point) => Double) extends Serializable {
 
   private val zero = Point.zero(dimension)
 
