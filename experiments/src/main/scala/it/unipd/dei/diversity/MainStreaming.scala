@@ -33,7 +33,16 @@ object MainStreaming {
 
     val points = coreset.points.toArray
 
-    val (farthestSubset, farthestSubsetTime): (Option[IndexedSeq[Point]], Long) =
+    val (farthestSubsetCenters, _): (Option[IndexedSeq[Point]], Long) =
+      if (computeFarthest) {
+        timed {
+          Some(FarthestPointHeuristic.run(coreset.kernelPoints.toArray[Point], k, distance))
+        }
+      } else {
+        (None, 0)
+      }
+
+    val (farthestSubsetWDelegates, farthestSubsetTime): (Option[IndexedSeq[Point]], Long) =
       if (computeFarthest) {
         timed {
           Some(FarthestPointHeuristic.run(points, k, distance))
@@ -51,7 +60,7 @@ object MainStreaming {
         (None, 0)
       }
 
-    approxTable(farthestSubset, matchingSubset, distance).foreach { row =>
+    approxTable(farthestSubsetCenters, farthestSubsetWDelegates, matchingSubset, distance).foreach { row =>
       experiment.append("approximation", row)
     }
 
