@@ -35,7 +35,7 @@ object MainSpark {
       parallelism)
 
     println("Run!!")
-    val (points, mrTime) = timed {
+    val (coreset, mrTime) = timed {
       input.mapPartitions { points =>
         val pointsArr: Array[Point] = points.toArray
         val coreset = MapReduceCoreset.run(
@@ -50,10 +50,19 @@ object MainSpark {
     }
 
     println("Build results")
-    val (farthestSubset, farthestSubsetTime): (Option[IndexedSeq[Point]], Long) =
+    val (farthestSubsetCenters, _): (Option[IndexedSeq[Point]], Long) =
       if (computeFarthest) {
         timed {
-          Some(FarthestPointHeuristic.run(points.points, k, distance))
+          Some(FarthestPointHeuristic.run(coreset.centers, k, distance))
+        }
+      } else {
+        (None, 0)
+      }
+
+    val (farthestSubsetWDelegates, farthestSubsetTime): (Option[IndexedSeq[Point]], Long) =
+      if (computeFarthest) {
+        timed {
+          Some(FarthestPointHeuristic.run(coreset.points, k, distance))
         }
       } else {
         (None, 0)
@@ -62,13 +71,13 @@ object MainSpark {
     val (matchingSubset, matchingSubsetTime): (Option[IndexedSeq[Point]], Long) =
       if (computeMatching) {
         timed {
-          Some(MatchingHeuristic.run(points.points, k, distance))
+          Some(MatchingHeuristic.run(coreset.points, k, distance))
         }
       } else {
         (None, 0)
       }
 
-    approxTable(farthestSubset, matchingSubset, distance).foreach { row =>
+    approxTable(farthestSubsetCenters, farthestSubsetWDelegates, matchingSubset, distance).foreach { row =>
       experiment.append("approximation", row)
     }
 

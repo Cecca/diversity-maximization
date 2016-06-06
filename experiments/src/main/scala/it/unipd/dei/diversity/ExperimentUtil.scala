@@ -74,6 +74,44 @@ object ExperimentUtil {
     }
   }
 
+  def approxTable(farthestSubsetCenters: Option[IndexedSeq[Point]],
+                  farthestSubsetWDelegates: Option[IndexedSeq[Point]],
+                  matchingSubset: Option[IndexedSeq[Point]],
+                  distance: (Point, Point) => Double) = {
+
+    val columns = mutable.ArrayBuffer[(String, Any)]()
+
+    farthestSubsetCenters.foreach { fs =>
+      val edgeDiversity = Diversity.edge(fs, distance)
+      columns.append(
+        "computed-edge" -> edgeDiversity
+      )
+    }
+
+    farthestSubsetWDelegates.foreach { fs =>
+      val treeDiversity = Diversity.tree(fs, distance)
+      columns.append(
+        "computed-tree" -> treeDiversity
+      )
+    }
+
+    matchingSubset.foreach { ms =>
+      val cliqueDiversity = Diversity.clique(ms, distance)
+      val starDiversity   = Diversity.star(ms, distance)
+      columns.append(
+        "computed-clique" -> cliqueDiversity,
+        "computed-star"   -> starDiversity
+      )
+    }
+
+    if (columns.nonEmpty) {
+      Some(jMap(columns: _*))
+    } else {
+      None
+    }
+  }
+
+
   def computeApproximations(pointSource: PointSource,
                             farthestSubset: Option[IndexedSeq[Point]],
                             matchingSubset: Option[IndexedSeq[Point]]) = {
