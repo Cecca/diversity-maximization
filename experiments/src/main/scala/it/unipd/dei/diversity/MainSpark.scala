@@ -35,8 +35,10 @@ object MainSpark {
       parallelism)
 
     println("Run!!")
+    val partitionCnt = sc.accumulator(0L, "partition counter")
     val (coreset, mrTime) = timed {
-      input.mapPartitions { points =>
+      input.coalesce(parallelism).mapPartitions { points =>
+        partitionCnt += 1
         val pointsArr: Array[Point] = points.toArray
         val coreset = MapReduceCoreset.run(
           pointsArr,
@@ -48,6 +50,8 @@ object MainSpark {
         MapReduceCoreset.compose(a, b)
       }
     }
+    require(partitionCnt.value == parallelism,
+      s"Processed ${partitionCnt.value} partitions")
 
     println("Build results")
     val (farthestSubsetCenters, _): (Option[IndexedSeq[Point]], Long) =
