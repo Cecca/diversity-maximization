@@ -87,7 +87,7 @@ object Algorithm {
     }
   }
 
-  def random[T:ClassTag](input: Iterable[T],
+  def random[T:ClassTag](input: Iterator[T],
                          k: Int,
                          sampleProb: Double,
                          distance: (T, T) => Double,

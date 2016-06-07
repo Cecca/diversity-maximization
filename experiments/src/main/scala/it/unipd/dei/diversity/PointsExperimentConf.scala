@@ -4,6 +4,8 @@ import org.rogach.scallop.ScallopConf
 
 class PointsExperimentConf(args: Array[String]) extends ScallopConf(args) {
 
+  lazy val algorithm = opt[String](default = Some("sequential"))
+
   lazy val source = opt[String](default = Some("versor"))
 
   lazy val spaceDimension = opt[String](default = Some("2"))
