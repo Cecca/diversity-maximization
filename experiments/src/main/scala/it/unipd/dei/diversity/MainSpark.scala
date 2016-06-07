@@ -105,7 +105,6 @@ object MainSpark {
     val numPointsList = opts.numPoints().split(",").map{_.toInt}
     val kernelSizeList = opts.kernelSize().split(",").map{_.toInt}
     val runs = opts.runs()
-    val materialize = opts.materialize()
     val computeFarthest = opts.farthest()
     val computeMatching = opts.matching()
     val directory = opts.directory()
@@ -132,7 +131,6 @@ object MainSpark {
         .tag("num-points", n)
         .tag("kernel-size", kernSize)
         .tag("algorithm", "MapReduce")
-        .tag("materialize", materialize)
         .tag("computeFarthest", computeFarthest)
         .tag("computeMatching", computeMatching)
       run(

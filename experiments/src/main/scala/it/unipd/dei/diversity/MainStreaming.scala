@@ -90,7 +90,6 @@ object MainStreaming {
     val numPointsList = opts.numPoints().split(",").map{_.toInt}
     val kernelSizeList = opts.kernelSize().split(",").map{_.toInt}
     val runs = opts.runs()
-    val materialize = opts.materialize()
     val computeFarthest = opts.farthest()
     val computeMatching = opts.matching()
     val directory = opts.directory()
@@ -118,7 +117,6 @@ object MainStreaming {
         .tag("num-points", n)
         .tag("kernel-size", kernSize)
         .tag("algorithm", "Streaming")
-        .tag("materialize", materialize)
         .tag("computeFarthest", computeFarthest)
         .tag("computeMatching", computeMatching)
 
