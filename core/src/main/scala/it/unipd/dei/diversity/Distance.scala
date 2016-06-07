@@ -16,4 +16,16 @@ object Distance {
     res
   }
 
+  def jaccard[T](a: Set[T], b: Set[T]): Double = {
+    if (a.isEmpty && b.isEmpty) {
+      1
+    } else {
+      val jaccardIndex = a.intersect(b).size.toDouble / a.union(b).size.toDouble
+      1 - jaccardIndex
+    }
+  }
+
+  def jaccard(a: BagOfWords, b: BagOfWords): Double =
+    jaccard(a.words, b.words)
+
 }
