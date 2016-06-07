@@ -3,15 +3,14 @@ package it.unipd.dei.diversity
 import scala.collection.mutable.ArrayBuffer
 import scala.reflect.ClassTag
 
-class MapReduceCoreset[T:ClassTag](val centers: Vector[T],
-                                   val delegates: Vector[T]) extends Serializable {
+class MapReduceCoreset[T:ClassTag](val kernel: Vector[T],
+                                   val delegates: Vector[T])
+extends Coreset[T] with Serializable {
 
-  def points: Vector[T] = centers ++ delegates
-
-  def length: Int = centers.length + delegates.length
+  def length: Int = kernel.length + delegates.length
 
   override def toString: String =
-    s"Coreset with ${centers.size} centers and ${delegates.size} delegates"
+    s"Coreset with ${kernel.size} centers and ${delegates.size} delegates"
 
 }
 
@@ -19,7 +18,7 @@ object MapReduceCoreset {
 
   def compose[T:ClassTag](a: MapReduceCoreset[T], b: MapReduceCoreset[T]): MapReduceCoreset[T] =
     new MapReduceCoreset(
-      (a.centers ++ b.centers).distinct,
+      (a.kernel ++ b.kernel).distinct,
       (a.delegates ++ b.delegates).distinct)
   
   def run[T:ClassTag](points: Array[T],

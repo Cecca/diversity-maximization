@@ -57,7 +57,7 @@ object MainSpark {
     val (farthestSubsetCenters, _): (Option[IndexedSeq[Point]], Long) =
       if (computeFarthest) {
         timed {
-          Some(FarthestPointHeuristic.run(coreset.centers, k, distance))
+          Some(FarthestPointHeuristic.run(coreset.kernel, k, distance))
         }
       } else {
         (None, 0)

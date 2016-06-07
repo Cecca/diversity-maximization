@@ -51,10 +51,10 @@ object MapReduceCoresetTest extends Properties("MapReduceCoreset") {
             points.toArray, kernelSize, k, Distance.euclidean)
 
           val radius =
-            Utils.maxMinDistance(coreset.delegates, coreset.centers, Distance.euclidean)
+            Utils.maxMinDistance(coreset.delegates, coreset.kernel, Distance.euclidean)
 
           val farness =
-            Utils.minDistance(coreset.centers, Distance.euclidean)
+            Utils.minDistance(coreset.kernel, Distance.euclidean)
 
           (radius <= farness) :| s"radius $radius, farness $farness"
         }

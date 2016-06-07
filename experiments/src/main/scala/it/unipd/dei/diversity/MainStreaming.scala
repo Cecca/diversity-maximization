@@ -31,12 +31,12 @@ object MainStreaming {
       }
     }
 
-    val points = coreset.points.toArray
+    val points = coreset.pointsIterator.toArray
 
     val (farthestSubsetCenters, _): (Option[IndexedSeq[Point]], Long) =
       if (computeFarthest) {
         timed {
-          Some(FarthestPointHeuristic.run(coreset.kernelPoints.toArray[Point], k, distance))
+          Some(FarthestPointHeuristic.run(coreset.kernelPointsIterator.toArray[Point], k, distance))
         }
       } else {
         (None, 0)

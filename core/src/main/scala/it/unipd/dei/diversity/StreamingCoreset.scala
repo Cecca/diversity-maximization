@@ -43,7 +43,8 @@ object StreamingCoreset {
 
 class StreamingCoreset[T: ClassTag](val kernelSize: Int,
                                     val numDelegates: Int,
-                                    val distance: (T, T) => Double) {
+                                    val distance: (T, T) => Double)
+extends Coreset[T] {
 
   import StreamingCoreset._
 
@@ -105,10 +106,10 @@ class StreamingCoreset[T: ClassTag](val kernelSize: Int,
       }
     }
 
-  def points: Iterator[T] = kernelPoints ++ delegatePoints
+  def pointsIterator: Iterator[T] = kernelPointsIterator ++ delegatePointsIterator
 
   private[diversity]
-  def kernelPoints: Iterator[T] =
+  def kernelPointsIterator: Iterator[T] =
     new Iterator[T] {
       val maxIdx = numKernelPoints
       var itIdx = 0
@@ -128,13 +129,13 @@ class StreamingCoreset[T: ClassTag](val kernelSize: Int,
     }
 
   private[diversity]
-  def delegatePoints: Iterator[T] =
+  def delegatePointsIterator: Iterator[T] =
     (0 until numKernelPoints).iterator.flatMap { idx =>
       delegatesOf(idx)
     }
 
   private[diversity]
-  def minKernelDistance: Double = minDistance(kernelPoints.toArray[T], distance)
+  def minKernelDistance: Double = minDistance(kernelPointsIterator.toArray[T], distance)
 
   /**
     * Find the maximum minimum distance between delegates and kernel points
@@ -142,9 +143,9 @@ class StreamingCoreset[T: ClassTag](val kernelSize: Int,
   private[diversity]
   def delegatesRadius: Double = {
     var radius = 0.0
-    delegatePoints.foreach { dp =>
+    delegatePointsIterator.foreach { dp =>
       var curRadius = 0.0
-      kernelPoints.foreach { kp =>
+      kernelPointsIterator.foreach { kp =>
         val d = distance(kp, dp)
         if (d < curRadius) {
           curRadius = d
@@ -159,7 +160,7 @@ class StreamingCoreset[T: ClassTag](val kernelSize: Int,
 
   private def closestKernelDistance(point: T): Double = {
     var m = Double.PositiveInfinity
-    kernelPoints.foreach { kp =>
+    kernelPointsIterator.foreach { kp =>
       val d = distance(kp, point)
       if (d < m) {
         m = d
@@ -196,7 +197,7 @@ class StreamingCoreset[T: ClassTag](val kernelSize: Int,
     var idx = 0
     var mDist = Double.PositiveInfinity
     var mIdx = 0
-    val kps = kernelPoints
+    val kps = kernelPointsIterator
     while(kps.hasNext) {
       val d = distance(kps.next(), point)
       if (d < mDist) {
@@ -313,5 +314,9 @@ class StreamingCoreset[T: ClassTag](val kernelSize: Int,
     t.stop()
     res
   }
+
+  override def kernel: Vector[T] = kernelPointsIterator.toVector
+
+  override def delegates: Vector[T] = delegatePointsIterator.toVector
 
 }
