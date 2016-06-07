@@ -23,10 +23,14 @@ object Algorithm {
       }
     }
     val updatesTimer = coreset.updatesTimer.getSnapshot
+    experiment.append("times",
+      jMap(
+        "component" -> "algorithm",
+        "time"      -> convertDuration(coresetTime, reportTimeUnit)
+      ))
     experiment.append("performance",
       jMap(
         "throughput"    -> coreset.updatesTimer.getMeanRate,
-        "coreset-time"  -> convertDuration(coresetTime, reportTimeUnit),
         "update-mean"   -> convertDuration(updatesTimer.getMean, reportTimeUnit),
         "update-stddev" -> convertDuration(updatesTimer.getStdDev, reportTimeUnit),
         "update-max"    -> convertDuration(updatesTimer.getMax, reportTimeUnit),
@@ -65,10 +69,10 @@ object Algorithm {
     require(partitionCnt.value == parallelism,
       s"Processed ${partitionCnt.value} partitions")
 
-    experiment.append("performance",
+    experiment.append("times",
       jMap(
-        "component" -> "MapReduce",
-        "time" -> convertDuration(mrTime, reportTimeUnit)
+        "component" -> "algorithm",
+        "time"      -> convertDuration(mrTime, reportTimeUnit)
       ))
 
     coreset
@@ -81,6 +85,11 @@ object Algorithm {
   def sequential[T:ClassTag](points: Vector[T],
                              experiment: Experiment): Coreset[T] = {
     experiment.tag("algorithm", "Sequential")
+    experiment.append("times",
+      jMap(
+        "component" -> "algorithm",
+        "time"      -> 0.0
+      ))
     new Coreset[T] {
       override def kernel: Vector[T] = points
       override def delegates: Vector[T] = Vector.empty
@@ -95,13 +104,21 @@ object Algorithm {
     experiment.tag("algorithm", "Random")
     println("Run!!")
     val sample = ArrayBuffer[T]()
-    for (p <- input) {
-      if (Random.nextDouble() <= sampleProb) {
-        sample.append(p)
+    val (_, time) = timed {
+      for (p <- input) {
+        if (Random.nextDouble() <= sampleProb) {
+          sample.append(p)
+        }
       }
     }
     val randomSubset = Random.shuffle(sample).take(k).toVector
     require(randomSubset.size == k)
+
+    experiment.append("times",
+      jMap(
+        "component" -> "algorithm",
+        "time"      -> convertDuration(time, reportTimeUnit)
+      ))
 
     new Coreset[T] {
       override def kernel: Vector[T] = randomSubset

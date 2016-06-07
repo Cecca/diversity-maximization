@@ -55,7 +55,7 @@ object Approximation {
       ))
     experiment.append("times",
       jMap(
-        "component" -> "farthest",
+        "component" -> "matching",
         "time" -> convertDuration(matchingSubsetTime, reportTimeUnit)
     ))
 
