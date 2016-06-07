@@ -2,13 +2,14 @@ package it.unipd.dei.diversity
 
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.{SparkConf, SparkContext}
+import org.rogach.scallop.ScallopConf
 
 object MainPoints {
 
   def main(args: Array[String]) {
 
     // Read command line options
-    val opts = new PointsExperimentConf(args)
+    val opts = new Conf(args)
     opts.verify()
     val algorithm = opts.algorithm()
     val sourcesList = opts.source().split(",")
@@ -85,5 +86,36 @@ object MainPoints {
     }
 
   }
+
+  class Conf(args: Array[String]) extends ScallopConf(args) {
+
+    lazy val algorithm = opt[String](default = Some("sequential"))
+
+    lazy val source = opt[String](default = Some("versor"))
+
+    lazy val spaceDimension = opt[String](default = Some("2"))
+
+    lazy val delegates = opt[String](required = true)
+
+    lazy val kernelSize = opt[String](required = true)
+
+    lazy val numPoints = opt[String](required = true)
+
+    lazy val runs = opt[Int](default = Some(1))
+
+    lazy val directory = opt[String](default = Some("/tmp"))
+
+    lazy val farthest = toggle(
+      default=Some(true),
+      descrYes = "Compute metrics based on the farthest-point heuristic",
+      descrNo  = "Don't compute metrics based on the farthest-point heuristic")
+
+    lazy val matching = toggle(
+      default=Some(true),
+      descrYes = "Compute metrics based on the matching heuristic",
+      descrNo  = "Don't compute metrics based on the matching heuristic")
+
+  }
+
 
 }
