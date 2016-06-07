@@ -12,8 +12,7 @@ lazy val commonSettings = Seq(
     "-Xdisable-assertions",
     "-feature",
     "-deprecation",
-    "-unchecked")
-)
+    "-unchecked"))
 
 lazy val root = (project in file(".")).
   aggregate(core)

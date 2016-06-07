@@ -10,6 +10,9 @@ class MapReduceCoreset[T:ClassTag](val centers: Vector[T],
 
   def length: Int = centers.length + delegates.length
 
+  override def toString: String =
+    s"Coreset with ${centers.size} centers and ${delegates.size} delegates"
+
 }
 
 object MapReduceCoreset {
@@ -24,17 +27,11 @@ object MapReduceCoreset {
                       numDelegates: Int,
                       distance: (T, T) => Double): MapReduceCoreset[T] = {
     val resultSize = kernelSize * (numDelegates+1)
-    if (points.length < resultSize) {
-      new MapReduceCoreset(points.take(kernelSize).toVector, points.drop(kernelSize).toVector)
+    if (points.length < kernelSize) {
+      new MapReduceCoreset(points.toVector, Vector.empty[T])
     } else {
       val kernel = FarthestPointHeuristic.run(points, kernelSize, distance)
       val delegates = ArrayBuffer[T]()
-//      val result = Array.ofDim[T](resultSize)
-//      var resultIdx = 0
-//      while (resultIdx < kernel.size) {
-//        result(resultIdx) = kernel(resultIdx)
-//        resultIdx += 1
-//      }
 
       val counters = Array.fill[Int](kernel.length)(0)
 
@@ -52,20 +49,19 @@ object MapReduceCoreset {
           }
           centerIdx += 1
         }
+        assert(minDist <= Utils.minDistance(kernel, distance),
+          s"Distance: $minDist, farness: ${Utils.minDistance(kernel, distance)}")
         // Add the point to the solution if there is space in the delegate count.
         // Consider only distances greater than zero in order not to add the
         // centers again.
         if (minDist > 0.0 && counters(minIdx) < numDelegates) {
-          assert(minDist < Utils.minDistance(kernel, distance),
-            s"Distance: $minDist, radius ${Utils.minDistance(kernel, distance)}")
           delegates.append(points(pointIdx))
-//          result(resultIdx) = points(pointIdx)
           counters(minIdx) += 1
-//          resultIdx += 1
         }
         pointIdx += 1
       }
-//      result.take(resultIdx)
+      assert(Utils.maxMinDistance(delegates, kernel, distance) <= Utils.minDistance(kernel, distance),
+        "Anticover property failing")
       new MapReduceCoreset(kernel.toVector, delegates.toVector)
     }
   }
