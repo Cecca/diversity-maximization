@@ -82,7 +82,7 @@ object Algorithm {
     * Doesn't do much, just wraps the entire input in a coreset, just
     * for uniformity with the rest.
     */
-  def sequential[T:ClassTag](points: Vector[T],
+  def sequential[T:ClassTag](inputPoints: Vector[T],
                              experiment: Experiment): Coreset[T] = {
     experiment.tag("algorithm", "Sequential")
     experiment.append("times",
@@ -91,7 +91,7 @@ object Algorithm {
         "time"      -> 0.0
       ))
     new Coreset[T] {
-      override def kernel: Vector[T] = points
+      override def kernel: Vector[T] = inputPoints
       override def delegates: Vector[T] = Vector.empty
     }
   }
