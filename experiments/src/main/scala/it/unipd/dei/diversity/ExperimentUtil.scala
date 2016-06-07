@@ -26,6 +26,8 @@ import scala.collection.{JavaConversions, mutable}
 
 object ExperimentUtil {
 
+  val reportTimeUnit = TimeUnit.MILLISECONDS
+
   def jMap(tuples: (String, Any)*): java.util.Map[String, Object] =
     JavaConversions.mapAsJavaMap(tuples.map(fixTuple).toMap)
 

@@ -1,7 +1,5 @@
 package it.unipd.dei.diversity
 
-import java.util.concurrent.TimeUnit
-
 import it.unipd.dei.diversity.ExperimentUtil._
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.rdd.RDD
@@ -11,8 +9,6 @@ import scala.reflect.ClassTag
 import scala.util.Random
 
 object Algorithm {
-
-  val reportTimeUnit = TimeUnit.MILLISECONDS
 
   def streaming[T:ClassTag](points: Iterator[T],
                             k: Int,
