@@ -25,7 +25,7 @@ object Distance {
     }
   }
 
-  def jaccard(a: BagOfWords, b: BagOfWords): Double =
+  def jaccard[T](a: BagOfWords[T], b: BagOfWords[T]): Double =
     jaccard(a.words, b.words)
 
 }

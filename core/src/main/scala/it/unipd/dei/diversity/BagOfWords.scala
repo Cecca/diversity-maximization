@@ -1,7 +1,7 @@
 package it.unipd.dei.diversity
 
-trait BagOfWords {
+trait BagOfWords[T] {
 
-  def words: Set[String]
+  def words: Set[T]
 
 }
