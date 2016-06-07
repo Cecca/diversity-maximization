@@ -4,9 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import it.unimi.dsi.logging.ProgressLogger
 import it.unipd.dei.diversity.ExperimentUtil._
-import it.unipd.dei.diversity.source.PointSource
 import it.unipd.dei.experiment.Experiment
-import org.rogach.scallop.ScallopConf
 
 object MainStreaming {
 

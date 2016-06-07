@@ -1,8 +1,8 @@
 package it.unipd.dei.diversity
 
 import it.unipd.dei.diversity.source.{PointSource, PointSourceRDD}
+import org.scalacheck.Prop.{BooleanOperators, forAll}
 import org.scalacheck.{Gen, Properties}
-import org.scalacheck.Prop.{forAll, BooleanOperators}
 
 class PointSourceRDDTest extends Properties("PointSourceRDD") {
 

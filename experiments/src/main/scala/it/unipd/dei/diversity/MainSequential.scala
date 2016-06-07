@@ -2,9 +2,8 @@ package it.unipd.dei.diversity
 
 import java.util.concurrent.TimeUnit
 
+import it.unipd.dei.diversity.ExperimentUtil._
 import it.unipd.dei.experiment.Experiment
-import org.apache.spark.{SparkConf, SparkContext}
-import ExperimentUtil._
 
 object MainSequential {
 

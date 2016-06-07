@@ -1,7 +1,7 @@
 package it.unipd.dei.diversity
 
+import it.unipd.dei.diversity.ExperimentUtil._
 import it.unipd.dei.experiment.Experiment
-import ExperimentUtil._
 
 import scala.collection.mutable
 import scala.reflect.ClassTag

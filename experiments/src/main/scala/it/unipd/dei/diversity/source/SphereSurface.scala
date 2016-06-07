@@ -1,6 +1,6 @@
 package it.unipd.dei.diversity.source
 
-import it.unipd.dei.diversity.{Distance, Diversity, Point, Utils}
+import it.unipd.dei.diversity.{Distance, Diversity, Point}
 
 import scala.collection.mutable.ArrayBuffer
 

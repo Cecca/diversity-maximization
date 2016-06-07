@@ -2,13 +2,9 @@ package it.unipd.dei.diversity
 
 import java.util.concurrent.TimeUnit
 
-import it.unipd.dei.diversity.source.{MaterializedPointSource, PointSource, PointSourceRDD}
+import it.unipd.dei.diversity.ExperimentUtil._
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.{SparkConf, SparkContext}
-import org.rogach.scallop.ScallopConf
-import ExperimentUtil._
-
-import scala.collection.mutable
 
 object MainSpark {
 

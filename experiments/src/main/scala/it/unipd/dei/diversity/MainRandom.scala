@@ -2,8 +2,8 @@ package it.unipd.dei.diversity
 
 import java.util.concurrent.TimeUnit
 
+import it.unipd.dei.diversity.ExperimentUtil._
 import it.unipd.dei.experiment.Experiment
-import ExperimentUtil._
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random

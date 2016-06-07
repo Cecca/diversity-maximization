@@ -2,7 +2,6 @@ package it.unipd.dei.diversity.source
 
 import it.unipd.dei.diversity.Point
 
-import scala.collection.mutable
 import scala.util.Random
 
 class GaussianRandomSpherePointSource(override val dim: Int,

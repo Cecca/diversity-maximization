@@ -2,8 +2,8 @@ package it.unipd.dei.diversity.source
 
 import it.unipd.dei.diversity.{Distance, Point}
 import org.apache.spark.annotation.DeveloperApi
-import org.apache.spark.{Partition, SparkConf, SparkContext, TaskContext}
 import org.apache.spark.rdd.RDD
+import org.apache.spark.{Partition, SparkConf, SparkContext, TaskContext}
 
 class PointSourcePartition(override val index: Int,
                            val size: Int,
