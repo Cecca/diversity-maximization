@@ -26,6 +26,7 @@ lazy val core = (project in file("core")).
     name := "diversity-maximization-core",
     libraryDependencies ++= Seq(
       "com.storm-enroute" %% "scalameter" % "0.7" % "bench",
+      "org.roaringbitmap" % "RoaringBitmap" % "0.5.11" % "bench",
       "io.dropwizard.metrics" % "metrics-core" % "3.1.2"
 
     ),

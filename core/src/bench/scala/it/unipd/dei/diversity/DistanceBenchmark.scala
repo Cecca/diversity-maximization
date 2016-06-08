@@ -1,5 +1,6 @@
 package it.unipd.dei.diversity
 
+import org.roaringbitmap.RoaringBitmap
 import org.scalameter.api._
 
 import scala.collection.BitSet
@@ -23,6 +24,10 @@ object DistanceBenchmark extends Bench.OfflineReport {
     size <- sizes
   } yield (BitSetBOW(vocabulary, size), BitSetBOW(vocabulary, size))
 
+  val roaringPairs = for {
+    size <- sizes
+  } yield (RoaringBOW(vocabulary, size), RoaringBOW(vocabulary, size))
+
 
   performance of "Distance.euclidean" in {
 
@@ -40,6 +45,12 @@ object DistanceBenchmark extends Bench.OfflineReport {
 
     measure method "BitSetBOW" in {
       using(bitsetPairs) in { case (a, b) =>
+        Distance.euclidean(a, b)
+      }
+    }
+
+    measure method "RoaringBOW" in {
+      using(roaringPairs) in { case (a, b) =>
         Distance.euclidean(a, b)
       }
     }
@@ -80,5 +91,28 @@ object BitSetBOW {
       (w, Random.nextInt())
     }.toMap
     new BitSetBOW(wc)
+  }
+}
+
+class RoaringBOW(override val wordCounts: Map[Int, Int]) extends BagOfWords[Int]{
+
+  private val roaringWords = RoaringBitmap.bitmapOf(wordCounts.keys.toSeq :_*)
+
+  override def wordUnion(other: BagOfWords[Int]): Iterator[Int] = {
+    val otherRoaringWords = other.asInstanceOf[RoaringBOW].roaringWords
+    val union = RoaringBitmap.or(this.roaringWords, otherRoaringWords)
+    new Iterator[Int] {
+      val it = union.getIntIterator
+      override def hasNext: Boolean = it.hasNext
+      override def next(): Int = it.next()
+    }
+  }
+}
+object RoaringBOW {
+  def apply(vocabulary: Vector[Int], size: Int): RoaringBOW ={
+    val wc = Random.shuffle(vocabulary).take(size).map { w =>
+      (w, Random.nextInt())
+    }.toMap
+    new RoaringBOW(wc)
   }
 }
