@@ -42,6 +42,7 @@ object MainBagOfWords {
         .tag("git-revcount", BuildInfo.gitRevCount)
         .tag("k", k)
         .tag("kernel-size", kernSize)
+        .tag("dataset", dataset)
         .tag("computeFarthest", computeFarthest)
         .tag("computeMatching", computeMatching)
 
