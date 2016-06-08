@@ -49,11 +49,21 @@ object Algorithm {
     experiment.tag("algorithm", "MapReduce")
 
     val parallelism = points.sparkContext.defaultParallelism
+    // We distinguish the case of increasing or decreasing the number of
+    // partitions for efficiency
+    val repartitioned =
+      if (points.getNumPartitions < parallelism) {
+        points.repartition(parallelism)
+      } else if (points.getNumPartitions > parallelism) {
+        points.coalesce(parallelism)
+      } else {
+        points
+      }
 
     println("Run!!")
     val partitionCnt = points.sparkContext.accumulator(0L, "partition counter")
     val (coreset, mrTime) = timed {
-      points.coalesce(parallelism).mapPartitions { pts =>
+      repartitioned.mapPartitions { pts =>
         partitionCnt += 1
         val pointsArr: Array[T] = pts.toArray
         val coreset = MapReduceCoreset.run(
