@@ -28,6 +28,10 @@ object DistanceBenchmark extends Bench.OfflineReport {
     size <- sizes
   } yield (RoaringBOW(vocabulary, size), RoaringBOW(vocabulary, size))
 
+  val intPairs = for {
+    size <- sizes
+  } yield (IntBOW(vocabulary, size), IntBOW(vocabulary, size))
+
 
   performance of "Distance.euclidean" in {
 
@@ -51,6 +55,12 @@ object DistanceBenchmark extends Bench.OfflineReport {
 
     measure method "RoaringBOW" in {
       using(roaringPairs) in { case (a, b) =>
+        Distance.euclidean(a, b)
+      }
+    }
+
+    measure method "IntBOW" in {
+      using(intPairs) in { case (a, b) =>
         Distance.euclidean(a, b)
       }
     }
@@ -115,4 +125,16 @@ object RoaringBOW {
     }.toMap
     new RoaringBOW(wc)
   }
+}
+
+object IntBOW {
+  def apply(vocabulary: Vector[Int], size: Int): IntBagOfWords ={
+    val wc = Random.shuffle(vocabulary).take(size).map { w =>
+      (w, Random.nextInt())
+    }.toMap
+    new IntBagOfWords {
+      override def wordCounts: Map[Int, Int] = wc
+    }
+  }
+
 }
