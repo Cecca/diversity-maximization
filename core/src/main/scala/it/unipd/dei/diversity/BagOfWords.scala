@@ -31,7 +31,8 @@ trait IntBagOfWords extends BagOfWords[Int] {
         override def next(): Int = it.next()
       }
     case other =>
-      super.wordUnion(other)
+      throw new UnsupportedOperationException(
+        "Only union between specialized bag of words is supported.")
   }
 
   override def wordIntersection(o: BagOfWords[Int]): Iterator[Int] = o match {
@@ -43,7 +44,8 @@ trait IntBagOfWords extends BagOfWords[Int] {
         override def next(): Int = it.next()
       }
     case other =>
-      super.wordIntersection(other)
+      throw new UnsupportedOperationException(
+        "Only intersection between specialized bag of words is supported.")
   }
 
 }
