@@ -2,9 +2,14 @@ package it.unipd.dei.diversity.words
 
 import it.unipd.dei.diversity.BagOfWords
 
+import scala.collection.immutable.HashSet
+
 class UCIBagOfWords(val documentId: Int,
                     override val wordCounts: Map[Int, Int])
 extends BagOfWords[Int] with Serializable {
+
+  override val words: Set[Int] =
+    HashSet[Int](wordCounts.keys.toSeq :_*)
 
   override def equals(o: scala.Any): Boolean = o match {
     case other: UCIBagOfWords =>
