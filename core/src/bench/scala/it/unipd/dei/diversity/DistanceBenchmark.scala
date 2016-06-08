@@ -80,9 +80,7 @@ object SimpleBOW {
   }
 }
 
-class HashSetBOW(override val wordCounts: mutable.HashMap[Int, Int]) extends BagOfWords[Int] {
-  override val words: Set[Int] = HashSet(wordCounts.keys.toSeq :_*).asInstanceOf[Set[Int]]
-}
+class HashSetBOW(override val wordCounts: mutable.HashMap[Int, Int]) extends BagOfWords[Int]
 object HashSetBOW {
   def apply(vocabulary: Vector[Int], size: Int): HashSetBOW ={
     val wc = mutable.HashMap(
@@ -94,8 +92,11 @@ object HashSetBOW {
 }
 
 class BitSetBOW(override val wordCounts: mutable.HashMap[Int, Int]) extends BagOfWords[Int] {
-  override val words: Set[Int] =
-    BitSet(wordCounts.keys.toSeq :_*).asInstanceOf[Set[Int]]
+  val words: BitSet = BitSet(wordCounts.keys.toSeq :_*)
+  override def wordUnion(other: BagOfWords[Int]): Iterator[Int] = {
+    val union = this.words.intersect(other.asInstanceOf[BitSetBOW].words)
+    union.iterator
+  }
 }
 object BitSetBOW {
   def apply(vocabulary: Vector[Int], size: Int): BitSetBOW ={

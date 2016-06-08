@@ -7,13 +7,11 @@ trait BagOfWords[T] {
 
   def wordCounts: mutable.HashMap[T, Int]
 
-  def words: scala.collection.Set[T] = wordCounts.keySet
-
   def wordUnion(other: BagOfWords[T]): Iterator[T] =
-    this.words.union(other.words).iterator
+    this.wordCounts.keySet.union(other.wordCounts.keySet).iterator
 
   def wordIntersection(other: BagOfWords[T]): Iterator[T] =
-    this.words.intersect(other.words).iterator
+    this.wordCounts.keySet.intersect(other.wordCounts.keySet).iterator
 
   def apply(word: T): Int = wordCounts.getOrElse(word, 0)
 
