@@ -1,10 +1,11 @@
 package it.unipd.dei.diversity
 
+import it.unipd.dei.diversity.words.{BagOfWordsDataset, UCIBagOfWords}
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.{SparkConf, SparkContext}
 import org.rogach.scallop.ScallopConf
 
-object MainPoints {
+object MainBagOfWords {
 
   def main(args: Array[String]) {
 
@@ -12,17 +13,15 @@ object MainPoints {
     val opts = new Conf(args)
     opts.verify()
     val algorithm = opts.algorithm()
-    val sourcesList = opts.source().split(",")
-    val dimList = opts.spaceDimension().split(",").map{_.toInt}
     val kList = opts.delegates().split(",").map{_.toInt}
-    val numPointsList = opts.numPoints().split(",").map{_.toInt}
     val kernelSizeList = opts.kernelSize().split(",").map{_.toInt}
     val runs = opts.runs()
     val computeFarthest = opts.farthest()
     val computeMatching = opts.matching()
+    val datasets = opts.dataset().split(",")
     val directory = opts.directory()
 
-    val distance: (Point, Point) => Double = Distance.euclidean
+    val distance: (UCIBagOfWords, UCIBagOfWords) => Double = Distance.jaccard[Int]
 
     // Set up Spark lazily, it will be initialized only if the algorithm needs it.
     lazy val sparkConfig = new SparkConf(loadDefaults = true)
@@ -31,55 +30,43 @@ object MainPoints {
 
     // Cycle through parameter configurations
     for {
-      r <- 0 until runs
-      sourceName <- sourcesList
-      dim      <- dimList
+      r        <- 0 until runs
+      dataset  <- datasets
       k        <- kList
-      n        <- numPointsList
       kernSize <- kernelSizeList
     } {
       val experiment = new Experiment()
-        .tag("experiment", "Points")
+        .tag("experiment", "BagOfWords")
         .tag("version", BuildInfo.version)
         .tag("git-revision", BuildInfo.gitRevision)
         .tag("git-revcount", BuildInfo.gitRevCount)
-        .tag("source", sourceName)
-        .tag("space-dimension", dim)
         .tag("k", k)
-        .tag("num-points", n)
         .tag("kernel-size", kernSize)
         .tag("computeFarthest", computeFarthest)
         .tag("computeMatching", computeMatching)
 
-      val coreset: Coreset[Point] = algorithm match {
+      val data = BagOfWordsDataset.fromName(dataset, directory)
+
+      val coreset: Coreset[UCIBagOfWords] = algorithm match {
 
         case "mapreduce" =>
           val parallelism = sc.defaultParallelism
           experiment.tag("parallelism", parallelism)
-          val points = sc.objectFile[Point](
-            DatasetGenerator.filename(directory, sourceName, dim, n, k),
-            parallelism)
-          Algorithm.mapReduce(points, kernSize, k, distance, experiment)
+          val input = data.documents(sc)
+          Algorithm.mapReduce(input, kernSize, k, distance, experiment)
 
         case "streaming" =>
-          val points = SerializationUtils.sequenceFile(
-            DatasetGenerator.filename(directory, sourceName, dim, n, k))
-          Algorithm.streaming(points, k, kernSize, distance, experiment)
+          ???
 
         case "sequential" =>
-          val points = SerializationUtils.sequenceFile(
-            DatasetGenerator.filename(directory, sourceName, dim, n, k))
-          Algorithm.sequential(points.toVector, experiment)
+          ???
 
         case "random" =>
-          val points = SerializationUtils.sequenceFile(
-            DatasetGenerator.filename(directory, sourceName, dim, n, k))
-          val prob = kernSize.toDouble / n
-          Algorithm.random(points, k, prob, distance, experiment)
+          ???
 
       }
 
-      Approximation.approximate(
+      Approximation.approximate[UCIBagOfWords](
         coreset, k, distance, computeFarthest, computeMatching, experiment)
 
       experiment.saveAsJsonFile()
@@ -92,19 +79,15 @@ object MainPoints {
 
     lazy val algorithm = opt[String](default = Some("sequential"))
 
-    lazy val source = opt[String](default = Some("versor"))
+    lazy val dataset = opt[String](required = true)
 
-    lazy val spaceDimension = opt[String](default = Some("2"))
+    lazy val directory = opt[String](required = true)
 
     lazy val delegates = opt[String](required = true)
 
     lazy val kernelSize = opt[String](required = true)
 
-    lazy val numPoints = opt[String](required = true)
-
     lazy val runs = opt[Int](default = Some(1))
-
-    lazy val directory = opt[String](default = Some("/tmp"))
 
     lazy val farthest = toggle(
       default=Some(true),
