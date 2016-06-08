@@ -16,6 +16,18 @@ object Distance {
     res
   }
 
+  def euclidean[T](a: BagOfWords[T], b: BagOfWords[T]): Double = {
+    val keys = a.words.union(b.words)
+    var sum: Double = 0.0
+    for (k <- keys) {
+      val diff = a.wordCounts.getOrElse(k, 0) - b.wordCounts.getOrElse(k, 0)
+      sum += diff*diff
+    }
+    val res = math.sqrt(sum)
+    assert(res < Double.PositiveInfinity, "The distance cannot be infinite! Check your inputs.")
+    res
+  }
+
   def jaccard[T](a: Set[T], b: Set[T]): Double = {
     if (a.isEmpty && b.isEmpty) {
       1

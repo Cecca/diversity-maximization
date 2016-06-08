@@ -5,6 +5,8 @@ import org.scalacheck.Prop.{BooleanOperators, forAll, all}
 
 object MapReduceCoresetTest extends Properties("MapReduceCoreset") {
 
+  val distance: (Point, Point) => Double = Distance.euclidean
+
   def pointGen(dim: Int) =
     for(data <- Gen.listOfN(dim, Gen.choose[Double](0.0, 1.0)))
       yield new Point(data.toArray)
@@ -15,7 +17,7 @@ object MapReduceCoresetTest extends Properties("MapReduceCoreset") {
         forAll(Gen.choose(k, points.length / 2)) { kernelSize =>
           (points.size > k) ==> {
             val coreset = MapReduceCoreset.run(
-              points.toArray, kernelSize, k, Distance.euclidean)
+              points.toArray, kernelSize, k, distance)
 
             (coreset.length >= k) :| s"Coreset size is ${coreset.length}"
           }
@@ -29,7 +31,7 @@ object MapReduceCoresetTest extends Properties("MapReduceCoreset") {
         forAll(Gen.choose(k, points.length / 2)) { kernelSize =>
           (points.size > k) ==> {
             val coreset = MapReduceCoreset.run(
-              points.toArray, kernelSize, k, Distance.euclidean)
+              points.toArray, kernelSize, k, distance)
 
             coreset.points.toSet.size == coreset.length
           }
@@ -48,13 +50,13 @@ object MapReduceCoresetTest extends Properties("MapReduceCoreset") {
       forAll(Gen.choose(2, points.length/2)) { k =>
         forAll(Gen.choose(k, points.length/2)) { kernelSize =>
           val coreset = MapReduceCoreset.run(
-            points.toArray, kernelSize, k, Distance.euclidean)
+            points.toArray, kernelSize, k, distance)
 
           val radius =
-            Utils.maxMinDistance(coreset.delegates, coreset.kernel, Distance.euclidean)
+            Utils.maxMinDistance(coreset.delegates, coreset.kernel, distance)
 
           val farness =
-            Utils.minDistance(coreset.kernel, Distance.euclidean)
+            Utils.minDistance(coreset.kernel, distance)
 
           (radius <= farness) :| s"radius $radius, farness $farness"
         }

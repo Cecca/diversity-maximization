@@ -5,10 +5,12 @@ import org.scalacheck._
 
 object StreamingCoresetChecks extends Properties("StreamingCoreset") {
 
+  val distance: (Point, Point) => Double = Distance.euclidean
+
   property("farness") =
     forAll(Gen.choose(2, 100), Gen.posNum[Int], Gen.choose(2, 1000))
     { (kernelSize, numDelegates, n) =>
-      val coreset = new StreamingCoreset(kernelSize, numDelegates, Distance.euclidean)
+      val coreset = new StreamingCoreset(kernelSize, numDelegates, distance)
       (0 until n).foreach { _ =>
         coreset.update(Point.random(1))
       }
@@ -20,7 +22,7 @@ object StreamingCoresetChecks extends Properties("StreamingCoreset") {
     forAll(Gen.choose(2, 100), Gen.choose(1, 100), Gen.choose(2, 1000))
     { (kernelSize, numDelegates, n) =>
       (n > kernelSize) ==> {
-        val coreset = new StreamingCoreset(kernelSize, numDelegates, Distance.euclidean)
+        val coreset = new StreamingCoreset(kernelSize, numDelegates, distance)
         (0 until n).foreach { _ =>
           coreset.update(Point.random(1))
         }
