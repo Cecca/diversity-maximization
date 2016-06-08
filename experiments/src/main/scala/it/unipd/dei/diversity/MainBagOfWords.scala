@@ -56,13 +56,16 @@ object MainBagOfWords {
           Algorithm.mapReduce(input, kernSize, k, distance, experiment)
 
         case "streaming" =>
-          ???
+          val input = data.documents()
+          Algorithm.streaming(input, k, kernSize, distance, experiment)
 
         case "sequential" =>
-          ???
+          val input = data.documents()
+          Algorithm.sequential(input.toVector, experiment)
 
         case "random" =>
-          ???
+          val input = data.documents()
+          Algorithm.random(input, k, kernSize, distance, experiment)
 
       }
 
