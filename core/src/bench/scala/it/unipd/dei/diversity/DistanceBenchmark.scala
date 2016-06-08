@@ -3,7 +3,7 @@ package it.unipd.dei.diversity
 import org.roaringbitmap.RoaringBitmap
 import org.scalameter.api._
 
-import scala.collection.BitSet
+import scala.collection.{BitSet, mutable}
 import scala.collection.immutable.HashSet
 import scala.util.Random
 
@@ -69,42 +69,45 @@ object DistanceBenchmark extends Bench.OfflineReport {
 
 }
 
-class SimpleBOW(override val wordCounts: Map[Int, Int]) extends BagOfWords[Int]
+class SimpleBOW(override val wordCounts: mutable.HashMap[Int, Int]) extends BagOfWords[Int]
 object SimpleBOW {
   def apply(vocabulary: Vector[Int], size: Int): SimpleBOW ={
-    val wc = Random.shuffle(vocabulary).take(size).map { w =>
-      (w, Random.nextInt())
-    }.toMap
+    val wc = mutable.HashMap(
+      Random.shuffle(vocabulary).take(size).map { w =>
+        (w, Random.nextInt())
+      } :_*)
     new SimpleBOW(wc)
   }
 }
 
-class HashSetBOW(override val wordCounts: Map[Int, Int]) extends BagOfWords[Int] {
+class HashSetBOW(override val wordCounts: mutable.HashMap[Int, Int]) extends BagOfWords[Int] {
   override val words: Set[Int] = HashSet(wordCounts.keys.toSeq :_*).asInstanceOf[Set[Int]]
 }
 object HashSetBOW {
   def apply(vocabulary: Vector[Int], size: Int): HashSetBOW ={
-    val wc = Random.shuffle(vocabulary).take(size).map { w =>
-      (w, Random.nextInt())
-    }.toMap
+    val wc = mutable.HashMap(
+      Random.shuffle(vocabulary).take(size).map { w =>
+        (w, Random.nextInt())
+      } :_*)
     new HashSetBOW(wc)
   }
 }
 
-class BitSetBOW(override val wordCounts: Map[Int, Int]) extends BagOfWords[Int] {
+class BitSetBOW(override val wordCounts: mutable.HashMap[Int, Int]) extends BagOfWords[Int] {
   override val words: Set[Int] =
     BitSet(wordCounts.keys.toSeq :_*).asInstanceOf[Set[Int]]
 }
 object BitSetBOW {
   def apply(vocabulary: Vector[Int], size: Int): BitSetBOW ={
-    val wc = Random.shuffle(vocabulary).take(size).map { w =>
-      (w, Random.nextInt())
-    }.toMap
+    val wc = mutable.HashMap(
+      Random.shuffle(vocabulary).take(size).map { w =>
+        (w, Random.nextInt())
+      } :_*)
     new BitSetBOW(wc)
   }
 }
 
-class RoaringBOW(override val wordCounts: Map[Int, Int]) extends BagOfWords[Int]{
+class RoaringBOW(override val wordCounts: mutable.HashMap[Int, Int]) extends BagOfWords[Int]{
 
   private val roaringWords = RoaringBitmap.bitmapOf(wordCounts.keys.toSeq :_*)
 
@@ -120,20 +123,22 @@ class RoaringBOW(override val wordCounts: Map[Int, Int]) extends BagOfWords[Int]
 }
 object RoaringBOW {
   def apply(vocabulary: Vector[Int], size: Int): RoaringBOW ={
-    val wc = Random.shuffle(vocabulary).take(size).map { w =>
-      (w, Random.nextInt())
-    }.toMap
+    val wc = mutable.HashMap(
+      Random.shuffle(vocabulary).take(size).map { w =>
+        (w, Random.nextInt())
+      } :_*)
     new RoaringBOW(wc)
   }
 }
 
 object IntBOW {
   def apply(vocabulary: Vector[Int], size: Int): IntBagOfWords ={
-    val wc = Random.shuffle(vocabulary).take(size).map { w =>
-      (w, Random.nextInt())
-    }.toMap
+    val wc = mutable.HashMap(
+      Random.shuffle(vocabulary).take(size).map { w =>
+        (w, Random.nextInt())
+      } :_*)
     new IntBagOfWords {
-      override def wordCounts: Map[Int, Int] = wc
+      override def wordCounts: mutable.HashMap[Int, Int] = wc
     }
   }
 

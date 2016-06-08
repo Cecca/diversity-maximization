@@ -2,8 +2,10 @@ package it.unipd.dei.diversity.words
 
 import it.unipd.dei.diversity.IntBagOfWords
 
+import scala.collection.mutable
+
 class UCIBagOfWords(val documentId: Int,
-                    override val wordCounts: Map[Int, Int])
+                    override val wordCounts: mutable.HashMap[Int, Int])
 extends IntBagOfWords with Serializable {
 
   override def equals(o: scala.Any): Boolean = o match {

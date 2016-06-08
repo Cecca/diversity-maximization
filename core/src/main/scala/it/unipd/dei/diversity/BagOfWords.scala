@@ -1,12 +1,13 @@
 package it.unipd.dei.diversity
 
 import org.roaringbitmap.RoaringBitmap
+import scala.collection.mutable
 
 trait BagOfWords[T] {
 
-  def wordCounts: Map[T, Int]
+  def wordCounts: mutable.HashMap[T, Int]
 
-  def words: Set[T] = wordCounts.keySet
+  def words: scala.collection.Set[T] = wordCounts.keySet
 
   def wordUnion(other: BagOfWords[T]): Iterator[T] =
     this.words.union(other.words).iterator
