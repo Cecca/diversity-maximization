@@ -4,9 +4,10 @@ import java.io.FileInputStream
 import java.util.zip.GZIPInputStream
 
 import it.unipd.dei.diversity.{Distance, Utils}
+import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.apache.spark.{SparkConf, SparkContext}
 
+import scala.collection.mutable
 import scala.io.Source
 
 class BagOfWordsDataset(val documentsFile: String,
@@ -29,29 +30,41 @@ class BagOfWordsDataset(val documentsFile: String,
       new UCIBagOfWords(docId, wordCounts.toMap)
     }
 
-  def documents(): Iterator[UCIBagOfWords] = {
+  def documents(): Iterator[UCIBagOfWords] = new Iterator[UCIBagOfWords] {
+
     val source = Source.fromInputStream(
       new GZIPInputStream(new FileInputStream(documentsFile)))
-    val (iterator, last) =
-      source.getLines().flatMap { line =>
+
+    val tokenized =
+      source.getLines().drop(3).map { line =>
         val tokens = line.split(" ")
-        if (tokens.length != 3) {
-          Iterator.empty
-        } else {
-          Iterator((tokens(0).toInt, tokens(1).toInt, tokens(2).toInt))
-        }
-      }.foldLeft[(Iterator[UCIBagOfWords], Option[UCIBagOfWords])]((Iterator.empty, None)) {
-        case ((it, None), (docId, word, count)) =>
-          (it, Some(new UCIBagOfWords(docId, Map(word -> count))))
-        case ((it, Some(bow)), (docId, word, count)) =>
-          if (docId == bow.documentId) {
-            (it, Some(new UCIBagOfWords(docId, bow.wordCounts.updated(word, count))))
-          } else {
-            (it ++ Iterator(bow), Some(new UCIBagOfWords(docId, Map(word -> count))))
-          }
+        require(tokens.length == 3)
+        (tokens(0).toInt, tokens(1).toInt, tokens(2).toInt)
       }
-    source.close()
-    iterator ++ Iterator(last.get)
+
+    var first = tokenized.next()
+
+    override def hasNext: Boolean = tokenized.hasNext
+
+    override def next(): UCIBagOfWords = {
+      val (docId, word, count) = first
+      val words = mutable.Map[Int, Int](word -> count)
+      var current = first
+      while(tokenized.hasNext && current._1 == docId) {
+        current = tokenized.next()
+        if (current._1 == docId) {
+          words(current._2) = current._3
+        } else {
+          first = current
+        }
+      }
+
+      new UCIBagOfWords(docId, words.toMap)
+    }
+
+    override def finalize(): Unit = {
+      source.close()
+    }
   }
 
 }

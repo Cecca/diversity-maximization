@@ -7,6 +7,14 @@ class UCIBagOfWords(val documentId: Int,
 
   override def words = wordCounts.keySet
 
+  override def equals(o: scala.Any): Boolean = o match {
+    case other: UCIBagOfWords =>
+      this.documentId == documentId && this.wordCounts == other.wordCounts
+    case _ => false
+  }
+
+  override def hashCode(): Int = 31*documentId + wordCounts.hashCode()
+
   override def toString: String =
     s"Document: $documentId\n$wordCounts"
 
