@@ -3,9 +3,8 @@ package it.unipd.dei.diversity.words
 import it.unipd.dei.diversity.BagOfWords
 
 class UCIBagOfWords(val documentId: Int,
-                    val wordCounts: Map[Int, Int]) extends BagOfWords[Int] with Serializable {
-
-  override def words = wordCounts.keySet
+                    override val wordCounts: Map[Int, Int])
+extends BagOfWords[Int] with Serializable {
 
   override def equals(o: scala.Any): Boolean = o match {
     case other: UCIBagOfWords =>
