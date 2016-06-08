@@ -18,7 +18,12 @@ object Approximation {
     val (farthestSubsetCenters, _): (Option[IndexedSeq[T]], Long) =
       if (computeFarthest) {
         timed {
-          Some(FarthestPointHeuristic.run(coreset.kernel, k, distance))
+          val pts = if(coreset.kernel.length < k) {
+            coreset.points
+          } else {
+            coreset.kernel
+          }
+          Some(FarthestPointHeuristic.run(pts, k, distance))
         }
       } else {
         (None, 0)
