@@ -1,5 +1,8 @@
 package it.unipd.dei.diversity.words
 
+import java.io.FileInputStream
+import java.util.zip.GZIPInputStream
+
 import it.unipd.dei.diversity.{Distance, Utils}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
@@ -26,6 +29,31 @@ class BagOfWordsDataset(val documentsFile: String,
       new UCIBagOfWords(docId, wordCounts.toMap)
     }
 
+  def documents(): Iterator[UCIBagOfWords] = {
+    val source = Source.fromInputStream(
+      new GZIPInputStream(new FileInputStream(documentsFile)))
+    val (iterator, last) =
+      source.getLines().flatMap { line =>
+        val tokens = line.split(" ")
+        if (tokens.length != 3) {
+          Iterator.empty
+        } else {
+          Iterator((tokens(0).toInt, tokens(1).toInt, tokens(2).toInt))
+        }
+      }.foldLeft[(Iterator[UCIBagOfWords], Option[UCIBagOfWords])]((Iterator.empty, None)) {
+        case ((it, None), (docId, word, count)) =>
+          (it, Some(new UCIBagOfWords(docId, Map(word -> count))))
+        case ((it, Some(bow)), (docId, word, count)) =>
+          if (docId == bow.documentId) {
+            (it, Some(new UCIBagOfWords(docId, bow.wordCounts.updated(word, count))))
+          } else {
+            (it ++ Iterator(bow), Some(new UCIBagOfWords(docId, Map(word -> count))))
+          }
+      }
+    source.close()
+    iterator ++ Iterator(last.get)
+  }
+
 }
 
 object BagOfWordsDataset {
@@ -40,11 +68,11 @@ object BagOfWordsDataset {
     val documentsFile = args(0)
     val vocabularyFile = args(1)
 
-    val conf = new SparkConf().setAppName("test").setMaster("local")
-    val sc = new SparkContext(conf)
+    //val conf = new SparkConf().setAppName("test").setMaster("local")
+    //val sc = new SparkContext(conf)
     val dataset = new BagOfWordsDataset(documentsFile, vocabularyFile)
 
-    val sample = dataset.documents(sc).take(3)
+    val sample = dataset.documents().take(3).toVector
 
     sample.foreach { doc =>
       println("=====")
