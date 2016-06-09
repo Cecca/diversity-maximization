@@ -16,6 +16,7 @@ object Algorithm {
                             distance: (T, T) => Double,
                             experiment: Experiment): StreamingCoreset[T] = {
     experiment.tag("algorithm", "Streaming")
+    println("Run streaming algorithm!")
     val coreset = new StreamingCoreset[T](kernelSize, k, distance)
     val (_, coresetTime) = timed {
       for (p <- points) {
@@ -60,7 +61,7 @@ object Algorithm {
         points
       }
 
-    println("Run!!")
+    println("Run MapReduce algorithm!")
     val partitionCnt = points.sparkContext.accumulator(0L, "partition counter")
     val (coreset, mrTime) = timed {
       repartitioned.mapPartitions { pts =>
@@ -112,7 +113,7 @@ object Algorithm {
                          distance: (T, T) => Double,
                          experiment: Experiment): Coreset[T] = {
     experiment.tag("algorithm", "Random")
-    println("Run!!")
+    println("Run random algorithm!")
     val sample = ArrayBuffer[T]()
     val (_, time) = timed {
       for (p <- input) {
