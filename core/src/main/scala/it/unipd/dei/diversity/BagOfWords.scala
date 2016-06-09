@@ -1,16 +1,16 @@
 package it.unipd.dei.diversity
 
-import org.roaringbitmap.RoaringBitmap
-
 import scala.collection.mutable
 
 trait BagOfWords[T] {
 
   def words: Iterator[T]
 
-  def wordUnion(other: BagOfWords[T]): Iterator[T]
+  def wordUnion(other: BagOfWords[T]): Iterator[T] =
+    words.toSet.union(other.words.toSet).iterator
 
-  def wordIntersection(other: BagOfWords[T]): Iterator[T]
+  def wordIntersection(other: BagOfWords[T]): Iterator[T] =
+    words.toSet.intersect(other.words.toSet).iterator
 
   def apply(word: T): Int
 
@@ -31,10 +31,6 @@ class ArrayBagOfWords(counts: Seq[(Int, Int)]) extends BagOfWords[Int] {
     if (idx < 0) 0
     else countsArray(idx)
   }
-
-  override def wordIntersection(other: BagOfWords[Int]): Iterator[Int] = ???
-
-  override def wordUnion(other: BagOfWords[Int]): Iterator[Int] = ???
 
 }
 
