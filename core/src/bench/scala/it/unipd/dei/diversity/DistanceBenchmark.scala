@@ -39,7 +39,7 @@ object BOWBuilders {
   def randomTable(vocabulary: Vector[Int], size: Int) =
     mutable.HashMap(
       Random.shuffle(vocabulary).take(size).map { w =>
-        (w, Random.nextInt())
+        (w, Random.nextInt(1024))
       } :_*)
 
   def mapBOW(vocabulary: Vector[Int], size: Int): MapBagOfWords[Int] =

@@ -32,6 +32,9 @@ class ArrayBagOfWords(counts: Seq[(Int, Int)]) extends BagOfWords[Int] with Seri
     else countsArray(idx)
   }
 
+  override def toString: String =
+    wordsArray.zip(countsArray).toMap.toString
+
 }
 
 object ArrayBagOfWords {
@@ -89,5 +92,7 @@ class MapBagOfWords[T](val wordCounts: mutable.HashMap[T, Int]) extends BagOfWor
     this.wordCounts.keySet.intersect(other.asInstanceOf[MapBagOfWords[T]].wordCounts.keySet).iterator
 
   override def apply(word: T): Int = wordCounts.getOrElse(word, 0)
+
+  override def toString: String = wordCounts.toString
 
 }
