@@ -4,6 +4,8 @@ import java.io.FileInputStream
 import java.util.zip.GZIPInputStream
 
 import it.unipd.dei.diversity.{Distance, Utils}
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.hadoop.mapred.{FileInputFormat, InvalidInputException}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 
@@ -13,22 +15,38 @@ import scala.io.Source
 class BagOfWordsDataset(val documentsFile: String,
                         val vocabularyFile: String) {
 
+  val sparkCacheFile = documentsFile + ".cache"
+
+  def hasSparkCacheFile(sc: SparkContext): Boolean = {
+    val fs = FileSystem.get(sc.hadoopConfiguration)
+    fs.exists(new Path(sparkCacheFile))
+  }
+
   lazy val wordMap: Map[Int, String] = {
     val lines = Source.fromFile(vocabularyFile).getLines()
     lines.zipWithIndex.map(_.swap).toMap
   }
 
-  def documents(sc: SparkContext): RDD[UCIBagOfWords] =
-    sc.textFile(documentsFile).flatMap { line =>
-      val tokens = line.split(" ")
-      if (tokens.length != 3) {
-        Iterator.empty
-      } else {
-        Iterator((tokens(0).toInt, (tokens(1).toInt, tokens(2).toInt)))
-      }
-    }.groupByKey().map { case (docId, wordCounts) =>
-      new UCIBagOfWords(docId, wordCounts.toSeq)
+  def documents(sc: SparkContext): RDD[UCIBagOfWords] = {
+    if (hasSparkCacheFile(sc)) {
+      println("Loading documents from cache")
+      sc.objectFile(sparkCacheFile, sc.defaultParallelism)
+    } else{
+      println("No cache for requested documents, load from text file")
+      val docs = sc.textFile(documentsFile).flatMap { line =>
+        val tokens = line.split(" ")
+        if (tokens.length != 3) {
+          Iterator.empty
+        } else {
+          Iterator((tokens(0).toInt, (tokens(1).toInt, tokens(2).toInt)))
+        }
+      }.groupByKey().map { case (docId, wordCounts) =>
+        new UCIBagOfWords(docId, wordCounts.toSeq)
+      }.cache()
+      docs.saveAsObjectFile(sparkCacheFile)
+      docs
     }
+  }
 
   def documents(): Iterator[UCIBagOfWords] = new Iterator[UCIBagOfWords] {
 
