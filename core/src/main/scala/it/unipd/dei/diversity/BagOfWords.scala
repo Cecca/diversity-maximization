@@ -3,7 +3,6 @@ package it.unipd.dei.diversity
 import org.roaringbitmap.RoaringBitmap
 
 import scala.collection.mutable
-import scala.reflect.ClassTag
 
 trait BagOfWords[T] {
 
@@ -17,9 +16,13 @@ trait BagOfWords[T] {
 
 }
 
-class ArrayBagOfWords(val wordsArray: Array[Int],
-                      val countsArray: Array[Int]) extends BagOfWords[Int] {
-  require(wordsArray.length == countsArray.length)
+class ArrayBagOfWords(counts: Seq[(Int, Int)]) extends BagOfWords[Int] {
+
+  val (wordsArray, countsArray): (Array[Int], Array[Int]) = {
+    val sorted = counts.sortBy(_._1)
+    val (words, cnts) = sorted.unzip
+    (words.toArray, cnts.toArray)
+  }
 
   override def words: Iterator[Int] = wordsArray.iterator
 
@@ -37,11 +40,8 @@ class ArrayBagOfWords(val wordsArray: Array[Int],
 
 object ArrayBagOfWords {
 
-  def apply(counts: Seq[(Int, Int)]): ArrayBagOfWords = {
-    val sorted = counts.sortBy(_._1)
-    val (words, cnts) = sorted.unzip
-    new ArrayBagOfWords(words.toArray, cnts.toArray)
-  }
+  def apply(counts: Seq[(Int, Int)]): ArrayBagOfWords =
+    new ArrayBagOfWords(counts)
 
   def euclidean(a: ArrayBagOfWords, b: ArrayBagOfWords): Double = {
     var sum = 0.0
