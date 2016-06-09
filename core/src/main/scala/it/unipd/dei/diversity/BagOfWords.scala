@@ -16,7 +16,7 @@ trait BagOfWords[T] {
 
 }
 
-class ArrayBagOfWords(counts: Seq[(Int, Int)]) extends BagOfWords[Int] {
+class ArrayBagOfWords(counts: Seq[(Int, Int)]) extends BagOfWords[Int] with Serializable {
 
   val (wordsArray, countsArray): (Array[Int], Array[Int]) = {
     val sorted = counts.sortBy(_._1)
