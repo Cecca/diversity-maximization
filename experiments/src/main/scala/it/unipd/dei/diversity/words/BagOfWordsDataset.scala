@@ -27,7 +27,7 @@ class BagOfWordsDataset(val documentsFile: String,
         Iterator((tokens(0).toInt, (tokens(1).toInt, tokens(2).toInt)))
       }
     }.groupByKey().map { case (docId, wordCounts) =>
-      new UCIBagOfWords(docId, mutable.HashMap(wordCounts.toSeq :_*))
+      new UCIBagOfWords(docId, wordCounts.toSeq)
     }
 
   def documents(): Iterator[UCIBagOfWords] = new Iterator[UCIBagOfWords] {
@@ -59,7 +59,7 @@ class BagOfWordsDataset(val documentsFile: String,
         }
       }
 
-      new UCIBagOfWords(docId, words)
+      new UCIBagOfWords(docId, words.toSeq)
     }
 
     override def finalize(): Unit = {

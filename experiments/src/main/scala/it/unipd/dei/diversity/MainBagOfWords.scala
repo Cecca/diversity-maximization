@@ -21,7 +21,7 @@ object MainBagOfWords {
     val datasets = opts.dataset().split(",")
     val directory = opts.directory()
 
-    val distance: (UCIBagOfWords, UCIBagOfWords) => Double = Distance.euclidean[Int]
+    val distance: (UCIBagOfWords, UCIBagOfWords) => Double = ArrayBagOfWords.euclidean
 
     // Set up Spark lazily, it will be initialized only if the algorithm needs it.
     lazy val sparkConfig = new SparkConf(loadDefaults = true)
