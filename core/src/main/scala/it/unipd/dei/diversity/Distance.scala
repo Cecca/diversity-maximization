@@ -16,16 +16,19 @@ object Distance {
     res
   }
 
-  def euclidean[T](a: BagOfWords[T], b: BagOfWords[T]): Double = {
-    val keys = a.wordUnion(b)
-    var sum: Double = 0.0
-    for (k <- keys) {
-      val diff = a(k) - b(k)
-      sum += diff*diff
-    }
-    val res = math.sqrt(sum)
-    assert(res < Double.PositiveInfinity, "The distance cannot be infinite! Check your inputs.")
-    res
+  def euclidean[T](bagA: BagOfWords[T], bagB: BagOfWords[T]): Double = (bagA, bagB) match {
+    case (a: ArrayBagOfWords, b: ArrayBagOfWords) =>
+      ArrayBagOfWords.euclidean(a, b)
+    case (a, b) =>
+      val keys = a.wordUnion(b)
+      var sum: Double = 0.0
+      for (k <- keys) {
+        val diff = a(k) - b(k)
+        sum += diff*diff
+      }
+      val res = math.sqrt(sum)
+      assert(res < Double.PositiveInfinity, "The distance cannot be infinite! Check your inputs.")
+      res
   }
   
   def jaccard[T](a: BagOfWords[T], b: BagOfWords[T]): Double = {
