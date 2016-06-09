@@ -1,11 +1,12 @@
 package it.unipd.dei.diversity.words
 
-import java.io.FileInputStream
+import java.io.{File, FileInputStream, FileOutputStream}
 import java.util.zip.GZIPInputStream
 
+import com.esotericsoftware.kryo.{Kryo, Serializer}
+import com.esotericsoftware.kryo.io.{Input, Output}
 import it.unipd.dei.diversity.{Distance, Utils}
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.mapred.{FileInputFormat, InvalidInputException}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 
@@ -16,10 +17,16 @@ class BagOfWordsDataset(val documentsFile: String,
                         val vocabularyFile: String) {
 
   val sparkCacheFile = documentsFile + ".cache"
+  val streamingCacheFile = documentsFile + ".streaming.cache"
 
   def hasSparkCacheFile(sc: SparkContext): Boolean = {
     val fs = FileSystem.get(sc.hadoopConfiguration)
     fs.exists(new Path(sparkCacheFile))
+  }
+
+  def hasStreamingCacheFile: Boolean = {
+    val file = new File(streamingCacheFile)
+    file.exists()
   }
 
   lazy val wordMap: Map[Int, String] = {
@@ -48,7 +55,14 @@ class BagOfWordsDataset(val documentsFile: String,
     }
   }
 
-  def documents(): Iterator[UCIBagOfWords] = new UCITextFileIterator(documentsFile)
+  def documents(): Iterator[UCIBagOfWords] =
+    if (hasStreamingCacheFile) {
+      println(s"Loading stream from cache file $streamingCacheFile")
+      new UCICacheFileIterator(streamingCacheFile)
+    } else {
+      println(s"No streaming cache file found, loading from text file $documentsFile")
+      new UCITextFileIterator(documentsFile, streamingCacheFile)
+    }
 }
 
 object BagOfWordsDataset {
@@ -81,10 +95,50 @@ object BagOfWordsDataset {
 
 }
 
-class UCITextFileIterator(val documentsFile: String) extends Iterator[UCIBagOfWords] {
+class UCIKryoSerializer extends Serializer[UCIBagOfWords] {
+  override def write(kryo: Kryo, output: Output, bow: UCIBagOfWords): Unit = {
+    kryo.writeObject(output, bow.documentId)
+    kryo.writeObject(output, bow.wordsArray)
+    kryo.writeObject(output, bow.countsArray)
+  }
+
+  override def read(kryo: Kryo, input: Input, cls: Class[UCIBagOfWords]): UCIBagOfWords = {
+    val docId = kryo.readObject(input, classOf[Int])
+    val wordsArray = kryo.readObject(input, classOf[Array[Int]])
+    val countsArray = kryo.readObject(input, classOf[Array[Int]])
+    // Setting directly the words and counts array would be more efficient, but would
+    // require to change the constructor of ArrayBagOfWords, which enforces the
+    // correct structure of the pair of arrays.
+    new UCIBagOfWords(docId, wordsArray.zip(countsArray))
+  }
+}
+
+class UCICacheFileIterator(val cacheFile: String) extends Iterator[UCIBagOfWords] {
+
+  val kryo = new Kryo()
+  val input = new Input(new FileInputStream(cacheFile))
+  val serializer = new UCIKryoSerializer()
+
+  override def hasNext: Boolean = input.available() > 0
+
+  override def next(): UCIBagOfWords =
+    kryo.readObject(input, classOf[UCIBagOfWords], serializer)
+
+  override def finalize(): Unit = {
+    input.close()
+  }
+}
+
+class UCITextFileIterator(val documentsFile: String,
+                          val cacheFile: String)
+extends Iterator[UCIBagOfWords] {
 
   val source = Source.fromInputStream(
     new GZIPInputStream(new FileInputStream(documentsFile)))
+
+  val kryo = new Kryo()
+  val cacheOutput = new Output(new FileOutputStream(cacheFile))
+  val serializer = new UCIKryoSerializer()
 
   val tokenized =
     source.getLines().drop(3).map { line =>
@@ -95,7 +149,17 @@ class UCITextFileIterator(val documentsFile: String) extends Iterator[UCIBagOfWo
 
   var first = tokenized.next()
 
-  override def hasNext: Boolean = tokenized.hasNext
+  override def hasNext: Boolean = {
+    val hn = tokenized.hasNext
+    if(!hn) {
+      // The output is flushed when there is no next element because
+      // relying only on the close in the finalize method does not
+      // seem to be enough: when deserializing we would get buffer
+      // exception originated from incomplete input
+      cacheOutput.flush()
+    }
+    hn
+  }
 
   override def next(): UCIBagOfWords = {
     val (docId, word, count) = first
@@ -110,10 +174,17 @@ class UCITextFileIterator(val documentsFile: String) extends Iterator[UCIBagOfWo
       }
     }
 
-    new UCIBagOfWords(docId, words.toSeq)
+    val bow = new UCIBagOfWords(docId, words.toSeq)
+    kryo.writeObject(cacheOutput, bow, serializer)
+    bow
   }
 
   override def finalize(): Unit = {
+    if (hasNext) {
+      throw new IllegalStateException(
+        "The stream should be consumed completely, otherwise caching does not work")
+    }
     source.close()
+    cacheOutput.close()
   }
 }

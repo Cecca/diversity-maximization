@@ -16,6 +16,7 @@ trait BagOfWords[T] {
 
 }
 
+// TODO: Add an additional constructor that directly accepts the words and counts arrays
 class ArrayBagOfWords(counts: Seq[(Int, Int)]) extends BagOfWords[Int] with Serializable {
 
   val (wordsArray, countsArray): (Array[Int], Array[Int]) = {
