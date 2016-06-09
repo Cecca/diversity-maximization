@@ -77,19 +77,11 @@ object BagOfWordsDataset {
     val documentsFile = args(0)
     val vocabularyFile = args(1)
 
-    //val conf = new SparkConf().setAppName("test").setMaster("local")
-    //val sc = new SparkContext(conf)
     val dataset = new BagOfWordsDataset(documentsFile, vocabularyFile)
 
-    val sample = dataset.documents().take(3).toVector
-
-    sample.foreach { doc =>
-      println("=====")
-      println(doc.toString(dataset.wordMap))
-    }
-
-    Utils.pairs(sample).foreach { case (a, b) =>
-      println(s"Pair ${a.documentId}, ${b.documentId}: ${Distance.jaccard(a, b)}")
+    for (doc <- dataset.documents()) {
+      val words = doc.words.map(w => dataset.wordMap.getOrElse(w, w.toString)).toSeq.sorted
+      println(s"${doc.documentId}: ${words.mkString(" ")}")
     }
   }
 
