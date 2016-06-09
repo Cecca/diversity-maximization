@@ -106,10 +106,7 @@ class UCIKryoSerializer extends Serializer[UCIBagOfWords] {
     val docId = kryo.readObject(input, classOf[Int])
     val wordsArray = kryo.readObject(input, classOf[Array[Int]])
     val countsArray = kryo.readObject(input, classOf[Array[Int]])
-    // Setting directly the words and counts array would be more efficient, but would
-    // require to change the constructor of ArrayBagOfWords, which enforces the
-    // correct structure of the pair of arrays.
-    new UCIBagOfWords(docId, wordsArray.zip(countsArray))
+    new UCIBagOfWords(docId, wordsArray, countsArray)
   }
 }
 

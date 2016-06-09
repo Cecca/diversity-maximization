@@ -17,12 +17,16 @@ trait BagOfWords[T] {
 }
 
 // TODO: Add an additional constructor that directly accepts the words and counts arrays
-class ArrayBagOfWords(counts: Seq[(Int, Int)]) extends BagOfWords[Int] with Serializable {
+class ArrayBagOfWords(val wordsArray: Array[Int],
+                      val countsArray: Array[Int])
+extends BagOfWords[Int] with Serializable {
 
-  val (wordsArray, countsArray): (Array[Int], Array[Int]) = {
-    val sorted = counts.sortBy(_._1)
-    val (words, cnts) = sorted.unzip
-    (words.toArray, cnts.toArray)
+  def this(arrayPair: (Array[Int], Array[Int])) {
+    this(arrayPair._1, arrayPair._2)
+  }
+
+  def this(counts: Seq[(Int, Int)]) = {
+    this(ArrayBagOfWords.buildArrayPair(counts))
   }
 
   override def words: Iterator[Int] = wordsArray.iterator
@@ -39,6 +43,12 @@ class ArrayBagOfWords(counts: Seq[(Int, Int)]) extends BagOfWords[Int] with Seri
 }
 
 object ArrayBagOfWords {
+
+  def buildArrayPair(counts: Seq[(Int, Int)]): (Array[Int], Array[Int]) = {
+    val sorted = counts.sortBy(_._1)
+    val (words, cnts) = sorted.unzip
+    (words.toArray, cnts.toArray)
+  }
 
   def apply(counts: Seq[(Int, Int)]): ArrayBagOfWords =
     new ArrayBagOfWords(counts)

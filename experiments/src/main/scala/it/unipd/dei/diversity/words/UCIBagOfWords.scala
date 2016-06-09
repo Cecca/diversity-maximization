@@ -1,12 +1,19 @@
 package it.unipd.dei.diversity.words
 
-import java.util
-
 import it.unipd.dei.diversity.ArrayBagOfWords
 
 class UCIBagOfWords(val documentId: Int,
-                    wordCounts: Seq[(Int, Int)])
-extends ArrayBagOfWords(wordCounts) with Serializable {
+                    override val wordsArray: Array[Int],
+                    override val countsArray: Array[Int])
+extends ArrayBagOfWords(wordsArray, countsArray) with Serializable {
+
+  def this(docId: Int, arrayPair: (Array[Int], Array[Int])) {
+    this(docId, arrayPair._1, arrayPair._2)
+  }
+
+  def this(docId: Int, counts: Seq[(Int, Int)]) {
+    this(docId, ArrayBagOfWords.buildArrayPair(counts))
+  }
 
   override def equals(o: scala.Any): Boolean = o match {
     case other: UCIBagOfWords =>
