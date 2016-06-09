@@ -17,8 +17,7 @@ extends ArrayBagOfWords(wordCounts) with Serializable {
     case _ => false
   }
 
-  override def hashCode(): Int =
-    31*documentId + 7*util.Arrays.hashCode(wordsArray) + util.Arrays.hashCode(countsArray)
+  override def hashCode(): Int = documentId
 
   override def toString: String =
     s"Document $documentId"
