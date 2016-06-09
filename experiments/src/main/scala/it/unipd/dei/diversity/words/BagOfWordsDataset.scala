@@ -48,43 +48,7 @@ class BagOfWordsDataset(val documentsFile: String,
     }
   }
 
-  def documents(): Iterator[UCIBagOfWords] = new Iterator[UCIBagOfWords] {
-
-    val source = Source.fromInputStream(
-      new GZIPInputStream(new FileInputStream(documentsFile)))
-
-    val tokenized =
-      source.getLines().drop(3).map { line =>
-        val tokens = line.split(" ")
-        require(tokens.length == 3)
-        (tokens(0).toInt, tokens(1).toInt, tokens(2).toInt)
-      }
-
-    var first = tokenized.next()
-
-    override def hasNext: Boolean = tokenized.hasNext
-
-    override def next(): UCIBagOfWords = {
-      val (docId, word, count) = first
-      val words = mutable.HashMap[Int, Int](word -> count)
-      var current = first
-      while(tokenized.hasNext && current._1 == docId) {
-        current = tokenized.next()
-        if (current._1 == docId) {
-          words(current._2) = current._3
-        } else {
-          first = current
-        }
-      }
-
-      new UCIBagOfWords(docId, words.toSeq)
-    }
-
-    override def finalize(): Unit = {
-      source.close()
-    }
-  }
-
+  def documents(): Iterator[UCIBagOfWords] = new UCITextFileIterator(documentsFile)
 }
 
 object BagOfWordsDataset {
@@ -115,4 +79,41 @@ object BagOfWordsDataset {
     }
   }
 
+}
+
+class UCITextFileIterator(val documentsFile: String) extends Iterator[UCIBagOfWords] {
+
+  val source = Source.fromInputStream(
+    new GZIPInputStream(new FileInputStream(documentsFile)))
+
+  val tokenized =
+    source.getLines().drop(3).map { line =>
+      val tokens = line.split(" ")
+      require(tokens.length == 3)
+      (tokens(0).toInt, tokens(1).toInt, tokens(2).toInt)
+    }
+
+  var first = tokenized.next()
+
+  override def hasNext: Boolean = tokenized.hasNext
+
+  override def next(): UCIBagOfWords = {
+    val (docId, word, count) = first
+    val words = mutable.HashMap[Int, Int](word -> count)
+    var current = first
+    while(tokenized.hasNext && current._1 == docId) {
+      current = tokenized.next()
+      if (current._1 == docId) {
+        words(current._2) = current._3
+      } else {
+        first = current
+      }
+    }
+
+    new UCIBagOfWords(docId, words.toSeq)
+  }
+
+  override def finalize(): Unit = {
+    source.close()
+  }
 }
