@@ -13,9 +13,6 @@ object DistanceBenchmark extends Bench.OfflineReport {
   val mapPairs = for {
     size <- sizes
   } yield (BOWBuilders.mapBOW(vocabulary, size), BOWBuilders.mapBOW(vocabulary, size))
-  val roaringPairs = for {
-    size <- sizes
-  } yield (BOWBuilders.roaringBOW(vocabulary, size), BOWBuilders.roaringBOW(vocabulary, size))
   val arrayPairs = for {
     size <- sizes
   } yield (BOWBuilders.arrayBOW(vocabulary, size), BOWBuilders.arrayBOW(vocabulary, size))
@@ -24,11 +21,6 @@ object DistanceBenchmark extends Bench.OfflineReport {
 
     measure method "MapBOW" in {
       using(mapPairs) in { case (a, b) =>
-        Distance.euclidean(a, b)
-      }
-    }
-    measure method "RoaringBOW" in {
-      using(roaringPairs) in { case (a, b) =>
         Distance.euclidean(a, b)
       }
     }
@@ -52,9 +44,6 @@ object BOWBuilders {
 
   def mapBOW(vocabulary: Vector[Int], size: Int): MapBagOfWords[Int] =
     new MapBagOfWords[Int](randomTable(vocabulary, size))
-
-  def roaringBOW(vocabulary: Vector[Int], size: Int): IntBagOfWords =
-    new IntBagOfWords(randomTable(vocabulary, size))
 
   def arrayBOW(vocabulary: Vector[Int], size: Int): ArrayBagOfWords =
     ArrayBagOfWords(randomTable(vocabulary, size).toSeq)
