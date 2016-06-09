@@ -6,7 +6,7 @@ import scala.collection.mutable
 
 class UCIBagOfWords(val documentId: Int,
                     override val wordCounts: mutable.HashMap[Int, Int])
-extends IntBagOfWords with Serializable {
+extends IntBagOfWords(wordCounts) with Serializable {
 
   override def equals(o: scala.Any): Boolean = o match {
     case other: UCIBagOfWords =>

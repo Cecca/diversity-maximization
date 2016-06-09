@@ -16,6 +16,9 @@ object DistanceBenchmark extends Bench.OfflineReport {
   val roaringPairs = for {
     size <- sizes
   } yield (BOWBuilders.roaringBOW(vocabulary, size), BOWBuilders.roaringBOW(vocabulary, size))
+  val arrayPairs = for {
+    size <- sizes
+  } yield (BOWBuilders.arrayBOW(vocabulary, size), BOWBuilders.arrayBOW(vocabulary, size))
 
   performance of "Distance.euclidean" in {
 
@@ -25,8 +28,13 @@ object DistanceBenchmark extends Bench.OfflineReport {
       }
     }
     measure method "RoaringBOW" in {
-      using(mapPairs) in { case (a, b) =>
+      using(roaringPairs) in { case (a, b) =>
         Distance.euclidean(a, b)
+      }
+    }
+    measure method "ArrayBOW" in {
+      using(arrayPairs) in { case (a, b) =>
+        ArrayBagOfWords.euclidean(a, b)
       }
     }
 
@@ -42,11 +50,12 @@ object BOWBuilders {
         (w, Random.nextInt())
       } :_*)
 
-  def mapBOW(vocabulary: Vector[Int], size: Int): BagOfWords[Int] =
+  def mapBOW(vocabulary: Vector[Int], size: Int): MapBagOfWords[Int] =
     new MapBagOfWords[Int](randomTable(vocabulary, size))
 
-  def roaringBOW(vocabulary: Vector[Int], size: Int): BagOfWords[Int] =
+  def roaringBOW(vocabulary: Vector[Int], size: Int): IntBagOfWords =
     new IntBagOfWords(randomTable(vocabulary, size))
 
-
+  def arrayBOW(vocabulary: Vector[Int], size: Int): ArrayBagOfWords =
+    ArrayBagOfWords(randomTable(vocabulary, size).toSeq)
 }
