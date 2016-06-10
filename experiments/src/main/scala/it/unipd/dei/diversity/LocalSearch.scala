@@ -142,49 +142,4 @@ object LocalSearch {
     }
   }
 
-  def runSlow[T:ClassTag](input: IndexedSeq[T],
-                          k: Int,
-                          epsilon: Double,
-                          distance: (T, T) => Double,
-                          diversity: (IndexedSeq[T], (T, T) => Double) => Double)
-  : IndexedSeq[T] = {
-    if (input.length <= k) {
-      input
-    } else {
-      var partial: Set[T] = initialSet(input, k, distance).toSet
-      var outside: Set[T] =
-        input.iterator.filterNot(p => partial.contains(p)).toSet
-
-      // While there are convenient swappings
-      var foundPairs = true
-      while (foundPairs) {
-        val threshold = (1+epsilon/k)*diversity(partial.toArray[T], distance)
-        // try (lazily) all the combinations to find an improving swap
-        val swaps: Iterator[(Set[T], Set[T])] =
-          partial.iterator.flatMap { in =>
-            outside.iterator.flatMap { out =>
-              val swapin = partial - in + out
-              val swapout = outside - out + in
-              val div = diversity(swapin.toArray[T], distance)
-              if (div > threshold) {
-                Iterator((swapin, swapout))
-              } else {
-                Iterator.empty
-              }
-            }
-          }
-        if (swaps.hasNext) {
-          val (swapin, swapout) = swaps.next()
-          partial = swapin
-          outside = swapout
-        } else {
-          // There are no improving swaps, break from the loop
-          foundPairs = false
-        }
-      }
-
-      partial.toArray[T]
-    }
-  }
-
 }
