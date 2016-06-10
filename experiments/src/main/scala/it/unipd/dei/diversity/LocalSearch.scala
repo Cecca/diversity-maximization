@@ -92,8 +92,6 @@ object LocalSearch {
       // The "inside" and "outside" sets as an array of flags
       val flags = Array.ofDim[Boolean](input.length)
       // set the initial partial solution
-      // TODO There's room for optimization here, by modifying initialSet
-      // to return the bitmap.
       val initial = initialSet(input, k, distance)
       var h = 0
       while(h < input.length) {
