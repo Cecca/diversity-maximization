@@ -63,11 +63,90 @@ object LocalSearch {
     }
   }
 
+  // Modify the partial array in place
+  def flagsToArray[T:ClassTag](points: IndexedSeq[T],
+                               flags: Array[Boolean],
+                               partial: Array[T]): Unit = {
+    var i = 0
+    var j = 0
+    while (i<flags.length) {
+      if (flags(i)) {
+        partial(j) = points(i)
+        j += 1
+      }
+      i += 1
+    }
+  }
+
   def run[T:ClassTag](input: IndexedSeq[T],
                       k: Int,
                       epsilon: Double,
                       distance: (T, T) => Double,
                       diversity: (IndexedSeq[T], (T, T) => Double) => Double)
+  : IndexedSeq[T] = {
+    if (input.length <= k) {
+      input
+    } else {
+      // Partial solution: it will be used to store the partial results
+      val partial = Array.ofDim[T](k)
+      // The "inside" and "outside" sets as an array of flags
+      val flags = Array.ofDim[Boolean](input.length)
+      // set the initial partial solution
+      // TODO There's room for optimization here, by modifying initialSet
+      // to return the bitmap.
+      val initial = initialSet(input, k, distance)
+      var h = 0
+      while(h < input.length) {
+        if (initial.contains(input(h))) {
+          flags(h) = true
+        }
+        h += 1
+      }
+      var foundImprovingSwap = true
+      while(foundImprovingSwap) {
+        // This will be reset to true if a swap is found
+        foundImprovingSwap = false
+        // Compute the threshold for this iteration
+        flagsToArray(input, flags, partial)
+        val threshold = (1+epsilon/k)*diversity(partial, distance)
+
+        // Try to find an improving swap
+        var i = 0
+        while (i < flags.length && !foundImprovingSwap) {
+          if (flags(i)) { // If i is inside the partial solution
+            var j = i + 1
+            while (j < flags.length && !foundImprovingSwap) {
+              if (!flags(j)) { // If j is not inside the partial solution
+                // Try the swap
+                flags(i) = false // move i-th point outside the solution
+                flags(j) = true  // move j-th point inside the solution
+                flagsToArray(input, flags, partial)
+                if (diversity(partial, distance) > threshold) {
+                  // Swap successful, set foundImprovingSwap to break the inner loops
+                  foundImprovingSwap = true
+                } else {
+                  // Swap unsuccessful, reset to previous situation
+                  flags(i) = true  // move i-th point inside the solution again
+                  flags(j) = false // move j-th point outside the solution again
+                }
+              }
+              j += 1
+            }
+          }
+          i += 1
+        }
+      }
+
+      flagsToArray(input, flags, partial)
+      partial
+    }
+  }
+
+  def runSlow[T:ClassTag](input: IndexedSeq[T],
+                          k: Int,
+                          epsilon: Double,
+                          distance: (T, T) => Double,
+                          diversity: (IndexedSeq[T], (T, T) => Double) => Double)
   : IndexedSeq[T] = {
     if (input.length <= k) {
       input

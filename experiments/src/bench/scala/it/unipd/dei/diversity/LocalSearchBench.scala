@@ -30,6 +30,13 @@ object LocalSearchBench extends Bench.OfflineReport {
       }
     }
 
+
+    measure method "local search: slow" in {
+      using(params) in { case (points, k) =>
+        LocalSearch.runSlow(points, k, epsilon, distance, diversity)
+      }
+    }
+
     measure method "matching heuristic" in {
       using(params) in { case (points, k) =>
         MatchingHeuristic.run(points, k, distance)
