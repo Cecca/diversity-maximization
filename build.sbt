@@ -47,7 +47,8 @@ lazy val experiments = (project in file("experiments")).
       "org.rogach" %% "scallop" % "1.0.1",
       "it.unimi.dsi" % "dsiutils" % "2.3.2" exclude("ch.qos.logback", "logback-classic"),
       "com.typesafe.akka" %% "akka-stream" % "2.4.5" % "provided",
-      "org.apache.spark" %% "spark-core" % "1.6.1" % "provided"
+      "org.apache.spark" %% "spark-core" % "1.6.1" % "provided",
+      "com.storm-enroute" %% "scalameter" % "0.7" % "bench"
     ),
     deploy := deployTaskImpl.value
   ).
@@ -59,7 +60,9 @@ lazy val experiments = (project in file("experiments")).
       "gitRevCount" -> "git log --oneline".!!.split("\n").length
     ),
     buildInfoPackage := "it.unipd.dei.diversity"
-  )
+  ).
+  configs(Benchmark).
+  settings(inConfig(Benchmark)(Defaults.testSettings): _*)
 
 //////////////////////////////////////////////////////////////////////////////
 // Custom tasks

@@ -51,7 +51,7 @@ object LocalSearch {
       // Fill the point set with the other points
       var h = 0
       var rIdx = 2
-      while (h<input.length) {
+      while (h<input.length && rIdx < k) {
         if (h != a && h != b) {
           result(rIdx) = input(h)
           rIdx += 1
