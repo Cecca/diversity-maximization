@@ -21,9 +21,9 @@ object LocalSearch {
 
   def initialSet[T:ClassTag](input: IndexedSeq[T],
                              k: Int,
-                             distance: (T, T) => Double): IndexedSeq[T] = {
+                             distance: (T, T) => Double): Array[T] = {
     if (input.length <= k) {
-      input
+      input.toArray
     } else {
       val result = Array.ofDim[T](k)
       // Find the pair of points with maximum distance
@@ -88,14 +88,14 @@ object LocalSearch {
       input
     } else {
       // Partial solution: it will be used to store the partial results
-      val partial = Array.ofDim[T](k)
+      val partial = initialSet(input, k, distance)
+      require(partial.length == k)
       // The "inside" and "outside" sets as an array of flags
-      val flags = Array.ofDim[Boolean](input.length)
+      val flags = Array.fill[Boolean](input.length)(false)
       // set the initial partial solution
-      val initial = initialSet(input, k, distance)
       var h = 0
       while(h < input.length) {
-        if (initial.contains(input(h))) {
+        if (partial.contains(input(h))) {
           flags(h) = true
         }
         h += 1
@@ -136,6 +136,7 @@ object LocalSearch {
       }
 
       flagsToArray(input, flags, partial)
+      require(partial.length == k)
       partial
     }
   }
