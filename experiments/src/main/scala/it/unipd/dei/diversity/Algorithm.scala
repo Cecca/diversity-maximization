@@ -74,8 +74,9 @@ object Algorithm {
           kernelSize,
           k,
           distance)
-        require(coreset.kernel.length == k,
-          s"Kernel of the wrong size: ${coreset.kernel.length} != $k")
+        require(coreset.kernel.length == kernelSize,
+          s"Kernel of the wrong size: ${coreset.kernel.length} != $kernelSize" +
+            s"(input of ${pointsArr.length} points)")
         require(coreset.kernel.length + coreset.delegates.length <= k*kernelSize,
           s"Coreset of the wrong size: " +
             s"${coreset.kernel.length} + ${coreset.delegates.length} > ${k*kernelSize} " +
