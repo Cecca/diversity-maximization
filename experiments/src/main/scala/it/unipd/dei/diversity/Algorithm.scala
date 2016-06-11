@@ -89,6 +89,51 @@ object Algorithm {
     coreset
   }
 
+
+  def localSearch[T:ClassTag](points: RDD[T],
+                              k: Int,
+                              epsilon: Double,
+                              distance: (T, T) => Double,
+                              diversity: (IndexedSeq[T], (T, T) => Double) => Double,
+                              experiment: Experiment): MapReduceCoreset[T] = {
+    experiment.tag("algorithm", "LocalSearch")
+
+    val parallelism = points.sparkContext.defaultParallelism
+    // We distinguish the case of increasing or decreasing the number of
+    // partitions for efficiency
+    val repartitioned =
+      if (points.getNumPartitions < parallelism) {
+        points.repartition(parallelism)
+      } else if (points.getNumPartitions > parallelism) {
+        points.coalesce(parallelism)
+      } else {
+        points
+      }
+
+    println("Run LocalSearch algorithm!")
+    val partitionCnt = points.sparkContext.accumulator(0L, "partition counter")
+    val (coreset, mrTime) = timed {
+      repartitioned.mapPartitions { pts =>
+        partitionCnt += 1
+        val pointsArr: Array[T] = pts.toArray
+        val coreset = LocalSearch.coreset(pointsArr, k, epsilon, distance, diversity)
+        Iterator(coreset)
+      }.reduce { (a, b) =>
+        MapReduceCoreset.compose(a, b)
+      }
+    }
+    require(partitionCnt.value == parallelism,
+      s"Processed ${partitionCnt.value} partitions")
+
+    experiment.append("times",
+      jMap(
+        "component" -> "algorithm",
+        "time"      -> convertDuration(mrTime, reportTimeUnit)
+      ))
+
+    coreset
+  }
+
   /**
     * Doesn't do much, just wraps the entire input in a coreset, just
     * for uniformity with the rest.
