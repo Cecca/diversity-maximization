@@ -74,9 +74,12 @@ object Algorithm {
           kernelSize,
           k,
           distance)
-        require(coreset.kernel.length + coreset.delegates.length == k*kernelSize,
+        require(coreset.kernel.length == k,
+          s"Kernel of the wrong size: ${coreset.kernel.length} != $k")
+        require(coreset.kernel.length + coreset.delegates.length <= k*kernelSize,
           s"Coreset of the wrong size: " +
-            s"${coreset.kernel.length} + ${coreset.delegates.length} != ${k*kernelSize}")
+            s"${coreset.kernel.length} + ${coreset.delegates.length} > ${k*kernelSize} " +
+            s"(input of ${pointsArr.length} points)")
         Iterator(coreset)
       }.reduce { (a, b) =>
         MapReduceCoreset.compose(a, b)
@@ -87,9 +90,9 @@ object Algorithm {
       s"Processed ${partitionCnt.value} partitions")
     require(coreset.kernel.size == parallelism*kernelSize,
       s"Unexpected kernel size: ${coreset.kernel.size} != ${parallelism*kernelSize}")
-    require(coreset.kernel.size + coreset.delegates.size == parallelism*kernelSize*k,
+    require(coreset.kernel.size + coreset.delegates.size <= parallelism*kernelSize*k,
       "Unexpected coreset size " +
-        s"${coreset.kernel.size} + ${coreset.delegates.size} != ${parallelism*kernelSize*k}")
+        s"${coreset.kernel.size} + ${coreset.delegates.size} > ${parallelism*kernelSize*k}")
 
     experiment.append("times",
       jMap(
