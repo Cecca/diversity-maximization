@@ -26,9 +26,9 @@ object Approximation {
             coreset.kernel
           }
           println(s"Compute approximation for remote-edge (${pts.length} points)")
-          val bestApprox = (0 until runNumber).map { _ =>
+          val bestApprox = (0 until math.min(runNumber, pts.length)).map { i =>
             print("|")
-            FarthestPointHeuristic.run(pts, k, distance)
+            FarthestPointHeuristic.run(pts, k, i, distance)
           }.maxBy(sub => Diversity.edge(sub, distance))
           println()
           Some(bestApprox)
@@ -42,9 +42,9 @@ object Approximation {
       val points = coreset.points
       println(s"Compute approximation for remote-tree (${points.length} points)")
       timed {
-        val bestApprox = (0 until runNumber).map { _ =>
+        val bestApprox = (0 until math.min(runNumber, points.length)).map { i =>
           print("|")
-          FarthestPointHeuristic.run(points, k, distance)
+          FarthestPointHeuristic.run(points, k, i, distance)
         }.maxBy(sub => Diversity.tree(sub, distance))
         println()
         Some(bestApprox)
