@@ -17,6 +17,7 @@ object MainPointsLocalSearch {
     val epsilonList = opts.epsilon().split(",").map{_.toDouble}
     val numPointsList = opts.numPoints().split(",").map{_.toInt}
     val runs = opts.runs()
+    val approxRuns = opts.approxRuns()
     val directory = opts.directory()
 
     val distance: (Point, Point) => Double = Distance.euclidean
@@ -60,7 +61,7 @@ object MainPointsLocalSearch {
       }
 
       Approximation.approximate(
-        coreset, k, distance, computeFarthest = false, computeMatching = true, 32, experiment)
+        coreset, k, distance, computeFarthest = false, computeMatching = true, approxRuns, experiment)
 
       experiment.saveAsJsonFile()
       println(experiment.toSimpleString)
@@ -79,6 +80,8 @@ object MainPointsLocalSearch {
     lazy val numPoints = opt[String](required = true)
 
     lazy val runs = opt[Int](default = Some(1))
+
+    lazy val approxRuns = opt[Int](default = Some(1))
 
     lazy val directory = opt[String](default = Some("/tmp"))
 

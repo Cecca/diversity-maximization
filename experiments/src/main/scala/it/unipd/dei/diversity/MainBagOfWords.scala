@@ -16,6 +16,7 @@ object MainBagOfWords {
     val kList = opts.delegates().split(",").map{_.toInt}
     val kernelSizeList = opts.kernelSize().split(",").map{_.toInt}
     val runs = opts.runs()
+    val approxRuns = opts.approxRuns()
     val computeFarthest = opts.farthest()
     val computeMatching = opts.matching()
     val datasets = opts.dataset().split(",")
@@ -92,6 +93,8 @@ object MainBagOfWords {
     lazy val kernelSize = opt[String](required = true)
 
     lazy val runs = opt[Int](default = Some(1))
+
+    lazy val approxRuns = opt[Int](default = Some(1))
 
     lazy val farthest = toggle(
       default=Some(true),

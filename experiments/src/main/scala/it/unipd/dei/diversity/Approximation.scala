@@ -15,6 +15,7 @@ object Approximation {
                               computeMatching: Boolean,
                               runNumber: Int,
                               experiment: Experiment) = {
+    require(runNumber > 0)
 
     val (farthestSubsetCenters, _): (Option[IndexedSeq[T]], Long) =
       if (computeFarthest) {
