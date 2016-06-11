@@ -32,7 +32,8 @@ object MapReduceCoreset {
       val kernel = FarthestPointHeuristic.run(points, kernelSize, distance)
       val delegates = ArrayBuffer[T]()
 
-      val counters = Array.fill[Int](kernel.length)(0)
+      // Init to 1 the number of delegates because we already count the centers
+      val counters = Array.fill[Int](kernel.length)(1)
 
       var pointIdx = 0
       while (pointIdx < points.length) {
