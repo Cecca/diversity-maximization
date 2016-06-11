@@ -1,6 +1,5 @@
 package it.unipd.dei.diversity
 
-import scala.collection.immutable.HashSet
 import scala.reflect.ClassTag
 
 /**
@@ -140,5 +139,15 @@ object LocalSearch {
       partial
     }
   }
+
+  def coreset[T:ClassTag](points: IndexedSeq[T],
+                          k: Int,
+                          epsilon: Double,
+                          distance: (T, T) => Double,
+                          diversity: (IndexedSeq[T], (T, T) => Double) => Double)
+  : MapReduceCoreset[T] =
+    new MapReduceCoreset(
+      run(points, k, epsilon, distance, diversity).toVector,
+      Vector.empty[T])
 
 }
