@@ -71,7 +71,7 @@ object MainBagOfWords {
       }
 
       Approximation.approximate[UCIBagOfWords](
-        coreset, k, distance, computeFarthest, computeMatching, experiment)
+        coreset, k, distance, computeFarthest, computeMatching, 16, experiment)
 
       experiment.saveAsJsonFile()
       println(experiment.toSimpleString)

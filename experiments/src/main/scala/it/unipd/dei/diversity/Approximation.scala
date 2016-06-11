@@ -13,6 +13,7 @@ object Approximation {
                               distance: (T, T) => Double,
                               computeFarthest: Boolean,
                               computeMatching: Boolean,
+                              runNumber: Int,
                               experiment: Experiment) = {
 
     val (farthestSubsetCenters, _): (Option[IndexedSeq[T]], Long) =
@@ -24,7 +25,12 @@ object Approximation {
             coreset.kernel
           }
           println(s"Compute approximation for remote-edge (${pts.length} points)")
-          Some(FarthestPointHeuristic.run(pts, k, distance))
+          val bestApprox = (0 until runNumber).map { _ =>
+            print("|")
+            FarthestPointHeuristic.run(pts, k, distance)
+          }.maxBy(sub => Diversity.edge(sub, distance))
+          println()
+          Some(bestApprox)
         }
       } else {
         (None, 0)
@@ -35,11 +41,16 @@ object Approximation {
       val points = coreset.points
       println(s"Compute approximation for remote-tree (${points.length} points)")
       timed {
-          Some(FarthestPointHeuristic.run(points, k, distance))
-        }
-      } else {
-        (None, 0)
+        val bestApprox = (0 until runNumber).map { _ =>
+          print("|")
+          FarthestPointHeuristic.run(points, k, distance)
+        }.maxBy(sub => Diversity.tree(sub, distance))
+        println()
+        Some(bestApprox)
       }
+    } else {
+      (None, 0)
+    }
 
     val (matchingSubset, matchingSubsetTime): (Option[IndexedSeq[T]], Long) =
     if (computeMatching) {

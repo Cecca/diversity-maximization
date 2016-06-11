@@ -87,7 +87,7 @@ object MainPoints {
       }
 
       Approximation.approximate(
-        coreset, k, distance, computeFarthest, computeMatching, experiment)
+        coreset, k, distance, computeFarthest, computeMatching, 32, experiment)
 
       experiment.saveAsJsonFile()
       println(experiment.toSimpleString)

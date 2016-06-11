@@ -60,7 +60,7 @@ object MainPointsLocalSearch {
       }
 
       Approximation.approximate(
-        coreset, k, distance, computeFarthest = false, computeMatching = true, experiment)
+        coreset, k, distance, computeFarthest = false, computeMatching = true, 32, experiment)
 
       experiment.saveAsJsonFile()
       println(experiment.toSimpleString)
