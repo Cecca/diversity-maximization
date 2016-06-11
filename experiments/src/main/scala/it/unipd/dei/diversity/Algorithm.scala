@@ -79,6 +79,11 @@ object Algorithm {
     }
     require(partitionCnt.value == parallelism,
       s"Processed ${partitionCnt.value} partitions")
+    require(coreset.kernel.size == parallelism*kernelSize,
+      s"Unexpected kernel size: ${coreset.kernel.size} != ${parallelism*kernelSize}")
+    require(coreset.kernel.size + coreset.delegates.size == parallelism*kernelSize*k,
+      "Unexpected coreset size " +
+        s"${coreset.kernel.size} + ${coreset.delegates.size} != ${parallelism*kernelSize*k}")
 
     experiment.append("times",
       jMap(
