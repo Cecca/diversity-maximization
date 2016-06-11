@@ -63,10 +63,12 @@ object Algorithm {
 
     println("Run MapReduce algorithm!")
     val partitionCnt = points.sparkContext.accumulator(0L, "partition counter")
+    val pointsCnt = points.sparkContext.accumulator(0L, "points counter")
     val (coreset, mrTime) = timed {
       repartitioned.mapPartitions { pts =>
         partitionCnt += 1
         val pointsArr: Array[T] = pts.toArray
+        pointsCnt += pointsArr.length
         val coreset = MapReduceCoreset.run(
           pointsArr,
           kernelSize,
@@ -77,6 +79,7 @@ object Algorithm {
         MapReduceCoreset.compose(a, b)
       }
     }
+    println(s"Processed ${pointsCnt.value} points")
     require(partitionCnt.value == parallelism,
       s"Processed ${partitionCnt.value} partitions")
     require(coreset.kernel.size == parallelism*kernelSize,
