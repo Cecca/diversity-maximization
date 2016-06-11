@@ -74,6 +74,9 @@ object Algorithm {
           kernelSize,
           k,
           distance)
+        require(coreset.kernel.length + coreset.delegates.length == k*kernelSize,
+          s"Coreset of the wrong size: " +
+            s"${coreset.kernel.length} + ${coreset.delegates.length} != ${k*kernelSize}")
         Iterator(coreset)
       }.reduce { (a, b) =>
         MapReduceCoreset.compose(a, b)

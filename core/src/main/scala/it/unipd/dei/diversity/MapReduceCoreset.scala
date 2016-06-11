@@ -25,7 +25,7 @@ object MapReduceCoreset {
                       kernelSize: Int,
                       numDelegates: Int,
                       distance: (T, T) => Double): MapReduceCoreset[T] = {
-    val resultSize = kernelSize * (numDelegates+1)
+    val resultSize = kernelSize * numDelegates
     if (points.length < kernelSize) {
       new MapReduceCoreset(points.toVector, Vector.empty[T])
     } else {
