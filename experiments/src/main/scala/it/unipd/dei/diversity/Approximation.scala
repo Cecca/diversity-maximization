@@ -17,7 +17,7 @@ object Approximation {
                               experiment: Experiment) = {
     require(runNumber > 0)
 
-    val (farthestSubsetCenters, _): (Option[IndexedSeq[T]], Long) =
+    val (edgeDiv, _): (Option[Double], Long) =
       if (computeFarthest) {
         timed {
           val pts = if(coreset.kernel.length < k) {
@@ -28,8 +28,9 @@ object Approximation {
           println(s"Compute approximation for remote-edge (${pts.length} points)")
           val bestApprox = (0 until math.min(runNumber, pts.length)).map { i =>
             print("|")
-            FarthestPointHeuristic.run(pts, k, i, distance)
-          }.maxBy(sub => Diversity.edge(sub, distance))
+            val sub = FarthestPointHeuristic.run(pts, k, i, distance)
+            Diversity.edge(sub, distance)
+          }.max
           println()
           Some(bestApprox)
         }
@@ -37,15 +38,16 @@ object Approximation {
         (None, 0)
       }
 
-    val (farthestSubsetWDelegates, farthestSubsetTime): (Option[IndexedSeq[T]], Long) =
+    val (treeDiv, farthestSubsetTime): (Option[Double], Long) =
     if (computeFarthest) {
       val points = coreset.points
       println(s"Compute approximation for remote-tree (${points.length} points)")
       timed {
         val bestApprox = (0 until math.min(runNumber, points.length)).map { i =>
           print("|")
-          FarthestPointHeuristic.run(points, k, i, distance)
-        }.maxBy(sub => Diversity.tree(sub, distance))
+          val sub = FarthestPointHeuristic.run(points, k, i, distance)
+          Diversity.tree(sub, distance)
+        }.max
         println()
         Some(bestApprox)
       }
@@ -53,19 +55,19 @@ object Approximation {
       (None, 0)
     }
 
-    val (matchingSubset, matchingSubsetTime): (Option[IndexedSeq[T]], Long) =
+    val ((cliqueDiv, starDiv), matchingSubsetTime): ((Option[Double], Option[Double]), Long) =
     if (computeMatching) {
       val points = coreset.points
       println(s"Compute approximation for remote-clique and remote-star (${points.length} points)")
       timed {
-          Some(MatchingHeuristic.run(points, k, distance))
+        val sub = MatchingHeuristic.run(points, k, distance)
+        (Some(Diversity.clique(sub, distance)), Some(Diversity.star(sub, distance)))
         }
       } else {
-        (None, 0)
+        ((None, None), 0)
       }
 
-    approxTable(
-      farthestSubsetCenters, farthestSubsetWDelegates, matchingSubset, distance)
+    approxTable(edgeDiv, treeDiv, cliqueDiv, starDiv)
       .foreach { row =>
         experiment.append("approximation", row)
       }
@@ -83,35 +85,37 @@ object Approximation {
 
   }
 
-  def approxTable[T:ClassTag](farthestSubsetCenters: Option[IndexedSeq[T]],
-                              farthestSubsetWDelegates: Option[IndexedSeq[T]],
-                              matchingSubset: Option[IndexedSeq[T]],
-                              distance: (T, T) => Double) = {
+  def approxTable[T:ClassTag](edgeDiv: Option[Double],
+                              treeDiv: Option[Double],
+                              cliqueDiv: Option[Double],
+                              starDiv: Option[Double]) = {
 
     val columns = mutable.ArrayBuffer[(String, Any)]()
 
-    farthestSubsetCenters.foreach { fs =>
-      val edgeDiversity = Diversity.edge(fs, distance)
+    edgeDiv.foreach { div =>
       columns.append(
-        "computed-edge" -> edgeDiversity
+        "computed-edge" -> div
       )
     }
 
-    farthestSubsetWDelegates.foreach { fs =>
-      val treeDiversity = Diversity.tree(fs, distance)
+    treeDiv.foreach { div =>
       columns.append(
-        "computed-tree" -> treeDiversity
+        "computed-tree" -> div
       )
     }
 
-    matchingSubset.foreach { ms =>
-      val cliqueDiversity = Diversity.clique(ms, distance)
-      val starDiversity   = Diversity.star(ms, distance)
+    cliqueDiv.foreach { div =>
       columns.append(
-        "computed-clique" -> cliqueDiversity,
-        "computed-star"   -> starDiversity
+        "computed-clique" -> div
       )
     }
+
+    starDiv.foreach { div =>
+      columns.append(
+        "computed-star" -> div
+      )
+    }
+
 
     if (columns.nonEmpty) {
       Some(jMap(columns: _*))
@@ -119,6 +123,5 @@ object Approximation {
       None
     }
   }
-
 
 }
