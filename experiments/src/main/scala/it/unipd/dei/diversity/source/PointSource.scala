@@ -59,17 +59,20 @@ class InterleavingPointIterator(val certificate: Array[Point],
                                 val num: Int)
 extends Iterator[Point] {
 
+  private var _cnt = 0
   private val _toEmit = mutable.Set[Point](certificate :_*)
   private val _emissionProb: Double = certificate.length.toDouble / num
 
-  override def hasNext: Boolean = _toEmit.nonEmpty
+  override def hasNext: Boolean = _toEmit.nonEmpty || _cnt < num
 
-  override def next(): Point =
-    if (Random.nextDouble() <= _emissionProb) {
+  override def next(): Point = {
+    _cnt += 1
+    if (_toEmit.nonEmpty && Random.nextDouble() <= _emissionProb) {
       val p = _toEmit.head
       _toEmit.remove(p)
       p
     } else {
       points.next()
     }
+  }
 }

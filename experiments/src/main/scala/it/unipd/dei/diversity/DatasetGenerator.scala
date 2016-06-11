@@ -30,7 +30,15 @@ object DatasetGenerator {
       n        <- numPointsList
     } {
       val source = PointSource(sourceName, dim, n, k, Distance.euclidean)
-      val rdd = new PointSourceRDD(sc, source, sc.defaultParallelism)
+      // Materialize tht RDD to count it
+      val rdd = new PointSourceRDD(sc, source, sc.defaultParallelism).map {
+        p => p
+      }.cache()
+
+      val numGenerated = rdd.count()
+      require(numGenerated >= n,
+        s"Not enough points have been generated! $numGenerated < $n")
+      println(s"Generated $numGenerated points")
 
       rdd.saveAsObjectFile(filename(outputDir, sourceName, dim, n, k))
 
