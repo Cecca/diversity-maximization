@@ -38,6 +38,13 @@ object MainPoints {
       n        <- numPointsList
       kernSize <- kernelSizeList
     } {
+      println(
+        s"""
+          |Experiment with:
+          |  $n points from $sourceName (dimension $dim)
+          |  k  = $k
+          |  k' = $kernSize
+        """.stripMargin)
       val experiment = new Experiment()
         .tag("experiment", "Points")
         .tag("version", BuildInfo.version)

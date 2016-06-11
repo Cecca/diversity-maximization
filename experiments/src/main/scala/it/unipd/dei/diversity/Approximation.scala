@@ -15,7 +15,6 @@ object Approximation {
                               computeMatching: Boolean,
                               experiment: Experiment) = {
 
-    println("Compute approximation for remote-edge")
     val (farthestSubsetCenters, _): (Option[IndexedSeq[T]], Long) =
       if (computeFarthest) {
         timed {
@@ -24,27 +23,30 @@ object Approximation {
           } else {
             coreset.kernel
           }
+          println(s"Compute approximation for remote-edge (${pts.length} points)")
           Some(FarthestPointHeuristic.run(pts, k, distance))
         }
       } else {
         (None, 0)
       }
 
-    println("Compute approximation for remote-tree")
     val (farthestSubsetWDelegates, farthestSubsetTime): (Option[IndexedSeq[T]], Long) =
-      if (computeFarthest) {
-        timed {
-          Some(FarthestPointHeuristic.run(coreset.points, k, distance))
+    if (computeFarthest) {
+      val points = coreset.points
+      println(s"Compute approximation for remote-tree (${points.length} points)")
+      timed {
+          Some(FarthestPointHeuristic.run(points, k, distance))
         }
       } else {
         (None, 0)
       }
 
-    println("Compute approximation for remote-clique and remote-star")
     val (matchingSubset, matchingSubsetTime): (Option[IndexedSeq[T]], Long) =
-      if (computeMatching) {
-        timed {
-          Some(MatchingHeuristic.run(coreset.points, k, distance))
+    if (computeMatching) {
+      val points = coreset.points
+      println(s"Compute approximation for remote-clique and remote-star (${points.length} points)")
+      timed {
+          Some(MatchingHeuristic.run(points, k, distance))
         }
       } else {
         (None, 0)
