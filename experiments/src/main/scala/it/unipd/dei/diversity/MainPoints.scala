@@ -65,9 +65,15 @@ object MainPoints {
         case "mapreduce" =>
           val parallelism = sc.defaultParallelism
           experiment.tag("parallelism", parallelism)
+          val zero = Point.zero(dim)
+          // Adversarially partition by distance from origin
           val points = sc.objectFile[Point](
-            DatasetGenerator.filename(directory, sourceName, dim, n, k),
-            parallelism)
+            DatasetGenerator.filename(directory, sourceName, dim, n, k), parallelism)
+            .map { p =>
+              val pidx = distance(p, zero)*parallelism.toInt
+              (pidx, p)
+            }.repartition(parallelism)
+            .map { case (_, p) => p }
           Algorithm.mapReduce(points, kernSize, k, distance, experiment)
 
         case "streaming" =>

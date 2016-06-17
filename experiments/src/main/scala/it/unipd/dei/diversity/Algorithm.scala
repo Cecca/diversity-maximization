@@ -120,8 +120,10 @@ object Algorithm {
     // partitions for efficiency
     val repartitioned =
       if (points.getNumPartitions < parallelism) {
+        println("Increasing the number of partitions")
         points.repartition(parallelism)
       } else if (points.getNumPartitions > parallelism) {
+        println("Decreasing the number of partitions")
         points.coalesce(parallelism)
       } else {
         points
