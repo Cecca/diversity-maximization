@@ -43,6 +43,7 @@ object MainPointsLocalSearch {
         .tag("version", BuildInfo.version)
         .tag("git-revision", BuildInfo.gitRevision)
         .tag("git-revcount", BuildInfo.gitRevCount)
+        .tag("git-branch", BuildInfo.gitBranch)
         .tag("source", sourceName)
         .tag("space-dimension", dim)
         .tag("k", k)

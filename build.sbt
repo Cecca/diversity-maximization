@@ -56,6 +56,7 @@ lazy val experiments = (project in file("experiments")).
   settings(
     buildInfoKeys := Seq[BuildInfoKey](
       version,
+      "gitBranch"   -> "git rev-parse --abbrev-ref HEAD".!!.trim,
       "gitRevision" -> "git rev-parse HEAD".!!.trim,
       "gitRevCount" -> "git log --oneline".!!.split("\n").length
     ),

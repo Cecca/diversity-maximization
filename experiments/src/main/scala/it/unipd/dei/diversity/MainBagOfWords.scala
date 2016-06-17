@@ -41,6 +41,7 @@ object MainBagOfWords {
         .tag("version", BuildInfo.version)
         .tag("git-revision", BuildInfo.gitRevision)
         .tag("git-revcount", BuildInfo.gitRevCount)
+        .tag("git-branch", BuildInfo.gitBranch)
         .tag("k", k)
         .tag("kernel-size", kernSize)
         .tag("dataset", dataset)
