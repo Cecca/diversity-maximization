@@ -10,6 +10,10 @@ class WikiBagOfWords(val title: String,
                      val countsArray: Array[Int])
 extends BagOfWords[String] with Serializable {
 
+  // Words array MUST be sorted, otherwise the specialized
+  // implementation of the euclidean distance breaks
+  require(wordsArray.sorted.sameElements(wordsArray))
+
   override def words: Iterator[String] = wordsArray.iterator
 
   override def apply(word: String): Int = {
@@ -57,6 +61,43 @@ object WikiBagOfWords {
     val (words, counts) = wordCounts.unzip
 
     new WikiBagOfWords(title, categories, words.toArray, counts.toArray)
+  }
+
+  def euclidean(a: WikiBagOfWords, b: WikiBagOfWords): Double = {
+    var sum = 0.0
+    var aIdx = 0
+    var bIdx = 0
+    while(aIdx < a.wordsArray.length && bIdx < b.wordsArray.length) {
+      if (a.wordsArray(aIdx) == b.wordsArray(bIdx)) {
+        val diff = a.countsArray(aIdx) - b.countsArray(bIdx)
+        sum += diff * diff
+        aIdx += 1
+        bIdx += 1
+      } else if (a.wordsArray(aIdx) < b.wordsArray(bIdx)) {
+        val diff = a.countsArray(aIdx)
+        sum += diff*diff
+        aIdx += 1
+      } else {
+        val diff = b.countsArray(bIdx)
+        sum += diff * diff
+        bIdx += 1
+      }
+    }
+
+    while (aIdx < a.wordsArray.length) {
+      val diff = a.countsArray(aIdx)
+      sum += diff*diff
+      aIdx += 1
+    }
+    while (bIdx < b.wordsArray.length) {
+      val diff = b.countsArray(bIdx)
+      sum += diff*diff
+      bIdx += 1
+    }
+
+    val res = math.sqrt(sum)
+    assert(res < Double.PositiveInfinity, "The distance cannot be infinite! Check your inputs.")
+    res
   }
 
   def main(args: Array[String]) {
