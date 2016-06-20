@@ -14,10 +14,20 @@ object Approximation {
                               computeFarthest: Boolean,
                               computeMatching: Boolean,
                               runNumber: Int,
-                              experiment: Experiment) = {
+                              experiment: Experiment): Unit =
+    approximate(coreset, k, distance, computeFarthest, computeMatching, runNumber, None, experiment)
+
+  def approximate[T:ClassTag](coreset: Coreset[T],
+                              k: Int,
+                              distance: (T, T) => Double,
+                              computeFarthest: Boolean,
+                              computeMatching: Boolean,
+                              runNumber: Int,
+                              pointToRow: Option[T => Map[String, Any]],
+                              experiment: Experiment): Unit = {
     require(runNumber > 0)
 
-    val (edgeDiv, _): (Option[Double], Long) =
+    val (edgeSolution, _): (Option[(Double, Seq[T])], Long) =
       if (computeFarthest) {
         timed {
           val pts = if(coreset.kernel.length < k) {
@@ -26,48 +36,48 @@ object Approximation {
             coreset.kernel
           }
           println(s"Compute approximation for remote-edge (${pts.length} points)")
-          val bestApprox = (0 until math.min(runNumber, pts.length)).map { i =>
+          val (bestApprox, set) = (0 until math.min(runNumber, pts.length)).map { i =>
             print("|")
             val sub = FarthestPointHeuristic.run(pts, k, i, distance)
-            Diversity.edge(sub, distance)
-          }.max
+            (Diversity.edge(sub, distance), sub)
+          }.maxBy(_._1)
           println()
-          Some(bestApprox)
+          Some((bestApprox, set))
         }
       } else {
         (None, 0)
       }
 
-    val (treeDiv, farthestSubsetTime): (Option[Double], Long) =
+    val (treeSolution, farthestSubsetTime): (Option[(Double, Seq[T])], Long) =
     if (computeFarthest) {
       val points = coreset.points
       println(s"Compute approximation for remote-tree (${points.length} points)")
       timed {
-        val bestApprox = (0 until math.min(runNumber, points.length)).map { i =>
+        val (bestApprox, set) = (0 until math.min(runNumber, points.length)).map { i =>
           print("|")
           val sub = FarthestPointHeuristic.run(points, k, i, distance)
-          Diversity.tree(sub, distance)
-        }.max
+          (Diversity.tree(sub, distance), sub)
+        }.maxBy(_._1)
         println()
-        Some(bestApprox)
+        Some((bestApprox, set))
       }
     } else {
       (None, 0)
     }
 
-    val ((cliqueDiv, starDiv), matchingSubsetTime): ((Option[Double], Option[Double]), Long) =
+    val (matchingSolution, matchingSubsetTime): (Option[(Double, Double, Seq[T])], Long) =
     if (computeMatching) {
       val points = coreset.points
       println(s"Compute approximation for remote-clique and remote-star (${points.length} points)")
       timed {
         val sub = MatchingHeuristic.run(points, k, distance)
-        (Some(Diversity.clique(sub, distance)), Some(Diversity.star(sub, distance)))
-        }
-      } else {
-        ((None, None), 0)
+        Some((Diversity.clique(sub, distance), Diversity.star(sub, distance), sub))
       }
+    } else {
+      (None, 0)
+    }
 
-    approxTable(edgeDiv, treeDiv, cliqueDiv, starDiv)
+    approxTable(edgeSolution, treeSolution, matchingSolution)
       .foreach { row =>
         experiment.append("approximation", row)
       }
@@ -85,37 +95,30 @@ object Approximation {
 
   }
 
-  def approxTable[T:ClassTag](edgeDiv: Option[Double],
-                              treeDiv: Option[Double],
-                              cliqueDiv: Option[Double],
-                              starDiv: Option[Double]) = {
+  def approxTable[T:ClassTag](edgeSolution: Option[(Double, Seq[T])],
+                              treeSolution: Option[(Double, Seq[T])],
+                              matchingSolution: Option[(Double,Double, Seq[T])]) = {
 
     val columns = mutable.ArrayBuffer[(String, Any)]()
 
-    edgeDiv.foreach { div =>
+    edgeSolution.foreach { case (div, _) =>
       columns.append(
         "computed-edge" -> div
       )
     }
 
-    treeDiv.foreach { div =>
+    treeSolution.foreach { case (div, _) =>
       columns.append(
         "computed-tree" -> div
       )
     }
 
-    cliqueDiv.foreach { div =>
+    matchingSolution.foreach { case (cliqueDiv, starDiv, _) =>
       columns.append(
-        "computed-clique" -> div
+        "computed-clique" -> cliqueDiv,
+        "computed-star" -> starDiv
       )
     }
-
-    starDiv.foreach { div =>
-      columns.append(
-        "computed-star" -> div
-      )
-    }
-
 
     if (columns.nonEmpty) {
       Some(jMap(columns: _*))
