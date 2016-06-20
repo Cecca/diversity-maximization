@@ -70,7 +70,7 @@ object MainPoints {
           val points = sc.objectFile[Point](
             DatasetGenerator.filename(directory, sourceName, dim, n, k), parallelism)
             .map { p =>
-              val pidx = distance(p, zero)*parallelism.toInt
+              val pidx = math.ceil(distance(p, zero)*parallelism).toInt
               (pidx, p)
             }.repartition(parallelism)
             .map { case (_, p) => p }
