@@ -1,9 +1,16 @@
 package it.unipd.dei.diversity.wiki
 
+import it.unipd.dei.diversity.PorterStemmer
+
+import scala.io.Source
+
 class WikiBagOfWords(val title: String,
                      val categories: Set[String],
                      val words: Array[String],
-                     val counts: Array[String]) {
+                     val counts: Array[Int]) {
+
+  override def toString: String =
+    s"$title: ($categories)\n${words.zip(counts).mkString(", ")}"
 
 }
 
@@ -26,12 +33,26 @@ object WikiBagOfWords {
       } else {
         tokens(3).split(" ")
       }
-    rawWords.view
-      .filter(s => s.length > 1) // Filter out all single letter words
-      .map(s => s.toLowerCase)   // Make everything lowercase
+    val wordCounts = rawWords.view
+      .filter(s => s.length > 1)        // Filter out all single letter words
+      .map(s => s.toLowerCase)          // Make everything lowercase
+      .map(s => PorterStemmer.stem(s))  // stem the words
+      .groupBy(identity)
+      .map({case (w, occurences) => (w, occurences.size)})
+      .toSeq
+      .sortBy(_._1)
 
+    val (words, counts) = wordCounts.unzip
 
-    ???
+    new WikiBagOfWords(title, categories, words.toArray, counts.toArray)
+  }
+
+  def main(args: Array[String]) {
+    val text = Source.fromFile(args(0))
+    for (line <- text.getLines()) {
+      println(WikiBagOfWords.fromLine(line))
+    }
+    text.close()
   }
 
 }
