@@ -82,6 +82,8 @@ object Approximation {
         experiment.append("approximation", row)
       }
 
+    solutionTable(pointToRow, edgeSolution, treeSolution, matchingSolution, experiment)
+
     experiment.append("times",
       jMap(
         "component" -> "farthest",
@@ -97,7 +99,7 @@ object Approximation {
 
   def approxTable[T:ClassTag](edgeSolution: Option[(Double, Seq[T])],
                               treeSolution: Option[(Double, Seq[T])],
-                              matchingSolution: Option[(Double,Double, Seq[T])]) = {
+                              matchingSolution: Option[(Double, Double, Seq[T])]) = {
 
     val columns = mutable.ArrayBuffer[(String, Any)]()
 
@@ -125,6 +127,31 @@ object Approximation {
     } else {
       None
     }
+  }
+
+  def solutionTable[T:ClassTag](pointToRow: Option[T => Map[String, Any]],
+                                edgeSolution: Option[(Double, Seq[T])],
+                                treeSolution: Option[(Double, Seq[T])],
+                                matchingSolution: Option[(Double, Double, Seq[T])],
+                                experiment: Experiment) = pointToRow match {
+    case None => // Do nothing!
+    case Some(func) =>
+      edgeSolution.foreach { case (_, solution) =>
+        solution.map(func).foreach { row =>
+          experiment.append("solution-remote-edge", jMap(row.toSeq :_*))
+        }
+      }
+      treeSolution.foreach { case (_, solution) =>
+        solution.map(func).foreach { row =>
+          experiment.append("solution-remote-tree", jMap(row.toSeq :_*))
+        }
+      }
+      matchingSolution.foreach { case (_, _, solution) =>
+        solution.map(func).foreach { row =>
+          experiment.append("solution-remote-clique", jMap(row.toSeq :_*))
+          experiment.append("solution-remote-star", jMap(row.toSeq :_*))
+        }
+      }
   }
 
 }

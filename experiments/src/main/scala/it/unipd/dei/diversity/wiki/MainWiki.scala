@@ -7,6 +7,11 @@ import org.rogach.scallop.ScallopConf
 
 object MainWiki {
 
+  def wikiBowToMap(bow: WikiBagOfWords) = Map(
+    "title" -> bow.title,
+    "categories" -> bow.categories.mkString(",")
+  )
+
   def main(args: Array[String]) {
 
     // Read command line options
@@ -55,7 +60,8 @@ object MainWiki {
         Algorithm.mapReduce(documents, kernSize, k, distance, experiment)
 
       Approximation.approximate(
-        coreset, k, distance, computeFarthest, computeMatching, approxRuns, experiment)
+        coreset, k, distance, computeFarthest, computeMatching,
+        approxRuns, Some(wikiBowToMap _), experiment)
 
       experiment.saveAsJsonFile()
       println(experiment.toSimpleString)
