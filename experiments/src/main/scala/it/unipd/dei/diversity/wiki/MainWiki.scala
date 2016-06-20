@@ -55,7 +55,7 @@ object MainWiki {
 
       val parallelism = sc.defaultParallelism
       experiment.tag("parallelism", parallelism)
-      val documents = sc.textFile(dataset).map(WikiBagOfWords.fromLine)
+      val documents = CachedDataset(sc, dataset)
       val coreset: Coreset[WikiBagOfWords] =
         Algorithm.mapReduce(documents, kernSize, k, distance, experiment)
 
