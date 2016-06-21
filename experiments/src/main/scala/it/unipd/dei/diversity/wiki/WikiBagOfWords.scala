@@ -73,10 +73,8 @@ object WikiBagOfWords {
         aIdx += 1
         bIdx += 1
       } else if (a.wordsArray(aIdx) < b.wordsArray(bIdx)) {
-        numerator += a.countsArray(aIdx)
         aIdx += 1
       } else {
-        numerator += b.countsArray(bIdx)
         bIdx += 1
       }
     }

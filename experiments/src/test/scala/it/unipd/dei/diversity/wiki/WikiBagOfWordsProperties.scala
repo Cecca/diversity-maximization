@@ -1,10 +1,11 @@
 package it.unipd.dei.diversity.wiki
 
-import it.unipd.dei.diversity.Distance
+import it.unipd.dei.diversity.{Distance, MapBagOfWords}
 import org.scalacheck._
-import org.scalacheck.Prop.{BooleanOperators, forAll, all}
+import org.scalacheck.Prop.{BooleanOperators, all, forAll}
 import org.scalacheck.Gen
 
+import scala.collection.mutable
 import scala.util.Random
 
 object WikiBagOfWordsProperties extends Properties("WikiBagOfWords") {
@@ -27,6 +28,16 @@ object WikiBagOfWordsProperties extends Properties("WikiBagOfWords") {
     }
   }
 
+  def buildBagOfWords(wordCounts: Map[String, Int]) = {
+    val (words, counts) = wordCounts.toSeq.sortBy(_._1).unzip
+    new WikiBagOfWords("", Set.empty, words.toArray, counts.toArray)
+  }
+
+  def bagOfWords =
+    for {
+      countsMap <- wordCounts
+    } yield buildBagOfWords(countsMap)
+
   def bagOfWordsPair =
     for {
       countsMap <- wordCounts
@@ -44,5 +55,16 @@ object WikiBagOfWordsProperties extends Properties("WikiBagOfWords") {
            | $expected != $actual
          """.stripMargin
     }
+
+  property("cosine similarity of the same page") =
+    forAll(bagOfWords) { bow =>
+      val sim = WikiBagOfWords.cosineSimilarity(bow, bow)
+      doubleEquality(sim, 1.0) :| s"Similarity is $sim instead of 1.0"
+    }
+
+  def doubleEquality(a: Double, b: Double): Boolean = {
+    val precision = 0.000000000000001
+    math.abs(a-b) <= precision
+  }
 
 }
