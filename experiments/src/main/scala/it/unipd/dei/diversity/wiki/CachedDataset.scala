@@ -3,6 +3,7 @@ package it.unipd.dei.diversity.wiki
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
+import TfIdfTransformation._
 
 object CachedDataset {
 
@@ -21,7 +22,10 @@ object CachedDataset {
     } else {
       println(s"Dataset $path not found in cache, loading from text")
       val input = sc.textFile(path, sc.defaultParallelism)
-        .map(WikiBagOfWords.fromLine).cache()
+        .repartition(sc.defaultParallelism)
+        .map(WikiBagOfWords.fromLine)
+        .rescaleTfIdf()
+        .cache()
       input.saveAsObjectFile(cachedFilename(path))
       input
     }

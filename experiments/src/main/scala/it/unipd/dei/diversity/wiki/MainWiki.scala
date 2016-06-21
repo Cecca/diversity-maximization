@@ -25,7 +25,7 @@ object MainWiki {
     val computeFarthest = opts.farthest()
     val computeMatching = opts.matching()
 
-    val distance: (WikiBagOfWords, WikiBagOfWords) => Double = WikiBagOfWords.jaccard
+    val distance: (WikiBagOfWords, WikiBagOfWords) => Double = WikiBagOfWords.cosineDistance
 
     val sparkConfig = new SparkConf(loadDefaults = true)
       .setAppName("Wikipedia MapReduce coresets")
