@@ -19,6 +19,7 @@ object TfIdfTransformation {
     }.reduceByKey(_ + _).mapValues { docFrequency =>
       math.log(numDocs.toDouble/ docFrequency.toDouble)
     }.collectAsMap()
+    println(s"There are a total of ${localInverseDocFreqs.size} words in the dataset")
     val inverseDocFreqs = data.sparkContext.broadcast(localInverseDocFreqs)
 
     // 2. rescale the terms
