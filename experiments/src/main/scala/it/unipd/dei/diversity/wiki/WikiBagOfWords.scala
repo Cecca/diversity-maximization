@@ -63,6 +63,46 @@ object WikiBagOfWords {
     new WikiBagOfWords(title, categories, words.toArray, counts.toArray)
   }
 
+  def cosineSimilarity(a: WikiBagOfWords, b: WikiBagOfWords): Double = {
+    var numerator = 0.0
+    var aIdx = 0
+    var bIdx = 0
+    while(aIdx < a.wordsArray.length && bIdx < b.wordsArray.length) {
+      if (a.wordsArray(aIdx) == b.wordsArray(bIdx)) {
+        numerator += a.countsArray(aIdx) * b.countsArray(bIdx)
+        aIdx += 1
+        bIdx += 1
+      } else if (a.wordsArray(aIdx) < b.wordsArray(bIdx)) {
+        numerator += a.countsArray(aIdx)
+        aIdx += 1
+      } else {
+        numerator += b.countsArray(bIdx)
+        bIdx += 1
+      }
+    }
+
+    var denominatorA = 0.0
+    aIdx = 0
+    while (aIdx < a.countsArray.length) {
+      val v = a.countsArray(aIdx)
+      denominatorA += v*v
+      aIdx += 1
+    }
+    var denominatorB = 0.0
+    bIdx = 0
+    while (bIdx < b.countsArray.length) {
+      val v = b.countsArray(bIdx)
+      denominatorB += v*v
+      bIdx += 1
+    }
+
+    numerator / ( math.sqrt(denominatorA) * math.sqrt(denominatorB) )
+  }
+
+  def cosineDistance(a: WikiBagOfWords, b: WikiBagOfWords): Double = {
+    math.acos(cosineSimilarity(a,b)) / math.Pi
+  }
+
   def euclidean(a: WikiBagOfWords, b: WikiBagOfWords): Double = {
     var sum = 0.0
     var aIdx = 0
