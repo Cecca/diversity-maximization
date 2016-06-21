@@ -45,7 +45,7 @@ class BagOfWordsDataset(val documentsFile: String,
         if (tokens.length != 3) {
           Iterator.empty
         } else {
-          Iterator((tokens(0).toInt, (tokens(1).toInt, tokens(2).toInt)))
+          Iterator((tokens(0).toInt, (tokens(1).toInt, tokens(2).toDouble)))
         }
       }.groupByKey().map { case (docId, wordCounts) =>
         new UCIBagOfWords(docId, wordCounts.toSeq)
@@ -91,13 +91,13 @@ class UCIKryoSerializer extends Serializer[UCIBagOfWords] {
   override def write(kryo: Kryo, output: Output, bow: UCIBagOfWords): Unit = {
     kryo.writeObject(output, bow.documentId)
     kryo.writeObject(output, bow.wordsArray)
-    kryo.writeObject(output, bow.countsArray)
+    kryo.writeObject(output, bow.scoresArray)
   }
 
   override def read(kryo: Kryo, input: Input, cls: Class[UCIBagOfWords]): UCIBagOfWords = {
     val docId = kryo.readObject(input, classOf[Int])
     val wordsArray = kryo.readObject(input, classOf[Array[Int]])
-    val countsArray = kryo.readObject(input, classOf[Array[Int]])
+    val countsArray = kryo.readObject(input, classOf[Array[Double]])
     new UCIBagOfWords(docId, wordsArray, countsArray)
   }
 }
@@ -152,7 +152,7 @@ extends Iterator[UCIBagOfWords] {
 
   override def next(): UCIBagOfWords = {
     val (docId, word, count) = first
-    val words = mutable.HashMap[Int, Int](word -> count)
+    val words = mutable.HashMap[Int, Double](word -> count)
     var current = first
     while(tokenized.hasNext && current._1 == docId) {
       current = tokenized.next()

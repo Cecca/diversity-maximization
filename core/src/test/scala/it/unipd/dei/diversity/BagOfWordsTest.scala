@@ -13,7 +13,7 @@ object BagOfWordsTest extends Properties("BagOfWords") {
   def randomTable(vocabulary: Vector[Int], size: Int) =
     mutable.HashMap(
       Random.shuffle(vocabulary).take(size).map { w =>
-        (w, Random.nextInt(1024))
+        (w, 1024*Random.nextDouble())
       } :_*)
 
   val wordCounts = for {
@@ -39,7 +39,11 @@ object BagOfWordsTest extends Properties("BagOfWords") {
     forAll(bows) { case (map1, map2, array1, array2) =>
       val distMap = Distance.euclidean(map1, map2)
       val distArr = Distance.euclidean(array1, array2)
-      (distMap == distArr) :| s"map: $distMap, arr: $distArr"
+      doubleEquality(distMap, distArr) :| s"map: $distMap, arr: $distArr"
     }
+
+  def doubleEquality(a: Double, b: Double, precision: Double = 0.0000000001): Boolean = {
+    math.abs(a-b) <= precision
+  }
 
 }

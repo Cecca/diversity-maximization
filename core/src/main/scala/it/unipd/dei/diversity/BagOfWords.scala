@@ -12,45 +12,45 @@ trait BagOfWords[T] {
   def wordIntersection(other: BagOfWords[T]): Iterator[T] =
     words.toSet.intersect(other.words.toSet).iterator
 
-  def apply(word: T): Int
+  def apply(word: T): Double
 
 }
 
 // TODO: Add an additional constructor that directly accepts the words and counts arrays
 class ArrayBagOfWords(val wordsArray: Array[Int],
-                      val countsArray: Array[Int])
+                      val scoresArray: Array[Double])
 extends BagOfWords[Int] with Serializable {
 
-  def this(arrayPair: (Array[Int], Array[Int])) {
+  def this(arrayPair: (Array[Int], Array[Double])) {
     this(arrayPair._1, arrayPair._2)
   }
 
-  def this(counts: Seq[(Int, Int)]) = {
+  def this(counts: Seq[(Int, Double)]) = {
     this(ArrayBagOfWords.buildArrayPair(counts))
   }
 
   override def words: Iterator[Int] = wordsArray.iterator
 
-  override def apply(word: Int): Int = {
+  override def apply(word: Int): Double = {
     val idx = wordsArray.indexOf(word)
     if (idx < 0) 0
-    else countsArray(idx)
+    else scoresArray(idx)
   }
 
   override def toString: String =
-    wordsArray.zip(countsArray).toMap.toString
+    wordsArray.zip(scoresArray).toMap.toString
 
 }
 
 object ArrayBagOfWords {
 
-  def buildArrayPair(counts: Seq[(Int, Int)]): (Array[Int], Array[Int]) = {
+  def buildArrayPair(counts: Seq[(Int, Double)]): (Array[Int], Array[Double]) = {
     val sorted = counts.sortBy(_._1)
     val (words, cnts) = sorted.unzip
     (words.toArray, cnts.toArray)
   }
 
-  def apply(counts: Seq[(Int, Int)]): ArrayBagOfWords =
+  def apply(counts: Seq[(Int, Double)]): ArrayBagOfWords =
     new ArrayBagOfWords(counts)
 
   def euclidean(a: ArrayBagOfWords, b: ArrayBagOfWords): Double = {
@@ -59,28 +59,28 @@ object ArrayBagOfWords {
     var bIdx = 0
     while(aIdx < a.wordsArray.length && bIdx < b.wordsArray.length) {
       if (a.wordsArray(aIdx) == b.wordsArray(bIdx)) {
-        val diff = a.countsArray(aIdx) - b.countsArray(bIdx)
+        val diff = a.scoresArray(aIdx) - b.scoresArray(bIdx)
         sum += diff*diff
         aIdx += 1
         bIdx += 1
       } else if (a.wordsArray(aIdx) < b.wordsArray(bIdx)) {
-        val diff = a.countsArray(aIdx)
+        val diff = a.scoresArray(aIdx)
         sum += diff*diff
         aIdx +=1
       } else {
-        val diff = b.countsArray(bIdx)
+        val diff = b.scoresArray(bIdx)
         sum += diff*diff
         bIdx +=1
       }
     }
 
     while(aIdx < a.wordsArray.length) {
-      val diff = a.countsArray(aIdx)
+      val diff = a.scoresArray(aIdx)
       sum += diff*diff
       aIdx +=1
     }
     while(bIdx < b.wordsArray.length) {
-      val diff = b.countsArray(bIdx)
+      val diff = b.scoresArray(bIdx)
       sum += diff*diff
       bIdx +=1
     }
@@ -92,7 +92,7 @@ object ArrayBagOfWords {
 
 }
 
-class MapBagOfWords[T](val wordCounts: mutable.HashMap[T, Int]) extends BagOfWords[T] {
+class MapBagOfWords[T](val wordCounts: mutable.HashMap[T, Double]) extends BagOfWords[T] {
 
   override def words: Iterator[T] = wordCounts.keysIterator
 
@@ -102,7 +102,7 @@ class MapBagOfWords[T](val wordCounts: mutable.HashMap[T, Int]) extends BagOfWor
   override def wordIntersection(other: BagOfWords[T]): Iterator[T] =
     this.wordCounts.keySet.intersect(other.asInstanceOf[MapBagOfWords[T]].wordCounts.keySet).iterator
 
-  override def apply(word: T): Int = wordCounts.getOrElse(word, 0)
+  override def apply(word: T): Double = wordCounts.getOrElse(word, 0.0)
 
   override def toString: String = wordCounts.toString
 

@@ -4,14 +4,14 @@ import it.unipd.dei.diversity.ArrayBagOfWords
 
 class UCIBagOfWords(val documentId: Int,
                     override val wordsArray: Array[Int],
-                    override val countsArray: Array[Int])
-extends ArrayBagOfWords(wordsArray, countsArray) with Serializable {
+                    override val scoresArray: Array[Double])
+extends ArrayBagOfWords(wordsArray, scoresArray) with Serializable {
 
-  def this(docId: Int, arrayPair: (Array[Int], Array[Int])) {
+  def this(docId: Int, arrayPair: (Array[Int], Array[Double])) {
     this(docId, arrayPair._1, arrayPair._2)
   }
 
-  def this(docId: Int, counts: Seq[(Int, Int)]) {
+  def this(docId: Int, counts: Seq[(Int, Double)]) {
     this(docId, ArrayBagOfWords.buildArrayPair(counts))
   }
 
@@ -20,7 +20,7 @@ extends ArrayBagOfWords(wordsArray, countsArray) with Serializable {
       // FIXME: Make more efficient
       this.documentId == documentId &&
         this.wordsArray.toSeq == other.wordsArray.toSeq &&
-        this.countsArray.toSeq == other.countsArray.toSeq
+        this.scoresArray.toSeq == other.scoresArray.toSeq
     case _ => false
   }
 

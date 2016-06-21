@@ -14,11 +14,11 @@ object DistanceTest extends Properties("Distances") {
     for (data <- Gen.listOfN(dim, Gen.choose[Double](0.0, Long.MaxValue.toDouble)))
       yield new Point(data.toArray)
 
-  def wordWithCount: Gen[(String, Int)] =
+  def wordWithCount: Gen[(String, Double)] =
     for {
       chars <- Gen.nonEmptyListOf(Gen.alphaChar)
-      count <- Gen.choose(1, 100)
-    } yield (chars.mkString(""), count)
+      score <- Gen.choose[Double](1, 100)
+    } yield (chars.mkString(""), score)
 
   def wordCounts = Gen.nonEmptyMap(wordWithCount)
 
@@ -27,10 +27,10 @@ object DistanceTest extends Properties("Distances") {
       countsMap <- wordCounts
     } yield new MapBagOfWords[String](mutable.HashMap(countsMap.toSeq :_*))
 
-  def filteredBagOfWords(wordCounts: Map[String, Int]) = {
-    val words = wordCounts.filter(_ => Random.nextBoolean()).toSeq
+  def filteredBagOfWords(wordScores: Map[String, Double]) = {
+    val words = wordScores.filter(_ => Random.nextBoolean()).toSeq
     if (words.isEmpty) {
-      new MapBagOfWords[String](mutable.HashMap(wordCounts.head))
+      new MapBagOfWords[String](mutable.HashMap(wordScores.head))
     } else {
       new MapBagOfWords[String](mutable.HashMap(words: _*))
     }

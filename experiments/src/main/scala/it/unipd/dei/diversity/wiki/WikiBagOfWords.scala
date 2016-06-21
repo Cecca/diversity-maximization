@@ -7,7 +7,7 @@ import scala.io.Source
 class WikiBagOfWords(val title: String,
                      val categories: Set[String],
                      val wordsArray: Array[String],
-                     val countsArray: Array[Int])
+                     val scoresArray: Array[Double])
 extends BagOfWords[String] with Serializable {
 
   // Words array MUST be sorted, otherwise the specialized
@@ -16,17 +16,17 @@ extends BagOfWords[String] with Serializable {
 
   override def words: Iterator[String] = wordsArray.iterator
 
-  override def apply(word: String): Int = {
+  override def apply(word: String): Double = {
     val idx = wordsArray.indexOf(word)
     if (idx >= 0) {
-      countsArray(idx)
+      scoresArray(idx)
     } else {
       0
     }
   }
 
   override def toString: String =
-    s"$title: ($categories)\n${wordsArray.zip(countsArray).mkString(", ")}"
+    s"$title: ($categories)\n${wordsArray.zip(scoresArray).mkString(", ")}"
 
 }
 
@@ -54,7 +54,7 @@ object WikiBagOfWords {
       .map(s => s.toLowerCase)          // Make everything lowercase
       .map(s => PorterStemmer.stem(s))  // stem the words
       .groupBy(identity)
-      .map({case (w, occurences) => (w, occurences.size)})
+      .map({case (w, occurences) => (w, occurences.size.toDouble)})
       .toSeq
       .sortBy(_._1)
 
@@ -69,7 +69,7 @@ object WikiBagOfWords {
     var bIdx = 0
     while(aIdx < a.wordsArray.length && bIdx < b.wordsArray.length) {
       if (a.wordsArray(aIdx) == b.wordsArray(bIdx)) {
-        numerator += a.countsArray(aIdx) * b.countsArray(bIdx)
+        numerator += a.scoresArray(aIdx) * b.scoresArray(bIdx)
         aIdx += 1
         bIdx += 1
       } else if (a.wordsArray(aIdx) < b.wordsArray(bIdx)) {
@@ -81,15 +81,15 @@ object WikiBagOfWords {
 
     var denominatorA = 0.0
     aIdx = 0
-    while (aIdx < a.countsArray.length) {
-      val v = a.countsArray(aIdx)
+    while (aIdx < a.scoresArray.length) {
+      val v = a.scoresArray(aIdx)
       denominatorA += v*v
       aIdx += 1
     }
     var denominatorB = 0.0
     bIdx = 0
-    while (bIdx < b.countsArray.length) {
-      val v = b.countsArray(bIdx)
+    while (bIdx < b.scoresArray.length) {
+      val v = b.scoresArray(bIdx)
       denominatorB += v*v
       bIdx += 1
     }
@@ -111,24 +111,24 @@ object WikiBagOfWords {
     var bIdx = 0
     while(aIdx < a.wordsArray.length && bIdx < b.wordsArray.length) {
       if (a.wordsArray(aIdx) == b.wordsArray(bIdx)) {
-        numerator   += math.min(a.countsArray(aIdx), b.countsArray(bIdx))
-        denominator += math.max(a.countsArray(aIdx), b.countsArray(bIdx))
+        numerator   += math.min(a.scoresArray(aIdx), b.scoresArray(bIdx))
+        denominator += math.max(a.scoresArray(aIdx), b.scoresArray(bIdx))
         aIdx += 1
         bIdx += 1
       } else if (a.wordsArray(aIdx) < b.wordsArray(bIdx)) {
-        denominator += a.countsArray(aIdx)
+        denominator += a.scoresArray(aIdx)
         aIdx += 1
       } else {
-        denominator += b.countsArray(bIdx)
+        denominator += b.scoresArray(bIdx)
         bIdx += 1
       }
     }
     while (aIdx < a.wordsArray.length) {
-      denominator += a.countsArray(aIdx)
+      denominator += a.scoresArray(aIdx)
       aIdx += 1
     }
     while (bIdx < b.wordsArray.length) {
-      denominator += b.countsArray(bIdx)
+      denominator += b.scoresArray(bIdx)
       bIdx += 1
     }
     require(aIdx == a.wordsArray.length, s"$aIdx < ${a.wordsArray.length}")
@@ -143,28 +143,28 @@ object WikiBagOfWords {
     var bIdx = 0
     while(aIdx < a.wordsArray.length && bIdx < b.wordsArray.length) {
       if (a.wordsArray(aIdx) == b.wordsArray(bIdx)) {
-        val diff = a.countsArray(aIdx) - b.countsArray(bIdx)
+        val diff = a.scoresArray(aIdx) - b.scoresArray(bIdx)
         sum += diff * diff
         aIdx += 1
         bIdx += 1
       } else if (a.wordsArray(aIdx) < b.wordsArray(bIdx)) {
-        val diff = a.countsArray(aIdx)
+        val diff = a.scoresArray(aIdx)
         sum += diff*diff
         aIdx += 1
       } else {
-        val diff = b.countsArray(bIdx)
+        val diff = b.scoresArray(bIdx)
         sum += diff * diff
         bIdx += 1
       }
     }
 
     while (aIdx < a.wordsArray.length) {
-      val diff = a.countsArray(aIdx)
+      val diff = a.scoresArray(aIdx)
       sum += diff*diff
       aIdx += 1
     }
     while (bIdx < b.wordsArray.length) {
-      val diff = b.countsArray(bIdx)
+      val diff = b.scoresArray(bIdx)
       sum += diff*diff
       bIdx += 1
     }

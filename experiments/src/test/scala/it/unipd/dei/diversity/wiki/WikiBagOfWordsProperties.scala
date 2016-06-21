@@ -5,30 +5,29 @@ import org.scalacheck._
 import org.scalacheck.Prop.{BooleanOperators, all, forAll}
 import org.scalacheck.Gen
 
-import scala.collection.mutable
 import scala.util.Random
 
 object WikiBagOfWordsProperties extends Properties("WikiBagOfWords") {
 
-  def wordWithCount: Gen[(String, Int)] =
+  def wordWithCount: Gen[(String, Double)] =
     for {
       chars <- Gen.nonEmptyListOf(Gen.alphaChar)
-      count <- Gen.choose(1, 100)
-    } yield (chars.mkString(""), count)
+      score <- Gen.choose[Double](1, 100)
+    } yield (chars.mkString(""), score)
 
   def wordCounts = Gen.nonEmptyMap(wordWithCount)
 
-  def filteredBagOfWords(wordCounts: Map[String, Int]) = {
-    val (words, counts) = wordCounts.filter(_ => Random.nextBoolean()).toSeq.sortBy(_._1).unzip
+  def filteredBagOfWords(wordScores: Map[String, Double]) = {
+    val (words, scores) = wordScores.filter(_ => Random.nextBoolean()).toSeq.sortBy(_._1).unzip
     if (words.isEmpty) {
-      val (word, count) = wordCounts.head
-      new WikiBagOfWords("", Set.empty, Array(word), Array(count))
+      val (word, score) = wordScores.head
+      new WikiBagOfWords("", Set.empty, Array(word), Array(score))
     } else {
-      new WikiBagOfWords("", Set.empty, words.toArray, counts.toArray)
+      new WikiBagOfWords("", Set.empty, words.toArray, scores.toArray)
     }
   }
 
-  def buildBagOfWords(wordCounts: Map[String, Int]) = {
+  def buildBagOfWords(wordCounts: Map[String, Double]) = {
     val (words, counts) = wordCounts.toSeq.sortBy(_._1).unzip
     new WikiBagOfWords("", Set.empty, words.toArray, counts.toArray)
   }
@@ -67,10 +66,10 @@ object WikiBagOfWordsProperties extends Properties("WikiBagOfWords") {
     forAll(bagOfWordsPair) { case (a, b) =>
       val expected = Distance.cosineSimilarity(a, b)
       val actual = WikiBagOfWords.cosineSimilarity(a, b)
-      (expected == actual) :|
+      doubleEquality(expected, actual) :|
         s"""
-           | "A" words: ${a.wordsArray.zip(a.countsArray).toSeq}
-           | "B" words: ${b.wordsArray.zip(b.countsArray).toSeq}
+           | "A" words: ${a.wordsArray.zip(a.scoresArray).toSeq}
+           | "B" words: ${b.wordsArray.zip(b.scoresArray).toSeq}
            | expected != actual
            | $expected != $actual
          """.stripMargin
@@ -106,10 +105,10 @@ object WikiBagOfWordsProperties extends Properties("WikiBagOfWords") {
     forAll(bagOfWordsPair) { case (a, b) =>
       val expected = Distance.jaccard(a, b)
       val actual = WikiBagOfWords.jaccard(a, b)
-      (expected == actual) :|
+      doubleEquality(expected, actual) :|
         s"""
-           | "A" words: ${a.wordsArray.zip(a.countsArray).toSeq}
-           | "B" words: ${b.wordsArray.zip(b.countsArray).toSeq}
+           | "A" words: ${a.wordsArray.zip(a.scoresArray).toSeq}
+           | "B" words: ${b.wordsArray.zip(b.scoresArray).toSeq}
            | expected != actual
            | $expected != $actual
          """.stripMargin
