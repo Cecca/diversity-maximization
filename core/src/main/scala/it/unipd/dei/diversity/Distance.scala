@@ -41,6 +41,8 @@ object Distance {
   }
 
   def cosineSimilarity[T](a: BagOfWords[T], b: BagOfWords[T]): Double = {
+    require(a.words.nonEmpty)
+    require(b.words.nonEmpty)
     val keys = a.wordIntersection(b)
     var numerator: Double = 0.0
     for(k <- keys) {
@@ -48,11 +50,20 @@ object Distance {
     }
     val denomA = math.sqrt(a.words.map(w => a(w)*a(w)).sum)
     val denomB = math.sqrt(b.words.map(w => b(w)*b(w)).sum)
-    numerator / (denomA * denomB)
+    val res = numerator / (denomA * denomB)
+    // The minimum taken below fixes a bug of the cosineDistance function. Because
+    // of floating point arithmetic, sometimes the result of the above computations
+    // can be slightly greater than 1.0. However, it makes no sense to compute
+    // math.acos of a value greater than, therefore the implementation returns NaN
+    // in that case instead of 0.0
+    //
+    // Actually, the lack of precision of the Double type is a real hassle when
+    // computing trigonometric functions.
+    math.min(res, 1.0)
   }
 
   def cosineDistance[T](a: BagOfWords[T], b: BagOfWords[T]): Double = {
-    math.acos(cosineSimilarity(a,b)) / math.Pi
+    2*math.acos(cosineSimilarity(a,b)) / math.Pi
   }
 
 }

@@ -94,11 +94,14 @@ object WikiBagOfWords {
       bIdx += 1
     }
 
-    numerator / ( math.sqrt(denominatorA) * math.sqrt(denominatorB) )
+    val res = numerator / ( math.sqrt(denominatorA) * math.sqrt(denominatorB) )
+    // See the comment in Distance.cosineSimilarity for the motivation of the
+    // following operation.
+    math.min(1.0, res)
   }
 
   def cosineDistance(a: WikiBagOfWords, b: WikiBagOfWords): Double = {
-    math.acos(cosineSimilarity(a,b)) / math.Pi
+    2*math.acos(cosineSimilarity(a,b)) / math.Pi
   }
 
   def euclidean(a: WikiBagOfWords, b: WikiBagOfWords): Double = {
