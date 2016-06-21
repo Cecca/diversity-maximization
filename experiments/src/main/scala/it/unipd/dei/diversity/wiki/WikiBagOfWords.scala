@@ -104,6 +104,39 @@ object WikiBagOfWords {
     2*math.acos(cosineSimilarity(a,b)) / math.Pi
   }
 
+  def jaccard(a: WikiBagOfWords, b: WikiBagOfWords): Double = {
+    var numerator   = 0.0
+    var denominator = 0.0
+    var aIdx = 0
+    var bIdx = 0
+    while(aIdx < a.wordsArray.length && bIdx < b.wordsArray.length) {
+      if (a.wordsArray(aIdx) == b.wordsArray(bIdx)) {
+        numerator   += math.min(a.countsArray(aIdx), b.countsArray(bIdx))
+        denominator += math.max(a.countsArray(aIdx), b.countsArray(bIdx))
+        aIdx += 1
+        bIdx += 1
+      } else if (a.wordsArray(aIdx) < b.wordsArray(bIdx)) {
+        denominator += a.countsArray(aIdx)
+        aIdx += 1
+      } else {
+        denominator += b.countsArray(bIdx)
+        bIdx += 1
+      }
+    }
+    while (aIdx < a.wordsArray.length) {
+      denominator += a.countsArray(aIdx)
+      aIdx += 1
+    }
+    while (bIdx < b.wordsArray.length) {
+      denominator += b.countsArray(bIdx)
+      bIdx += 1
+    }
+    require(aIdx == a.wordsArray.length, s"$aIdx < ${a.wordsArray.length}")
+    require(bIdx == b.wordsArray.length, s"$bIdx < ${b.wordsArray.length}")
+
+    1.0 - (numerator/denominator)
+  }
+
   def euclidean(a: WikiBagOfWords, b: WikiBagOfWords): Double = {
     var sum = 0.0
     var aIdx = 0

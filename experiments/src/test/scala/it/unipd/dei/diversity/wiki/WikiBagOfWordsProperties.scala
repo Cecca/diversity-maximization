@@ -102,6 +102,20 @@ object WikiBagOfWordsProperties extends Properties("WikiBagOfWords") {
       dFn(a, b) + dFn(b, c) >= dFn(a, c)
     }
 
+  property("generalized Jaccard distance conformance with generic implementation") =
+    forAll(bagOfWordsPair) { case (a, b) =>
+      val expected = Distance.jaccard(a, b)
+      val actual = WikiBagOfWords.jaccard(a, b)
+      (expected == actual) :|
+        s"""
+           | "A" words: ${a.wordsArray.zip(a.countsArray).toSeq}
+           | "B" words: ${b.wordsArray.zip(b.countsArray).toSeq}
+           | expected != actual
+           | $expected != $actual
+         """.stripMargin
+    }
+
+
   def doubleEquality(a: Double, b: Double, precision: Double = 0.000000000001): Boolean = {
     math.abs(a-b) <= precision
   }
