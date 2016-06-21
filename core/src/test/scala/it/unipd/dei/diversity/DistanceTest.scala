@@ -36,6 +36,16 @@ object DistanceTest extends Properties("Distances") {
     }
   }
 
+  def orthogonalBagOfWords = wordCounts.flatMap { countsMapA =>
+    wordCounts.flatMap { countsMapB =>
+      val intersection = countsMapA.keySet.intersect(countsMapB.keySet)
+      val wordsA = countsMapA -- intersection
+      val wordsB = countsMapB -- intersection
+      (new MapBagOfWords[String](mutable.HashMap(wordsA.toSeq: _*)),
+        new MapBagOfWords[String](mutable.HashMap(wordsB.toSeq: _*)))
+    }
+  }
+
   def bagOfWordsPair =
     for {
       countsMap <- wordCounts
@@ -63,8 +73,14 @@ object DistanceTest extends Properties("Distances") {
       doubleEquality(sim, 1.0) :| s"Similarity is $sim instead of 1.0"
     }
 
+  property("cosine similarity of unrelated bag of words") =
+    forAll(orthogonalBagOfWords) { case (a, b) =>
+      val sim = Distance.cosineSimilarity(a, b)
+      doubleEquality(sim, 0.0) :| s"Similarity is $sim instead of 0.0"
+    }
+
   def doubleEquality(a: Double, b: Double): Boolean = {
-    val precision = 0.000000000000001
+    val precision = 0.000000000001
     math.abs(a-b) <= precision
   }
 }
