@@ -4,7 +4,6 @@ import org.scalacheck._
 import org.scalacheck.Prop.{BooleanOperators, forAll, all}
 import org.scalacheck.Gen
 import Distance.euclidean
-import org.scalatest.Matchers
 
 import scala.collection.mutable
 import scala.util.Random
