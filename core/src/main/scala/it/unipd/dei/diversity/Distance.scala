@@ -32,12 +32,13 @@ object Distance {
   }
   
   def jaccard[T](a: BagOfWords[T], b: BagOfWords[T]): Double = {
-    val denominator = a.wordUnion(b).size
-    if (denominator == 0) {
-      1.0
-    } else {
-      1.0 - (a.wordIntersection(b).size.toDouble / denominator.toDouble)
-    }
+    val numerator: Double = a.wordUnion(b).map { w =>
+      math.min(a(w), b(w))
+    }.sum
+    val denominator: Double = a.wordUnion(b).map { w =>
+      math.max(a(w), b(w))
+    }.sum
+    1.0 - (numerator/denominator)
   }
 
   def cosineSimilarity[T](a: BagOfWords[T], b: BagOfWords[T]): Double = {

@@ -110,6 +110,21 @@ object DistanceTest extends Properties("Distances") {
       dFn(a, b) + dFn(b, c) >= dFn(a, c)
     }
 
+  property("generalized Jaccard distance range") =
+    forAll(bagOfWordsPair) { case (a, b) =>
+      val sim = Distance.jaccard(a, b)
+      all (
+        s"Similarity is $sim and should be >= 0.0" |: sim >= 0,
+        s"Similarity is $sim and should be <= 1.0" |: sim <= 1
+      )
+    }
+
+  property("generalized Jaccard distance triangle inequality") =
+    forAll(bagOfWordsTriplet) { case (a, b, c) =>
+      val dFn: (BagOfWords[String], BagOfWords[String]) => Double = Distance.jaccard[String]
+      dFn(a, b) + dFn(b, c) >= dFn(a, c)
+    }
+
   def doubleEquality(a: Double, b: Double, precision: Double = 0.000000000001): Boolean = {
     math.abs(a-b) <= precision
   }
