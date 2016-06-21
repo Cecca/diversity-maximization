@@ -40,4 +40,19 @@ object Distance {
     }
   }
 
+  def cosineSimilarity[T](a: BagOfWords[T], b: BagOfWords[T]): Double = {
+    val keys = a.wordIntersection(b)
+    var numerator: Double = 0.0
+    for(k <- keys) {
+      numerator += a(k) * b(k)
+    }
+    val denomA = math.sqrt(a.words.map(w => a(w)*a(w)).sum)
+    val denomB = math.sqrt(b.words.map(w => b(w)*b(w)).sum)
+    numerator / (denomA * denomB)
+  }
+
+  def cosineDistance[T](a: BagOfWords[T], b: BagOfWords[T]): Double = {
+    math.acos(cosineSimilarity(a,b)) / math.Pi
+  }
+
 }
