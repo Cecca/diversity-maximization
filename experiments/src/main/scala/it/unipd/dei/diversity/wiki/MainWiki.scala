@@ -59,6 +59,9 @@ object MainWiki {
       val coreset: Coreset[WikiBagOfWords] =
         Algorithm.mapReduce(documents, kernSize, k, distance, experiment)
 
+      // Display coreset on console
+      println(coreset.points.map(bow => s"${bow.title} :: ${bow.categories}").mkString("\n"))
+
       Approximation.approximate(
         coreset, k, distance, computeFarthest, computeMatching,
         approxRuns, Some(wikiBowToMap _), experiment)
