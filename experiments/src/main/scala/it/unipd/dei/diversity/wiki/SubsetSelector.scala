@@ -34,17 +34,19 @@ object SubsetSelector {
     val opts = new ScallopConf(args) {
       lazy val dataset = opt[String](required = true)
       lazy val query   = opt[String](required = true)
+      lazy val radius  = opt[Double](default = Some(1.0))
     }
     opts.verify()
 
     val inputDataset = opts.dataset()
     val queryString  = opts.query()
+    val queryRadius  = opts.radius()
 
     val conf = new SparkConf(loadDefaults = true)
       .setAppName("Test SubsetSelector")
     val sc = new SparkContext(conf)
     val input = CachedDataset(sc, inputDataset)
-    val filtered = selectSubset(input, queryString, WikiBagOfWords.cosineDistance)
+    val filtered = selectSubset(input, queryString, WikiBagOfWords.cosineDistance, queryRadius)
       .persist(StorageLevel.MEMORY_AND_DISK)
     println(filtered.map(bow => s"${bow.title} :: ${bow.categories}").collect().mkString("\n"))
     println(s"Selected a total of ${filtered.count()} documents over ${input.count()}")
