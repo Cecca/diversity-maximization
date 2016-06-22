@@ -38,9 +38,33 @@ extends BagOfWords[String] with Serializable {
 
 object WikiBagOfWords {
 
+  /**
+    * Parses the given line into a [[WikiBagOfWords]]. The line _must_
+    * have 3 or 4 tab-separated fields, with the following meaning
+    *
+    *  1. The title of the page
+    *  2. The categories of the page
+    *  3. The ranking of the page. This is ignored.
+    *  4. The words of the page
+    *
+    * If there are only 3 fields, then the page ranking is assumed to be
+    * missing. Since it is irrelevant to our purposes, it's fine.
+    *
+    * @param line a tab-separated string
+    * @return maybe a [[WikiBagOfWords]]
+    */
   def fromLine(line: String): Option[WikiBagOfWords] = {
     val tokens = line.split("\t")
     require(tokens.length == 3 || tokens.length == 4)
+    // Check if the last token is a number. This is needed because
+    // the wiki dataset has the page rank score in each page, but
+    // some pages have no text. This leads to the page rank being
+    // interpreted as the text, which is obviously incorrect. Since
+    // pages with no text cannot be turned to valid bag of words, the
+    // safest course is to filter them out.
+    if (tokens.length == 3 && tokens(2).matches("""[+-]?\d+(\.\d+)?""")){
+      return None
+    }
     val title = tokens(0)
     val categories = tokens(1)
       .replaceAll("wordnet_", "")
