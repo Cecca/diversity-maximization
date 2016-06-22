@@ -1,6 +1,7 @@
 package it.unipd.dei.diversity
 
 import it.unipd.dei.diversity.source.{PointSource, PointSourceRDD}
+import org.apache.spark.storage.StorageLevel
 import org.apache.spark.{SparkConf, SparkContext}
 import org.rogach.scallop.ScallopConf
 
@@ -30,10 +31,9 @@ object DatasetGenerator {
       n        <- numPointsList
     } {
       val source = PointSource(sourceName, dim, n, k, Distance.euclidean)
-      // Materialize tht RDD to count it
-      val rdd = new PointSourceRDD(sc, source, sc.defaultParallelism).map {
-        p => p
-      }.cache()
+      
+      val rdd = sc.parallelize(source.toVector)
+        .persist(StorageLevel.MEMORY_AND_DISK)
 
       val numGenerated = rdd.count()
       require(numGenerated >= n,
