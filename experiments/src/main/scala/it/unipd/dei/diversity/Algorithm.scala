@@ -54,8 +54,10 @@ object Algorithm {
     // partitions for efficiency
     val repartitioned =
       if (points.getNumPartitions < parallelism) {
+        println("Increasing the number of partitions")
         points.repartition(parallelism)
       } else if (points.getNumPartitions > parallelism) {
+        println("Decreasing the number of partitions")
         points.coalesce(parallelism)
       } else {
         points
@@ -65,9 +67,9 @@ object Algorithm {
     val partitionCnt = points.sparkContext.accumulator(0L, "partition counter")
     val pointsCnt = points.sparkContext.accumulator(0L, "points counter")
     val (coreset, mrTime) = timed {
-      repartitioned.mapPartitions { pts =>
+      repartitioned.glom().map{ pointsArr =>
+        require(pointsArr.length > 0, "Cannot work on empty partitions!")
         partitionCnt += 1
-        val pointsArr: Array[T] = pts.toArray
         pointsCnt += pointsArr.length
         val coreset = MapReduceCoreset.run(
           pointsArr,
@@ -81,7 +83,7 @@ object Algorithm {
           s"Coreset of the wrong size: " +
             s"${coreset.kernel.length} + ${coreset.delegates.length} > ${k*kernelSize} " +
             s"(input of ${pointsArr.length} points)")
-        Iterator(coreset)
+        coreset
       }.reduce { (a, b) =>
         MapReduceCoreset.compose(a, b)
       }
