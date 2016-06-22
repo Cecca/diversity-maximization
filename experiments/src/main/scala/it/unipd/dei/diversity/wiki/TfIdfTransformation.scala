@@ -1,6 +1,8 @@
 package it.unipd.dei.diversity.wiki
 
 import org.apache.spark.rdd.RDD
+import org.apache.spark.storage.StorageLevel
+
 import scala.language.implicitConversions
 
 /**
@@ -13,7 +15,7 @@ object TfIdfTransformation {
 
   def apply(data: RDD[WikiBagOfWords]): RDD[WikiBagOfWords] = {
     // 1. Compute a inverse document frequency table to be broadcasted later.
-    val numDocs = data.cache().count()
+    val numDocs = data.persist(StorageLevel.MEMORY_AND_DISK).count()
     val localInverseDocFreqs = data.flatMap { bow =>
       bow.words.map(w => (w, 1))
     }.reduceByKey(_ + _).mapValues { docFrequency =>

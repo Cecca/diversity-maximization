@@ -4,6 +4,7 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import TfIdfTransformation._
+import org.apache.spark.storage.StorageLevel
 
 object CachedDataset {
 
@@ -22,10 +23,9 @@ object CachedDataset {
     } else {
       println(s"Dataset $path not found in cache, loading from text")
       val input = sc.textFile(path, sc.defaultParallelism)
-        .repartition(sc.defaultParallelism)
         .map(WikiBagOfWords.fromLine)
         .rescaleTfIdf()
-        .cache()
+        .persist(StorageLevel.MEMORY_AND_DISK)
       input.saveAsObjectFile(cachedFilename(path))
       input
     }
