@@ -10,6 +10,9 @@ class WikiBagOfWords(val title: String,
                      val scoresArray: Array[Double])
 extends BagOfWords[String] with Serializable {
 
+  // A bag of words without words can't be built
+  require(wordsArray.length > 0, s"A bag of words must have at least a word (page $title)")
+
   // Words array MUST be sorted, otherwise the specialized
   // implementation of the euclidean distance breaks
   require(wordsArray.sorted.sameElements(wordsArray))
@@ -35,7 +38,7 @@ extends BagOfWords[String] with Serializable {
 
 object WikiBagOfWords {
 
-  def fromLine(line: String): WikiBagOfWords = {
+  def fromLine(line: String): Option[WikiBagOfWords] = {
     val tokens = line.split("\t")
     require(tokens.length == 3 || tokens.length == 4)
     val title = tokens(0)
@@ -61,9 +64,12 @@ object WikiBagOfWords {
       .toSeq
       .sortBy(_._1)
 
-    val (words, counts) = wordCounts.unzip
-
-    new WikiBagOfWords(title, categories, words.toArray, counts.toArray)
+    if (wordCounts.isEmpty) {
+      None
+    } else {
+      val (words, counts) = wordCounts.unzip
+      Some(new WikiBagOfWords(title, categories, words.toArray, counts.toArray))
+    }
   }
 
   def cosineSimilarity(a: WikiBagOfWords, b: WikiBagOfWords): Double = {
@@ -183,7 +189,7 @@ object WikiBagOfWords {
       else Source.fromInputStream(System.in)
     val bows = text.getLines().map(s => WikiBagOfWords.fromLine(s)).toVector
     text.close()
-    println(Diversity.clique(bows, Distance.euclidean[String]))
+    println(Diversity.clique(bows.map(_.get), Distance.euclidean[String]))
   }
 
 }

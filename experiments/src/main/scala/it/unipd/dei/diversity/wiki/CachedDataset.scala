@@ -23,7 +23,7 @@ object CachedDataset {
     } else {
       println(s"Dataset $path not found in cache, loading from text")
       val input = sc.textFile(path, sc.defaultParallelism)
-        .map(WikiBagOfWords.fromLine)
+        .flatMap(WikiBagOfWords.fromLine) // Filter out `None` results
         .rescaleTfIdf()
         .persist(StorageLevel.MEMORY_AND_DISK)
       input.saveAsObjectFile(cachedFilename(path))
