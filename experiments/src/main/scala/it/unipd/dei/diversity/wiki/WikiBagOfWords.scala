@@ -14,6 +14,9 @@ extends BagOfWords[String] with Serializable {
   // implementation of the euclidean distance breaks
   require(wordsArray.sorted.sameElements(wordsArray))
 
+  // Moreover, we want all the scores to be positive
+  require(scoresArray.map(_ >= 0.0).reduce(_ && _), "All the scores must be positive")
+
   override def words: Iterator[String] = wordsArray.iterator
 
   override def apply(word: String): Double = {
