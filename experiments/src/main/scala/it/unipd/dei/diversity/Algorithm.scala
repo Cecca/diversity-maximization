@@ -50,24 +50,13 @@ object Algorithm {
     experiment.tag("algorithm", "MapReduce")
 
     val parallelism = points.sparkContext.defaultParallelism
-    // We distinguish the case of increasing or decreasing the number of
-    // partitions for efficiency
-    val repartitioned =
-      if (points.getNumPartitions < parallelism) {
-        println("Increasing the number of partitions")
-        points.repartition(parallelism)
-      } else if (points.getNumPartitions > parallelism) {
-        println("Decreasing the number of partitions")
-        points.coalesce(parallelism)
-      } else {
-        points
-      }
+    require(points.partitions.length == parallelism)
 
     println("Run MapReduce algorithm!")
     val partitionCnt = points.sparkContext.accumulator(0L, "partition counter")
     val pointsCnt = points.sparkContext.accumulator(0L, "points counter")
     val (coreset, mrTime) = timed {
-      repartitioned.glom().map{ pointsArr =>
+      points.glom().map{ pointsArr =>
         require(pointsArr.length > 0, "Cannot work on empty partitions!")
         partitionCnt += 1
         pointsCnt += pointsArr.length
@@ -116,23 +105,12 @@ object Algorithm {
     experiment.tag("algorithm", "LocalSearch")
 
     val parallelism = points.sparkContext.defaultParallelism
-    // We distinguish the case of increasing or decreasing the number of
-    // partitions for efficiency
-    val repartitioned =
-      if (points.getNumPartitions < parallelism) {
-        println("Increasing the number of partitions")
-        points.repartition(parallelism)
-      } else if (points.getNumPartitions > parallelism) {
-        println("Decreasing the number of partitions")
-        points.coalesce(parallelism)
-      } else {
-        points
-      }
+    require(points.partitions.length == parallelism)
 
     println("Run LocalSearch algorithm!")
     val partitionCnt = points.sparkContext.accumulator(0L, "partition counter")
     val (coreset, mrTime) = timed {
-      repartitioned.mapPartitions { pts =>
+      points.mapPartitions { pts =>
         partitionCnt += 1
         val pointsArr: Array[T] = pts.toArray
         val coreset = LocalSearch.coreset(pointsArr, k, epsilon, distance, diversity)

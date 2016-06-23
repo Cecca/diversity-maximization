@@ -11,6 +11,8 @@ object Partitioning {
 
   def random[T](rdd: RDD[T]): RDD[T] = {
     val parallelism = rdd.sparkContext.defaultParallelism
+    // We distinguish the case of increasing or decreasing the number of
+    // partitions for efficiency
     if (rdd.getNumPartitions < parallelism) {
       println("Increasing the number of partitions")
       rdd.repartition(parallelism)
