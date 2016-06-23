@@ -23,6 +23,7 @@ object MainPoints {
     val computeFarthest = opts.farthest()
     val computeMatching = opts.matching()
     val directory = opts.directory()
+    val partitioning = opts.partitioning()
 
     val distance: (Point, Point) => Double = Distance.euclidean
 
@@ -66,9 +67,15 @@ object MainPoints {
         case "mapreduce" =>
           val parallelism = sc.defaultParallelism
           experiment.tag("parallelism", parallelism)
+          experiment.tag("partitioning", partitioning)
           val inputPoints = sc.objectFile[Point](
             DatasetGenerator.filename(directory, sourceName, dim, n, k), parallelism)
-          val points = Partitioning.polar2D(inputPoints).persist(StorageLevel.MEMORY_AND_DISK)
+          val points = partitioning match {
+            case "random"  => Partitioning.random(inputPoints)
+            case "radius"  => Partitioning.radius(inputPoints, Point.zero(dim), distance)
+            case "polar2D" => Partitioning.polar2D(inputPoints)
+            case err       => throw new IllegalArgumentException(s"Unknown partitioning scheme $err")
+          }
           Algorithm.mapReduce(points, kernSize, k, distance, experiment)
 
         case "streaming" =>
@@ -110,6 +117,8 @@ object MainPoints {
     lazy val algorithm = opt[String](default = Some("sequential"))
 
     lazy val source = opt[String](default = Some("versor"))
+
+    lazy val partitioning = opt[String](default = Some("random"))
 
     lazy val spaceDimension = opt[String](default = Some("2"))
 
