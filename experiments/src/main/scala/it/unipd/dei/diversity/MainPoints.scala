@@ -1,6 +1,7 @@
 package it.unipd.dei.diversity
 
 import it.unipd.dei.experiment.Experiment
+import org.apache.spark.storage.StorageLevel
 import org.apache.spark.{SparkConf, SparkContext}
 import org.rogach.scallop.ScallopConf
 
@@ -65,15 +66,9 @@ object MainPoints {
         case "mapreduce" =>
           val parallelism = sc.defaultParallelism
           experiment.tag("parallelism", parallelism)
-          val zero = Point.zero(dim)
-          // Adversarially partition by distance from origin
-          val points = sc.objectFile[Point](
+          val inputPoints = sc.objectFile[Point](
             DatasetGenerator.filename(directory, sourceName, dim, n, k), parallelism)
-            .map { p =>
-              val pidx = math.ceil(distance(p, zero)*parallelism).toInt
-              (pidx, p)
-            }.repartition(parallelism)
-            .map { case (_, p) => p }
+          val points = Partitioning.polar2D(inputPoints).persist(StorageLevel.MEMORY_AND_DISK)
           Algorithm.mapReduce(points, kernSize, k, distance, experiment)
 
         case "streaming" =>
