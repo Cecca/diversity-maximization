@@ -55,7 +55,7 @@ object MainBagOfWords {
         case "mapreduce" =>
           val parallelism = sc.defaultParallelism
           experiment.tag("parallelism", parallelism)
-          val input = data.documents(sc)
+          val input = Partitioning.random(data.documents(sc))
           Algorithm.mapReduce(input, kernSize, k, distance, experiment)
 
         case "streaming" =>

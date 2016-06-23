@@ -50,4 +50,23 @@ object Partitioning {
       { points => points.map(_._2) },
       preservesPartitioning = true)
   }
+
+  def grid(rdd: RDD[Point]): RDD[Point] = {
+    val parallelism = rdd.sparkContext.defaultParallelism
+    rdd.map { p =>
+      var index: Int = 0
+      var multiplier = 1
+      for (coord <- p.data) {
+        require(coord <= 1 && coord >= -1)
+        val j = ((coord + 1.0)*parallelism/2.0).toInt
+        require(0 <= j && j <= parallelism)
+        index += j*multiplier
+        multiplier *= parallelism
+      }
+      (index, p)
+    }.partitionBy(new HashPartitioner(parallelism)).mapPartitions(
+      { points => points.map(_._2) },
+      preservesPartitioning = true)
+  }
+
 }

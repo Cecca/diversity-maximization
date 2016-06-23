@@ -58,7 +58,9 @@ object MainPointsLocalSearch {
         val points = sc.objectFile[Point](
           DatasetGenerator.filename(directory, sourceName, dim, n, k),
           parallelism)
-        Algorithm.localSearch(points, k, epsilon, distance, diversity, experiment)
+        Algorithm.localSearch(
+          Partitioning.random(points),
+          k, epsilon, distance, diversity, experiment)
       }
 
       Approximation.approximate(

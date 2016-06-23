@@ -72,7 +72,8 @@ object MainWiki {
       println(s"Working on $docCount documents over ${documents.count()}")
       documents.unpersist()
       val coreset: Coreset[WikiBagOfWords] = algorithm match {
-        case "mapreduce" => Algorithm.mapReduce(filteredDocuments, kernSize, k, distance, experiment)
+        case "mapreduce" =>
+          Algorithm.mapReduce(Partitioning.random(filteredDocuments), kernSize, k, distance, experiment)
         case "random" => Algorithm.random(filteredDocuments, k, (k*math.log(k))/docCount, distance, experiment)
       }
 
