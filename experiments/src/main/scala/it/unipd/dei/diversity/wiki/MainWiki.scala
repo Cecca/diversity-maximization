@@ -1,6 +1,6 @@
 package it.unipd.dei.diversity.wiki
 
-import it.unipd.dei.diversity.{Algorithm, Approximation, SerializationUtils, _}
+import it.unipd.dei.diversity.{Algorithm, Approximation, _}
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.{SparkConf, SparkContext}
@@ -19,6 +19,7 @@ object MainWiki {
     val opts = new Conf(args)
     opts.verify()
     val dataset = opts.dataset()
+    val algorithm = opts.algorithm()
     val kList = opts.delegates().split(",").map{_.toInt}
     val kernelSizeList = opts.kernelSize().split(",").map{_.toInt}
     val runs = opts.runs()
@@ -67,10 +68,13 @@ object MainWiki {
             .persist(StorageLevel.MEMORY_AND_DISK)
         case None => documents
       }
-      println(s"Working on ${filteredDocuments.count()} documents over ${documents.count()}")
+      val docCount = filteredDocuments.count()
+      println(s"Working on $docCount documents over ${documents.count()}")
       documents.unpersist()
-      val coreset: Coreset[WikiBagOfWords] =
-        Algorithm.mapReduce(filteredDocuments, kernSize, k, distance, experiment)
+      val coreset: Coreset[WikiBagOfWords] = algorithm match {
+        case "mapreduce" => Algorithm.mapReduce(filteredDocuments, kernSize, k, distance, experiment)
+        case "random" => Algorithm.random(filteredDocuments, k, (k*math.log(k))/docCount, distance, experiment)
+      }
 
       // Display coreset on console
       println(coreset.points.map(bow => s"${bow.title} :: ${bow.categories}").mkString("\n"))
@@ -100,6 +104,8 @@ object MainWiki {
     lazy val queryTitle = opt[String]()
 
     lazy val queryRadius = opt[Double](default=Some(1.0))
+
+    lazy val algorithm = opt[String](default = Some("mapreduce"))
 
     lazy val farthest = toggle(
       default=Some(true),
