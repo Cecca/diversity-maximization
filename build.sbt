@@ -27,8 +27,8 @@ lazy val core = (project in file("core")).
     libraryDependencies ++= Seq(
       "com.storm-enroute" %% "scalameter" % "0.7" % "bench",
       "org.roaringbitmap" % "RoaringBitmap" % "0.5.11",
-      "io.dropwizard.metrics" % "metrics-core" % "3.1.2"
-
+      "io.dropwizard.metrics" % "metrics-core" % "3.1.2",
+      "it.unimi.dsi" % "dsiutils" % "2.3.2" exclude("ch.qos.logback", "logback-classic")
     ),
     testFrameworks in Benchmark += new TestFramework("org.scalameter.ScalaMeterFramework"),
     parallelExecution in Benchmark := false,
@@ -45,7 +45,6 @@ lazy val experiments = (project in file("experiments")).
     libraryDependencies ++= Seq(
       "it.unipd.dei" % "experiment-reporter" % "0.3.0",
       "org.rogach" %% "scallop" % "1.0.1",
-      "it.unimi.dsi" % "dsiutils" % "2.3.2" exclude("ch.qos.logback", "logback-classic"),
       "com.typesafe.akka" %% "akka-stream" % "2.4.5" % "provided",
       "org.apache.spark" %% "spark-core" % "1.6.1" % "provided",
       "com.storm-enroute" %% "scalameter" % "0.7" % "bench"

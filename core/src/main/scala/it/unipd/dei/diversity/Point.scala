@@ -43,6 +43,8 @@ class Point(val data: Array[Double]) extends Comparable[Point] with Serializable
 
 object Point {
 
+//  val randomGen = new
+
   def apply(data: Double*): Point = new Point(data.toArray)
 
   def apply(data: Array[Double]): Point = new Point(data)
