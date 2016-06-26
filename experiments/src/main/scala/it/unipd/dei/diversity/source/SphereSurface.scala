@@ -16,7 +16,9 @@ class SphereSurface(val dimension: Int,
 
   def point(): Point = {
     val p = Point.randomGaussian(dimension)
-    p.normalize(distance(p, zero) / radius)
+    val res = p.normalize(distance(p, zero) / radius)
+    require(distance(res, zero) <= 1.00000000001) // Allow a little tolerance
+    res
   }
 
   /**
