@@ -89,13 +89,20 @@ object MainPoints {
       }
 
       Approximation.approximate(
-        coreset, k, distance, computeFarthest, computeMatching, approxRuns, experiment)
+        coreset, k, distance, computeFarthest, computeMatching, approxRuns,
+        Some(pointToRow(distance, dim) _), experiment)
 
       experiment.saveAsJsonFile()
       println(experiment.toSimpleString)
     }
 
   }
+
+  def pointToRow(distance: (Point, Point) => Double, dim: Int)(p: Point)
+  : Map[String, Any] = Map(
+    "norm" -> distance(p, Point.zero(dim)),
+    "point" -> p.toString
+  )
 
   class Conf(args: Array[String]) extends ScallopConf(args) {
 
