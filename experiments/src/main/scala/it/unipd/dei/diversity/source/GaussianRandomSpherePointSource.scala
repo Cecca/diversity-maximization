@@ -1,5 +1,6 @@
 package it.unipd.dei.diversity.source
 
+import it.unimi.dsi.util.XorShift1024StarRandomGenerator
 import it.unipd.dei.diversity.Point
 
 import scala.util.Random
@@ -33,10 +34,11 @@ extends RandomPointIterator {
   private val zero = Point.zero(dim)
   val sphereSurface = new SphereSurface(dim, 1.0, distance)
   val surfaceProbability = 0.25
+  val randomGen = new XorShift1024StarRandomGenerator()
 
   override def next(): Point = {
     // Generate a random point inside the sphere, or on the surface
-    if (Random.nextDouble() < surfaceProbability) {
+    if (randomGen.nextDouble() < surfaceProbability) {
       sphereSurface.point()
     } else {
       val p = Point.randomGaussian(dim)

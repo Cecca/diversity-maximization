@@ -1,5 +1,6 @@
 package it.unipd.dei.diversity.source
 
+import it.unimi.dsi.util.XorShift1024StarRandomGenerator
 import it.unipd.dei.diversity.{Diversity, Point}
 
 import scala.collection.mutable
@@ -69,11 +70,13 @@ extends Iterator[Point] {
   private val _toEmit = mutable.Set[Point](certificate :_*)
   private val _emissionProb: Double = certificate.length.toDouble / num
 
+  val randomGen = new XorShift1024StarRandomGenerator()
+
   override def hasNext: Boolean = _toEmit.nonEmpty || _cnt < num
 
   override def next(): Point = {
     _cnt += 1
-    if (_toEmit.nonEmpty && Random.nextDouble() <= _emissionProb) {
+    if (_toEmit.nonEmpty && randomGen.nextDouble() <= _emissionProb) {
       val p = _toEmit.head
       _toEmit.remove(p)
       p

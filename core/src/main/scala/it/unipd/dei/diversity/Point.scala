@@ -2,6 +2,8 @@ package it.unipd.dei.diversity
 
 import java.util
 
+import it.unimi.dsi.util.XorShift1024StarRandomGenerator
+
 import scala.util.Random
 
 class Point(val data: Array[Double]) extends Comparable[Point] with Serializable {
@@ -43,7 +45,7 @@ class Point(val data: Array[Double]) extends Comparable[Point] with Serializable
 
 object Point {
 
-//  val randomGen = new
+  val randomGen = new XorShift1024StarRandomGenerator()
 
   def apply(data: Double*): Point = new Point(data.toArray)
 
@@ -51,12 +53,12 @@ object Point {
 
   def random(dimension: Int): Point =
     Point((0 until dimension).view.map { _ =>
-      Random.nextDouble()
+      randomGen.nextDouble()
     }.toArray)
 
   def randomGaussian(dimension: Int): Point =
     Point((0 until dimension).view.map { _ =>
-      Random.nextGaussian()
+      randomGen.nextGaussian()
     }.toArray)
 
   def zero(dimension: Int): Point =
