@@ -42,8 +42,16 @@ extends RandomPointIterator {
       sphereSurface.point()
     } else {
       val p = Point.randomGaussian(dim)
-      val radius = math.min(0.25 * Random.nextGaussian(), 1.0)
-      p.normalize(distance(p, zero) / radius)
+      val dist = distance(p, zero)
+      val radius = math.abs(0.25 * Random.nextGaussian())
+      val normFactor =
+        if (radius >= 1.0) dist
+        else               dist/radius
+      val res = p.normalize(normFactor)
+      require(distance(res, zero) <= 1.00000000001, // Allow a little tolerance
+        s"Point must be within radius 1, was ${distance(res,zero)} instead " +
+          s"(original distance $dist, random radius $radius, normalization factor $normFactor)")
+      res
     }
   }
 
