@@ -4,6 +4,7 @@ import org.apache.spark.HashPartitioner
 import org.apache.spark.rdd.RDD
 import it.unipd.dei.diversity.ExperimentUtil._
 import it.unipd.dei.experiment.Experiment
+import org.apache.spark.storage.StorageLevel
 
 import scala.util.Random
 
@@ -16,10 +17,14 @@ object Partitioning {
   def random(rdd: RDD[Point], experiment: Experiment): RDD[Point] = {
     val (result, time): (RDD[Point], Long) = timed {
       val parallelism = rdd.sparkContext.defaultParallelism
-      rdd.map { p =>
+      val _res = rdd.map { p =>
         val pidx = Random.nextInt(parallelism)
         (pidx, p)
       }.partitionBy(new HashPartitioner(parallelism)).mapPartitions({ points => points.map(_._2) }, preservesPartitioning = true)
+        .persist(StorageLevel.MEMORY_AND_DISK)
+      // Force count to compute time
+      _res.count()
+      _res
     }
     experiment.append("times",
       jMap(
@@ -35,11 +40,15 @@ object Partitioning {
              experiment: Experiment): RDD[Point] = {
     val parallelism = rdd.sparkContext.defaultParallelism
     val (result, time): (RDD[Point], Long) = timed {
-      rdd.map { p =>
+      val _res = rdd.map { p =>
         val pidx = math.floor(distance(p, zero)*parallelism).toInt
         (pidx, p)
       }.partitionBy(new HashPartitioner(parallelism))
         .mapPartitions({ points => points.map(_._2) }, preservesPartitioning = true)
+        .persist(StorageLevel.MEMORY_AND_DISK)
+      // Force evaluation to get timing
+      _res.count()
+      _res
     }
     experiment.append("times",
       jMap(
