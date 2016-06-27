@@ -34,7 +34,7 @@ extends RandomPointIterator {
   override def next(): Point = {
     // Generate a random point inside the sphere
     val p = Point.randomGaussian(dim)
-    val res = p.normalize(distance(p, zero) / (0.8 * randomGen.nextDouble()))
+    val res = p.normalize(distance(p, zero) / randomGen.nextDouble())
     require(distance(res, zero) <= 1.00000000001) // Allow a little tolerance
     res
   }
