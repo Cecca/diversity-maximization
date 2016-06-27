@@ -71,10 +71,8 @@ object MainPoints {
           val inputPoints = sc.objectFile[Point](
             DatasetGenerator.filename(directory, sourceName, dim, n, k), parallelism)
           val points = partitioning match {
-            case "random"  => Partitioning.random(inputPoints)
-            case "radius"  => Partitioning.radius(inputPoints, Point.zero(dim), distance)
-            case "polar2D" => Partitioning.polar2D(inputPoints)
-            case "grid" => Partitioning.grid(inputPoints)
+            case "random"  => Partitioning.random(inputPoints, experiment)
+            case "radius"  => Partitioning.radius(inputPoints, Point.zero(dim), distance, experiment)
             case err       => throw new IllegalArgumentException(s"Unknown partitioning scheme $err")
           }
           Algorithm.mapReduce(points, kernSize, k, distance, experiment)

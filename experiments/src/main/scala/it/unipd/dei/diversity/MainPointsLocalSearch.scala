@@ -59,7 +59,7 @@ object MainPointsLocalSearch {
           DatasetGenerator.filename(directory, sourceName, dim, n, k),
           parallelism)
         Algorithm.localSearch(
-          Partitioning.random(points),
+          Partitioning.random(points, experiment),
           k, epsilon, distance, diversity, experiment)
       }
 

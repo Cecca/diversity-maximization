@@ -2,6 +2,10 @@ package it.unipd.dei.diversity
 
 import org.apache.spark.HashPartitioner
 import org.apache.spark.rdd.RDD
+import it.unipd.dei.diversity.ExperimentUtil._
+import it.unipd.dei.experiment.Experiment
+
+import scala.util.Random
 
 /**
   * Various partitioning strategies. Some strategies can be
@@ -9,31 +13,40 @@ import org.apache.spark.rdd.RDD
   */
 object Partitioning {
 
-  def random[T](rdd: RDD[T]): RDD[T] = {
-    val parallelism = rdd.sparkContext.defaultParallelism
-    // We distinguish the case of increasing or decreasing the number of
-    // partitions for efficiency
-    if (rdd.getNumPartitions < parallelism) {
-      println("Increasing the number of partitions")
-      rdd.repartition(parallelism)
-    } else if (rdd.getNumPartitions > parallelism) {
-      println("Decreasing the number of partitions")
-      rdd.coalesce(parallelism)
-    } else {
-      rdd
+  def random(rdd: RDD[Point], experiment: Experiment): RDD[Point] = {
+    val (result, time): (RDD[Point], Long) = timed {
+      val parallelism = rdd.sparkContext.defaultParallelism
+      rdd.map { p =>
+        val pidx = Random.nextInt(parallelism)
+        (pidx, p)
+      }.partitionBy(new HashPartitioner(parallelism)).mapPartitions({ points => points.map(_._2) }, preservesPartitioning = true)
     }
+    experiment.append("times",
+      jMap(
+        "component" -> "partitioning",
+        "time"      -> convertDuration(time, reportTimeUnit)
+      ))
+    result
   }
 
   def radius(rdd: RDD[Point],
              zero: Point,
-             distance: (Point, Point) => Double): RDD[Point] = {
+             distance: (Point, Point) => Double,
+             experiment: Experiment): RDD[Point] = {
     val parallelism = rdd.sparkContext.defaultParallelism
-    rdd.map { p =>
-      val pidx = math.floor(distance(p, zero)*parallelism).toInt
-      (pidx, p)
-    }.partitionBy(new HashPartitioner(parallelism)).mapPartitions(
-      { points => points.map(_._2) },
-      preservesPartitioning = true)
+    val (result, time): (RDD[Point], Long) = timed {
+      rdd.map { p =>
+        val pidx = math.floor(distance(p, zero)*parallelism).toInt
+        (pidx, p)
+      }.partitionBy(new HashPartitioner(parallelism))
+        .mapPartitions({ points => points.map(_._2) }, preservesPartitioning = true)
+    }
+    experiment.append("times",
+      jMap(
+        "component" -> "partitioning",
+        "time"      -> convertDuration(time, reportTimeUnit)
+      ))
+    result
   }
 
   def polar2D(rdd: RDD[Point]): RDD[Point] = {
