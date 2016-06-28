@@ -17,11 +17,16 @@ object Partitioning {
   def random(rdd: RDD[Point], experiment: Experiment): RDD[Point] = {
     val (result, time): (RDD[Point], Long) = timed {
       val parallelism = rdd.sparkContext.defaultParallelism
-      val _res = rdd.map { p =>
-        val pidx = Random.nextInt(parallelism)
-        (pidx, p)
-      }.partitionBy(new HashPartitioner(parallelism)).mapPartitions({ points => points.map(_._2) }, preservesPartitioning = true)
-        .persist(StorageLevel.MEMORY_AND_DISK)
+      val _res =
+        if (rdd.getNumPartitions < parallelism) {
+          println("Increasing the number of partitions")
+          rdd.repartition(parallelism)
+        } else if (rdd.getNumPartitions > parallelism) {
+          println("Decreasing the number of partitions")
+          rdd.coalesce(parallelism)
+        } else {
+          rdd
+        }.persist(StorageLevel.MEMORY_AND_DISK)
       // Force count to compute time
       _res.count()
       _res
