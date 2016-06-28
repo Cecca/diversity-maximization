@@ -72,6 +72,8 @@ object MainPoints {
             DatasetGenerator.filename(directory, sourceName, dim, n, k), parallelism)
           val points = partitioning match {
             case "random"  => Partitioning.random(inputPoints, experiment)
+            case "polar2D" => Partitioning.polar2D(inputPoints, experiment)
+            case "grid"    => Partitioning.grid(inputPoints, experiment)
             case "radius"  => Partitioning.radius(inputPoints, Point.zero(dim), distance, experiment)
             case err       => throw new IllegalArgumentException(s"Unknown partitioning scheme $err")
           }
