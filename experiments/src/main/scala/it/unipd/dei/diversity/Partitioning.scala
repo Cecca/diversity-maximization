@@ -39,6 +39,27 @@ object Partitioning {
     result
   }
 
+  def shuffle(rdd: RDD[Point], experiment: Experiment): RDD[Point] = {
+    println("Shuffling the data!")
+    val (result, time): (RDD[Point], Long) = timed {
+      val parallelism = rdd.sparkContext.defaultParallelism
+      val _res = rdd.map { p =>
+        val pidx = Random.nextInt(parallelism)
+        (pidx, p)
+      }.partitionBy(new HashPartitioner(parallelism)).mapPartitions({ points => points.map(_._2) }, preservesPartitioning = true)
+        .persist(StorageLevel.MEMORY_AND_DISK)
+      // Force count to compute time
+      _res.count()
+      _res
+    }
+    experiment.append("times",
+      jMap(
+        "component" -> "partitioning",
+        "time"      -> convertDuration(time, reportTimeUnit)
+      ))
+    result
+  }
+
   def radius(rdd: RDD[Point],
              zero: Point,
              distance: (Point, Point) => Double,

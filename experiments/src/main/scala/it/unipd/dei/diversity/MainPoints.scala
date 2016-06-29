@@ -80,9 +80,14 @@ object MainPoints {
           Algorithm.mapReduce(points, kernSize, k, distance, experiment)
 
         case "streaming" =>
-          val points = SerializationUtils.sequenceFile(
-            DatasetGenerator.filename(directory, sourceName, dim, n, k))
-          Algorithm.streaming(points, k, kernSize, distance, experiment)
+//          val points = SerializationUtils.sequenceFile(
+//            DatasetGenerator.filename(directory, sourceName, dim, n, k))
+
+          val parallelism = sc.defaultParallelism
+          val points = Partitioning.shuffle(sc.objectFile[Point](
+            DatasetGenerator.filename(directory, sourceName, dim, n, k), parallelism), experiment).collect()
+
+          Algorithm.streaming(points.iterator, k, kernSize, distance, experiment)
 
         case "sequential" =>
           val points = SerializationUtils.sequenceFile(
