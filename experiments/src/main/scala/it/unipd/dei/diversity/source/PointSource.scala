@@ -50,6 +50,8 @@ object PointSource {
       new UniformRandomSpherePointSource(dim, n, k, distance, randomGen)
     case "random-gaussian-sphere" =>
       new GaussianRandomSpherePointSource(dim, n, k, distance, randomGen)
+    case "random-gaussian-sphere-old" =>
+      new OldGaussianRandomSpherePointSource(dim, n, k, distance, randomGen)
     case str =>
       throw new IllegalArgumentException(s"Unknown source $str")
   }
