@@ -36,7 +36,7 @@ extends RandomPointIterator {
 
   private val zero = Point.zero(dim)
   val sphereSurface = new SphereSurface(dim, 1.0, distance, randomGen)
-  val surfaceProbability = 0.25
+  val surfaceProbability = 0.0
 
   override def next(): Point = {
     // Generate a random point inside the sphere, or on the surface
