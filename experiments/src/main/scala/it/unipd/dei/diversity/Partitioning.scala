@@ -84,6 +84,30 @@ object Partitioning {
     result
   }
 
+  def radiusOld(rdd: RDD[Point],
+                zero: Point,
+                distance: (Point, Point) => Double,
+                experiment: Experiment): RDD[Point] = {
+    val parallelism = rdd.sparkContext.defaultParallelism
+    val (result, time): (RDD[Point], Long) = timed {
+      val _res = rdd.map { p =>
+        val pidx = math.floor(distance(p, zero) / 0.8 * parallelism).toInt
+        (pidx, p)
+      }.partitionBy(new HashPartitioner(parallelism))
+        .mapPartitions({ points => points.map(_._2) }, preservesPartitioning = true)
+        .persist(StorageLevel.MEMORY_AND_DISK)
+      // Force evaluation to get timing
+      _res.count()
+      _res
+    }
+    experiment.append("times",
+      jMap(
+        "component" -> "partitioning",
+        "time"      -> convertDuration(time, reportTimeUnit)
+      ))
+    result
+  }
+
   def polar2D(rdd: RDD[Point], experiment: Experiment): RDD[Point] = {
     val parallelism = rdd.sparkContext.defaultParallelism
     val (res, time) = timed {

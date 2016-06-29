@@ -75,6 +75,7 @@ object MainPoints {
             case "polar2D" => Partitioning.polar2D(inputPoints, experiment)
             case "grid"    => Partitioning.grid(inputPoints, experiment)
             case "radius"  => Partitioning.radius(inputPoints, Point.zero(dim), distance, experiment)
+            case "radius-old"  => Partitioning.radiusOld(inputPoints, Point.zero(dim), distance, experiment)
             case err       => throw new IllegalArgumentException(s"Unknown partitioning scheme $err")
           }
           Algorithm.mapReduce(points, kernSize, k, distance, experiment)
