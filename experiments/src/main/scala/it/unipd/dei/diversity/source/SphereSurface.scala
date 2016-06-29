@@ -3,6 +3,7 @@ package it.unipd.dei.diversity.source
 import it.unipd.dei.diversity.{Distance, Diversity, Point}
 
 import scala.collection.mutable.ArrayBuffer
+import scala.util.Random
 
 /**
   * Utility class that generates points on the surface of
@@ -10,12 +11,13 @@ import scala.collection.mutable.ArrayBuffer
   */
 class SphereSurface(val dimension: Int,
                     val radius: Double,
-                    val distance: (Point, Point) => Double) extends Serializable {
+                    val distance: (Point, Point) => Double,
+                    val randomGen: Random) extends Serializable {
 
   private val zero = Point.zero(dimension)
 
   def point(): Point = {
-    val p = Point.randomGaussian(dimension)
+    val p = Point.randomGaussian(dimension, randomGen)
     val res = p.normalize(distance(p, zero) / radius)
     require(distance(res, zero) <= 1.00000000001) // Allow a little tolerance
     res
@@ -47,23 +49,5 @@ class SphereSurface(val dimension: Int,
 
   private def minDistance(points: Seq[Point], point: Point): Double =
     points.view.map(p => distance(p, point)).min
-
-}
-
-object SphereSurface {
-
-  def main(args: Array[String]) {
-    val k = 128
-    val sg = new SphereSurface(256, 1.0, Distance.euclidean)
-    val ur = sg.uniformRandom(k)
-    val ws = sg.wellSpaced(k, 1024)
-    println(
-      s"""
-         | Edge diversity
-         | ${Diversity.edge(ur, sg.distance)} | ${Diversity.edge(ws, sg.distance)}
-         | Clique diversity
-         | ${Diversity.clique(ur, sg.distance)} | ${Diversity.clique(ws, sg.distance)}
-       """.stripMargin)
-  }
 
 }

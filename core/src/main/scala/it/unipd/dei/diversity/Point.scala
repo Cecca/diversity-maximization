@@ -45,18 +45,16 @@ class Point(val data: Array[Double]) extends Comparable[Point] with Serializable
 
 object Point {
 
-  val randomGen = new XorShift1024StarRandomGenerator()
-
   def apply(data: Double*): Point = new Point(data.toArray)
 
   def apply(data: Array[Double]): Point = new Point(data)
 
-  def random(dimension: Int): Point =
+  def random(dimension: Int, randomGen: Random): Point =
     Point((0 until dimension).view.map { _ =>
       randomGen.nextDouble()
     }.toArray)
 
-  def randomGaussian(dimension: Int): Point =
+  def randomGaussian(dimension: Int, randomGen: Random): Point =
     Point((0 until dimension).view.map { _ =>
       randomGen.nextGaussian()
     }.toArray)

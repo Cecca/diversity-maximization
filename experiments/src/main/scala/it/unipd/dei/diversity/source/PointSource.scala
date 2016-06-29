@@ -20,6 +20,8 @@ trait PointSource extends Iterable[Point] {
 
   val certificate: Array[Point]
 
+  val randomGen: Random
+
   lazy val edgeDiversity: Double = Diversity.edge(certificate, distance)
 
   lazy val cliqueDiversity: Double = Diversity.clique(certificate, distance)
@@ -32,7 +34,7 @@ trait PointSource extends Iterable[Point] {
   def points: RandomPointIterator
 
   override def iterator: Iterator[Point] =
-    new InterleavingPointIterator(certificate, points, n)
+    new InterleavingPointIterator(certificate, points, n, randomGen)
 
 }
 
@@ -42,19 +44,12 @@ object PointSource {
             dim: Int,
             n: Int,
             k: Int,
-            distance: (Point, Point) => Double): PointSource = name match {
-    case "versor" =>
-      new VersorPointSource(dim, n, k, distance)
+            distance: (Point, Point) => Double,
+            randomGen: Random): PointSource = name match {
     case "random-uniform-sphere" =>
-      new UniformRandomSpherePointSource(dim, n, k, distance)
+      new UniformRandomSpherePointSource(dim, n, k, distance, randomGen)
     case "random-gaussian-sphere" =>
-      new GaussianRandomSpherePointSource(dim, n, k, distance)
-    case "random-tight-sphere" =>
-      new GaussianTightSpherePointSource(dim, n, k, distance)
-    case "random-sphere-surface" =>
-      new SphereSurfacePointSource(dim, n, k, distance)
-    case "gaussian" =>
-      new GaussianPointSource(dim, n, k, distance)
+      new GaussianRandomSpherePointSource(dim, n, k, distance, randomGen)
     case str =>
       throw new IllegalArgumentException(s"Unknown source $str")
   }
@@ -63,14 +58,13 @@ object PointSource {
 
 class InterleavingPointIterator(val certificate: Array[Point],
                                 val points: Iterator[Point],
-                                val num: Int)
+                                val num: Int,
+                                val randomGen: Random)
 extends Iterator[Point] {
 
   private var _cnt = 0
   private val _toEmit = mutable.Set[Point](certificate :_*)
   private val _emissionProb: Double = certificate.length.toDouble / num
-
-  val randomGen = new XorShift1024StarRandomGenerator()
 
   override def hasNext: Boolean = _toEmit.nonEmpty || _cnt < num
 

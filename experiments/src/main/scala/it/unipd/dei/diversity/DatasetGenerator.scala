@@ -1,9 +1,11 @@
 package it.unipd.dei.diversity
 
-import it.unipd.dei.diversity.source.{PointSource, PointSourceRDD}
+import it.unipd.dei.diversity.source.PointSource
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.{SparkConf, SparkContext}
 import org.rogach.scallop.ScallopConf
+
+import scala.util.Random
 
 object DatasetGenerator {
 
@@ -21,6 +23,8 @@ object DatasetGenerator {
     val numPointsList = opts.numPoints().split(",").map{_.toInt}
     val outputDir = opts.outputDir()
 
+    val randomGen = new Random()
+
     val sparkConfig = new SparkConf(loadDefaults = true)
       .setAppName("MapReduce coresets")
     val sc = new SparkContext(sparkConfig)
@@ -30,7 +34,7 @@ object DatasetGenerator {
       k        <- kList
       n        <- numPointsList
     } {
-      val source = PointSource(sourceName, dim, n, k, Distance.euclidean)
+      val source = PointSource(sourceName, dim, n, k, Distance.euclidean, randomGen)
       
       val rdd = sc.parallelize(source.toVector)
         .persist(StorageLevel.MEMORY_AND_DISK)
