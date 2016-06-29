@@ -1,6 +1,5 @@
 package it.unipd.dei.diversity.source
 
-import it.unimi.dsi.util.XorShift1024StarRandomGenerator
 import it.unipd.dei.diversity.Point
 
 import scala.util.Random
