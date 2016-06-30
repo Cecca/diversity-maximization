@@ -48,6 +48,8 @@ object PointSource {
             randomGen: Random): PointSource = name match {
     case "random-uniform-sphere" =>
       new UniformRandomSpherePointSource(dim, n, k, distance, randomGen)
+    case "random-uniform-cube" =>
+      new UniformRandomCubePointSource(dim, n, k, distance, randomGen)
     case "random-uniform-sphere-old" =>
       new OldUniformRandomSpherePointSource(dim, n, k, distance, randomGen)
     case "random-gaussian-sphere" =>
