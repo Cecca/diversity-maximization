@@ -15,8 +15,7 @@ object MainPoints {
     val algorithm = opts.algorithm()
     val sourcesList = opts.source().split(",")
     val dimList = opts.spaceDimension().split(",").map{_.toInt}
-    val delList = opts.delegates().split(",").map{_.toInt}
-    val targetList = opts.target().split(",").map{_.toInt}
+    val kList = opts.delegates().split(",").map{_.toInt}
     val numPointsList = opts.numPoints().split(",").map{_.toInt}
     val kernelSizeList = opts.kernelSize().split(",").map{_.toInt}
     val runs = opts.runs()
@@ -38,8 +37,7 @@ object MainPoints {
       r <- 0 until runs
       sourceName <- sourcesList
       dim      <- dimList
-      k <- targetList
-      delegates <- delList
+      k        <- kList
       n        <- numPointsList
       kernSize <- kernelSizeList
     } {
@@ -47,8 +45,7 @@ object MainPoints {
         s"""
           |Experiment with:
           |  $n points from $sourceName (dimension $dim)
-          |  k = $k
-          |  delegates  = $delegates
+          |  k  = $k
           |  k' = $kernSize
         """.stripMargin)
       val experiment = new Experiment()
@@ -59,7 +56,6 @@ object MainPoints {
         .tag("git-branch", BuildInfo.gitBranch)
         .tag("source", sourceName)
         .tag("space-dimension", dim)
-        .tag("delegates", delegates)
         .tag("k", k)
         .tag("num-points", n)
         .tag("kernel-size", kernSize)
@@ -83,14 +79,17 @@ object MainPoints {
             case "radius-old"  => Partitioning.radiusOld(inputPoints, Point.zero(dim), distance, experiment)
             case err       => throw new IllegalArgumentException(s"Unknown partitioning scheme $err")
           }
-          Algorithm.mapReduce(points, kernSize, delegates, distance, experiment)
+          Algorithm.mapReduce(points, kernSize, k, distance, experiment)
 
         case "streaming" =>
+//          val points = SerializationUtils.sequenceFile(
+//            DatasetGenerator.filename(directory, sourceName, dim, n, k))
+
           val parallelism = sc.defaultParallelism
           val points = Partitioning.shuffle(sc.objectFile[Point](
             DatasetGenerator.filename(directory, sourceName, dim, n, k), parallelism), experiment).collect()
 
-          Algorithm.streaming(points.iterator, delegates, kernSize, distance, experiment)
+          Algorithm.streaming(points.iterator, k, kernSize, distance, experiment)
 
         case "sequential" =>
           val points = SerializationUtils.sequenceFile(
@@ -101,7 +100,7 @@ object MainPoints {
           val points = SerializationUtils.sequenceFile(
             DatasetGenerator.filename(directory, sourceName, dim, n, k))
           val prob = kernSize.toDouble / n
-          Algorithm.random(points, delegates, prob, distance, experiment)
+          Algorithm.random(points, k, prob, distance, experiment)
 
       }
 
@@ -132,8 +131,6 @@ object MainPoints {
     lazy val spaceDimension = opt[String](default = Some("2"))
 
     lazy val delegates = opt[String](required = true)
-
-    lazy val target = opt[String](required = true)
 
     lazy val kernelSize = opt[String](required = true)
 
