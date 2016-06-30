@@ -162,4 +162,32 @@ object Partitioning {
     res
   }
 
+  def unitGrid(rdd: RDD[Point], experiment: Experiment): RDD[Point] = {
+    val parallelism = rdd.sparkContext.defaultParallelism
+    val (res, time) = timed {
+      val _res = rdd.map { p =>
+        var index: Int = 0
+        var multiplier = 1
+        for (coord <- p.data) {
+          require(coord <= 1 && coord >= 0)
+          val j = (coord*parallelism).toInt
+          require(0 <= j && j <= parallelism)
+          index += j*multiplier
+          multiplier *= parallelism
+        }
+        (index, p)
+      }.partitionBy(new HashPartitioner(parallelism)).mapPartitions(
+        { points => points.map(_._2) },
+        preservesPartitioning = true).persist(StorageLevel.MEMORY_AND_DISK)
+      _res.count()
+      _res
+    }
+    experiment.append("times",
+      jMap(
+        "component" -> "partitioning",
+        "time"      -> convertDuration(time, reportTimeUnit)
+      ))
+    res
+  }
+
 }
