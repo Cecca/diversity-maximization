@@ -2,10 +2,12 @@ package it.unipd.dei.diversity
 
 import java.io._
 
+import it.unimi.dsi.logging.ProgressLogger
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.SequenceFile.{Reader, Writer}
 import org.apache.hadoop.io.{BytesWritable, NullWritable, SequenceFile}
+import org.slf4j.LoggerFactory
 
 import scala.reflect.ClassTag
 
@@ -102,6 +104,9 @@ object SerializationUtils {
       val value = new BytesWritable(serialize(Array(v)))
       writer.append(key, value)
       cnt += 1
+      if (cnt % 10000 == 0) {
+        println(s"--> $cnt items")
+      }
     }
 
     writer.close()
