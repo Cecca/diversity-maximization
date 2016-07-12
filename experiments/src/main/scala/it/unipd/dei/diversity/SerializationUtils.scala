@@ -1,6 +1,7 @@
 package it.unipd.dei.diversity
 
 import java.io._
+import java.util.concurrent.TimeUnit
 
 import it.unimi.dsi.logging.ProgressLogger
 import org.apache.hadoop.conf.Configuration
@@ -98,16 +99,18 @@ object SerializationUtils {
 
     var cnt = 0
     val key = NullWritable.get()
-    for (v <- iterator) {
-      // The value must be wrapped in a Array because of how the values are
-      // deserialized by Spark
-      val value = new BytesWritable(serialize(Array(v)))
-      writer.append(key, value)
-      cnt += 1
-      if (cnt % 10000 == 0) {
+    // The value must be wrapped in a Array because of how the values are
+    // deserialized by Spark. We wrap more points in a single array for efficiency
+    val (_, time) = ExperimentUtil.timed {
+      for (vs <- iterator.grouped(4096)) {
+        val varr = vs.toArray
+        val value = new BytesWritable(serialize(varr))
+        writer.append(key, value)
+        cnt += varr.length
         println(s"--> $cnt items")
       }
     }
+    println(s"${ExperimentUtil.convertDuration(time, TimeUnit.MILLISECONDS)} elapsed")
 
     writer.close()
     cnt
