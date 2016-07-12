@@ -36,15 +36,16 @@ object DatasetGenerator {
     } {
       val source = PointSource(sourceName, dim, n, k, Distance.euclidean, randomGen)
       
-      val rdd = sc.parallelize(source.toVector)
-        .persist(StorageLevel.MEMORY_AND_DISK)
+//      val rdd = sc.parallelize(source.toVector)
+//        .persist(StorageLevel.MEMORY_AND_DISK)
 
-      val numGenerated = rdd.count()
+      val numGenerated = SerializationUtils.saveAsSequenceFile(
+        source.iterator, filename(outputDir, sourceName, dim, n, k))
       require(numGenerated >= n,
         s"Not enough points have been generated! $numGenerated < $n")
       println(s"Generated $numGenerated points")
 
-      rdd.saveAsObjectFile(filename(outputDir, sourceName, dim, n, k))
+//      rdd.saveAsObjectFile(filename(outputDir, sourceName, dim, n, k))
 
     }
 

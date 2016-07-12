@@ -1,11 +1,13 @@
 package it.unipd.dei.diversity
 
-import java.io.{ByteArrayInputStream, ObjectInputStream}
+import java.io._
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
-import org.apache.hadoop.io.SequenceFile.Reader
-import org.apache.hadoop.io.{BytesWritable, NullWritable}
+import org.apache.hadoop.io.SequenceFile.{Reader, Writer}
+import org.apache.hadoop.io.{BytesWritable, NullWritable, SequenceFile}
+
+import scala.reflect.ClassTag
 
 object SerializationUtils {
 
@@ -68,4 +70,42 @@ object SerializationUtils {
       singleSequenceFile(file, conf)
     }
   }
+
+  /** Serialize an object using Java serialization */
+  def serialize[T](o: T): Array[Byte] = {
+    val bos = new ByteArrayOutputStream()
+    val oos = new ObjectOutputStream(bos)
+    oos.writeObject(o)
+    oos.close()
+    bos.toByteArray
+  }
+
+  def saveAsSequenceFile[T:ClassTag](iterator: Iterator[T], file: String): Long = {
+    val path = new Path(file)
+    val conf = new Configuration()
+
+    if (path.getFileSystem(conf).exists(path)) {
+      throw new IOException(s"File $path already exists")
+    }
+
+    val writer = SequenceFile.createWriter(
+      conf,
+      Writer.file(path),
+      Writer.keyClass(classOf[NullWritable]),
+      Writer.valueClass(classOf[BytesWritable]))
+
+    var cnt = 0
+    val key = NullWritable.get()
+    for (v <- iterator) {
+      // The value must be wrapped in a Array because of how the values are
+      // deserialized by Spark
+      val value = new BytesWritable(serialize(Array(v)))
+      writer.append(key, value)
+      cnt += 1
+    }
+
+    writer.close()
+    cnt
+  }
+
 }
