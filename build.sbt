@@ -1,7 +1,10 @@
-lazy val commonSettings = Seq(
+lazy val baseSettings = Seq(
   organization := "it.unipd.dei",
   version := "0.1.0",
-  scalaVersion := "2.11.8",
+  scalaVersion := "2.11.8"
+)
+
+lazy val commonSettings = baseSettings ++ Seq(
   libraryDependencies ++= Seq(
     "org.scalatest" %% "scalatest" % "2.2.6" % "test",
     "org.scalacheck" %% "scalacheck" % "1.13.0" % "test"
@@ -15,7 +18,8 @@ lazy val commonSettings = Seq(
     "-unchecked"))
 
 lazy val root = (project in file(".")).
-  aggregate(core)
+  aggregate(core).
+  settings(baseSettings :_*)
 
 /** Configuration for benchmarks */
 lazy val Benchmark = config("bench") extend Test
