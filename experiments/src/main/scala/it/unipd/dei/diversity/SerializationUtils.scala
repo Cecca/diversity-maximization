@@ -102,7 +102,7 @@ object SerializationUtils {
     // The value must be wrapped in a Array because of how the values are
     // deserialized by Spark. We wrap more points in a single array for efficiency
     val (_, time) = ExperimentUtil.timed {
-      for (vs <- iterator.grouped(4096)) {
+      for (vs <- iterator.grouped(16384)) {
         val varr = vs.toArray
         val value = new BytesWritable(serialize(varr))
         writer.append(key, value)
