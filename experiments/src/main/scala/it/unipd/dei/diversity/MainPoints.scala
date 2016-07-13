@@ -84,9 +84,9 @@ object MainPoints {
         case "streaming" =>
           val parallelism = sc.defaultParallelism
           val points = Partitioning.shuffle(sc.objectFile[Point](
-            DatasetGenerator.filename(directory, sourceName, dim, n, k), parallelism), experiment).collect()
+            DatasetGenerator.filename(directory, sourceName, dim, n, k), parallelism), experiment).persist(StorageLevel.MEMORY_AND_DISK)
 
-          Algorithm.streaming(points.iterator, k, kernSize, distance, experiment)
+          Algorithm.streaming(points.toLocalIterator, k, kernSize, distance, experiment)
 
         case "sequential" =>
           val points = SerializationUtils.sequenceFile(
