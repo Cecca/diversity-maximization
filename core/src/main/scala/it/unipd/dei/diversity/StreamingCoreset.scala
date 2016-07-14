@@ -64,6 +64,9 @@ extends Coreset[T] {
 
   private var _threshold: Double = Double.PositiveInfinity
 
+  // The number of times the coreset have been restructured by a merge operation
+  private var _numRestructurings: Int = 0
+
   private val _kernel = Array.ofDim[T](kernelSize + 1)
 
   // Kernel points are not explicitly stored as delegates.
@@ -75,6 +78,12 @@ extends Coreset[T] {
 
   private[diversity]
   def threshold: Double = _threshold
+
+  /**
+    * The number of times the coreset have been restructured by a merge operation
+    */
+  private[diversity]
+  def numRestructurings: Int = _numRestructurings
 
   private[diversity]
   def numKernelPoints: Int = _insertionIdx
@@ -261,6 +270,7 @@ extends Coreset[T] {
     // indexes `bottomIdx` and `topIdx`
     require(_insertionIdx == _kernel.length)
     _threshold *= 2
+    _numRestructurings += 1
 
     var bottomIdx = 0
     var topIdx = _kernel.length - 1
