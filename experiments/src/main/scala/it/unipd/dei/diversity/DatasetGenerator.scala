@@ -1,11 +1,10 @@
 package it.unipd.dei.diversity
 
+import scala.util.Random
+
 import it.unipd.dei.diversity.source.PointSource
-import org.apache.spark.storage.StorageLevel
 import org.apache.spark.{SparkConf, SparkContext}
 import org.rogach.scallop.ScallopConf
-
-import scala.util.Random
 
 object DatasetGenerator {
 

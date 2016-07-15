@@ -1,13 +1,16 @@
 package it.unipd.dei.diversity
 
 import org.scalatest.{FreeSpec, Matchers}
+import scala.util.Random
 
 class StreamingCoresetTest extends FreeSpec with Matchers {
+
+  val randomGen = new Random()
 
   "The update" - {
     "should accept the first k'+1 points" in {
       val kPrime = 10
-      val points = (0 to kPrime).view.map(_ => Point.random(4))
+      val points = (0 to kPrime).view.map(_ => Point.random(4, randomGen))
       val coreset = new StreamingCoreset[Point](kPrime, 0, Distance.euclidean)
 
       coreset.initializing should be (true)
@@ -21,7 +24,7 @@ class StreamingCoresetTest extends FreeSpec with Matchers {
 
     "after initialization, the threshold must be the minimum distance" in {
       val kPrime = 10
-      val points = (0 to kPrime).view.map(_ => Point.random(4))
+      val points = (0 to kPrime).view.map(_ => Point.random(4, randomGen))
       val coreset = new StreamingCoreset[Point](kPrime, 0, Distance.euclidean)
 
       coreset.initializing should be (true)

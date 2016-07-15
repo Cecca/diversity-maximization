@@ -2,8 +2,11 @@ package it.unipd.dei.diversity
 
 import org.scalacheck.Prop.{BooleanOperators, forAll}
 import org.scalacheck._
+import scala.util.Random
 
 object StreamingCoresetChecks extends Properties("StreamingCoreset") {
+
+  val randomGen = new Random()
 
   val distance: (Point, Point) => Double = Distance.euclidean
 
@@ -12,7 +15,7 @@ object StreamingCoresetChecks extends Properties("StreamingCoreset") {
     { (kernelSize, numDelegates, n) =>
       val coreset = new StreamingCoreset(kernelSize, numDelegates, distance)
       (0 until n).foreach { _ =>
-        coreset.update(Point.random(1))
+        coreset.update(Point.random(1, randomGen))
       }
 
       coreset.numKernelPoints == 1 || coreset.threshold <= coreset.minKernelDistance
@@ -24,7 +27,7 @@ object StreamingCoresetChecks extends Properties("StreamingCoreset") {
       (n > kernelSize) ==> {
         val coreset = new StreamingCoreset(kernelSize, numDelegates, distance)
         (0 until n).foreach { _ =>
-          coreset.update(Point.random(1))
+          coreset.update(Point.random(1, randomGen))
         }
 
         (coreset.delegatesRadius <= 2 * coreset.threshold) :|

@@ -1,6 +1,7 @@
 package it.unipd.dei.diversity
 
 import org.scalameter.api._
+import scala.util.Random
 
 /**
   * Benchmark StreamingCoreset: the baseline is summing
@@ -8,13 +9,15 @@ import org.scalameter.api._
   */
 object StreamingCoresetBench extends Bench.OfflineReport {
 
+  val randomGen = new Random()
+
   val spaceDimension = 128
 
   val distance: (Point, Point) => Double = Distance.euclidean
 
   val sets: Gen[Array[Point]] = for {
     size <- Gen.range("num-points")(10000, 30000, 10000)
-  } yield Array.ofDim[Point](size).map{_ => Point.random(spaceDimension)}
+  } yield Array.ofDim[Point](size).map{_ => Point.random(spaceDimension, randomGen)}
 
   val ks: Gen[Int] = Gen.range("k")(10, 30, 10)
 

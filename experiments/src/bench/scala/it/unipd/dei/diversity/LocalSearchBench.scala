@@ -1,8 +1,11 @@
 package it.unipd.dei.diversity
 
 import org.scalameter.api._
+import scala.util.Random
 
 object LocalSearchBench extends Bench.OfflineReport {
+
+  val randomGen = new Random()
 
   val distance: (Point, Point) => Double = Distance.euclidean
 
@@ -13,7 +16,7 @@ object LocalSearchBench extends Bench.OfflineReport {
 
   val sets: Gen[Array[Point]] = for {
     size <- Gen.range("size")(100, 300, 100)
-  } yield Array.ofDim[Point](size).map{_ => Point.random(10)}
+  } yield Array.ofDim[Point](size).map{_ => Point.random(10, randomGen)}
 
   val ks: Gen[Int] = Gen.range("k")(10, 20, 10)
 
