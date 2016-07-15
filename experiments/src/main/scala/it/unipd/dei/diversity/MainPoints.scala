@@ -1,6 +1,7 @@
 package it.unipd.dei.diversity
 
 import it.unipd.dei.experiment.Experiment
+import it.unipd.dei.diversity.ExperimentUtil.jMap
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.{SparkConf, SparkContext}
 import org.rogach.scallop.ScallopConf
@@ -86,7 +87,14 @@ object MainPoints {
           val points = Partitioning.shuffle(sc.objectFile[Point](
             DatasetGenerator.filename(directory, sourceName, dim, n, k), parallelism), experiment).persist(StorageLevel.MEMORY_AND_DISK)
 
-          Algorithm.streaming(points.toLocalIterator, k, kernSize, distance, experiment)
+          val _coreset = Algorithm.streaming(points.toLocalIterator, k, kernSize, distance, experiment)
+          experiment.append("streaming-implementation",
+            jMap(
+              "num-merges" -> _coreset.numRestructurings,
+              "actual-centers" -> _coreset.kernel.length,
+              "threshold" -> _coreset.threshold
+            ))
+          _coreset
 
         case "sequential" =>
           val points = SerializationUtils.sequenceFile(
