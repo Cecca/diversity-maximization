@@ -19,9 +19,11 @@ package it.unipd.dei.diversity
 import java.io._
 import java.util.concurrent.TimeUnit
 
+import it.unipd.dei.diversity.source.PointSource
 import it.unimi.dsi.logging.ProgressLogger
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
+import org.apache.hadoop.io.Text
 import org.apache.hadoop.io.SequenceFile.{Reader, Writer}
 import org.apache.hadoop.io.{BytesWritable, NullWritable, SequenceFile}
 import org.slf4j.LoggerFactory
@@ -99,9 +101,17 @@ object SerializationUtils {
     bos.toByteArray
   }
 
-  def saveAsSequenceFile[T:ClassTag](iterator: Iterator[T], file: String): Long = {
-    val path = new Path(file)
+  def filename(dir: String, sourceName: String, dim: Int, n: Int, k: Int) =
+    s"$dir/$sourceName-$dim-$n-$k.points"
+
+  def saveAsSequenceFile[T:ClassTag](source: PointSource, directory: String): Long = {
+    val path = new Path(filename(directory, source.name, source.dim, source.n, source.k))
     val conf = new Configuration()
+    val meta = new SequenceFile.Metadata()
+    meta.set(new Text("far-points"), new Text(source.k.toString))
+    meta.set(new Text("source-name"), new Text(source.name))
+    meta.set(new Text("dimension"), new Text(source.dim.toString))
+    meta.set(new Text("num-points"), new Text(source.n.toString))
 
     if (path.getFileSystem(conf).exists(path)) {
       throw new IOException(s"File $path already exists")
@@ -110,15 +120,16 @@ object SerializationUtils {
     val writer = SequenceFile.createWriter(
       conf,
       Writer.file(path),
+      Writer.metadata(meta),
       Writer.keyClass(classOf[NullWritable]),
       Writer.valueClass(classOf[BytesWritable]))
 
-    var cnt = 0
+    var cnt = 0l
     val key = NullWritable.get()
     // The value must be wrapped in a Array because of how the values are
     // deserialized by Spark. We wrap more points in a single array for efficiency
     val (_, time) = ExperimentUtil.timed {
-      for (vs <- iterator.grouped(16384)) {
+      for (vs <- source.iterator.grouped(16384)) {
         val varr = vs.toArray
         val value = new BytesWritable(serialize(varr))
         writer.append(key, value)
@@ -131,5 +142,38 @@ object SerializationUtils {
     writer.close()
     cnt
   }
+
+  // def saveAsSequenceFile[T:ClassTag](iterator: Iterator[T], file: String): Long = {
+  //   val path = new Path(file)
+  //   val conf = new Configuration()
+
+  //   if (path.getFileSystem(conf).exists(path)) {
+  //     throw new IOException(s"File $path already exists")
+  //   }
+
+  //   val writer = SequenceFile.createWriter(
+  //     conf,
+  //     Writer.file(path),
+  //     Writer.keyClass(classOf[NullWritable]),
+  //     Writer.valueClass(classOf[BytesWritable]))
+
+  //   var cnt = 0
+  //   val key = NullWritable.get()
+  //   // The value must be wrapped in a Array because of how the values are
+  //   // deserialized by Spark. We wrap more points in a single array for efficiency
+  //   val (_, time) = ExperimentUtil.timed {
+  //     for (vs <- iterator.grouped(16384)) {
+  //       val varr = vs.toArray
+  //       val value = new BytesWritable(serialize(varr))
+  //       writer.append(key, value)
+  //       cnt += varr.length
+  //       println(s"--> $cnt items")
+  //     }
+  //   }
+  //   println(s"${ExperimentUtil.convertDuration(time, TimeUnit.MILLISECONDS)} elapsed")
+
+  //   writer.close()
+  //   cnt
+  // }
 
 }

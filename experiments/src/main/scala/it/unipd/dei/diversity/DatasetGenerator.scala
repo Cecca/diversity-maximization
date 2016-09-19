@@ -27,7 +27,7 @@ object DatasetGenerator {
   def filename(dir: String, sourceName: String, dim: Int, n: Int, k: Int) =
     s"$dir/$sourceName-$dim-$n-$k.points"
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]) = {
 
     val opts = new Conf(args)
     opts.verify()
@@ -36,7 +36,7 @@ object DatasetGenerator {
     val dimList = opts.spaceDimension().split(",").map{_.toInt}
     val kList = opts.k().split(",").map{_.toInt}
     val numPointsList = opts.numPoints().split(",").map{_.toInt}
-    val outputDir = opts.outputDir()
+    val outputDir = opts.directory()
 
     val randomGen = new Random()
 
@@ -50,17 +50,11 @@ object DatasetGenerator {
       n        <- numPointsList
     } {
       val source = PointSource(sourceName, dim, n, k, Distance.euclidean, randomGen)
-      
-//      val rdd = sc.parallelize(source.toVector)
-//        .persist(StorageLevel.MEMORY_AND_DISK)
 
-      val numGenerated = SerializationUtils.saveAsSequenceFile(
-        source.iterator, filename(outputDir, sourceName, dim, n, k))
+      val numGenerated = SerializationUtils.saveAsSequenceFile(source, outputDir)
       require(numGenerated >= n,
         s"Not enough points have been generated! $numGenerated < $n")
       println(s"Generated $numGenerated points")
-
-//      rdd.saveAsObjectFile(filename(outputDir, sourceName, dim, n, k))
 
     }
 
@@ -76,7 +70,7 @@ object DatasetGenerator {
 
     lazy val numPoints = opt[String](required = true)
 
-    lazy val outputDir = opt[String](required = true)
+    lazy val directory = opt[String](required = true)
 
   }
 
