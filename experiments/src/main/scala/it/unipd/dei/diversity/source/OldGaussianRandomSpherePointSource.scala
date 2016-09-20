@@ -27,7 +27,7 @@ class OldGaussianRandomSpherePointSource (override val dim: Int,
                                           val randomGen: Random)
   extends PointSource {
 
-  override val name = "gaussian-random-sphere-old"
+  override val name = "old-gaussian-random-sphere"
 
   private val zero = Point.zero(dim)
 

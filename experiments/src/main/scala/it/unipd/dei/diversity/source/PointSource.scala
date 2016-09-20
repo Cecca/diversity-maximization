@@ -56,6 +56,8 @@ trait PointSource extends Iterable[Point] {
 
 object PointSource {
 
+
+
   def apply(name: String,
             dim: Int,
             n: Int,
@@ -66,11 +68,11 @@ object PointSource {
       new UniformRandomSpherePointSource(dim, n, k, distance, randomGen)
     case "random-uniform-cube" =>
       new UniformRandomCubePointSource(dim, n, k, distance, randomGen)
-    case "random-uniform-sphere-old" =>
-      new OldUniformRandomSpherePointSource(dim, n, k, distance, randomGen)
+    case "chasm-random-uniform-sphere" =>
+      new ChasmUniformRandomSpherePointSource(dim, n, k, distance, randomGen)
     case "random-gaussian-sphere" =>
       new GaussianRandomSpherePointSource(dim, n, k, distance, randomGen)
-    case "random-gaussian-sphere-old" =>
+    case "old-random-gaussian-sphere" =>
       new OldGaussianRandomSpherePointSource(dim, n, k, distance, randomGen)
     case str =>
       throw new IllegalArgumentException(s"Unknown source $str")
