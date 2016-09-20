@@ -31,7 +31,7 @@ object MatchingHeuristicBench extends Bench.OfflineReport {
 
   val sets: Gen[Array[Point]] = for {
     size <- Gen.range("size")(100, 500, 100)
-  } yield Array.ofDim[Point](size).map{_ => Point.random(10, randomGen)}
+  } yield Array.ofDim[Point](size).map{_ => Point.random(64, randomGen)}
 
   val ks: Gen[Int] = Gen.range("k")(10, 90, 10)
 
@@ -60,11 +60,18 @@ object MatchingHeuristicBench extends Bench.OfflineReport {
       }
     }
 
-    measure method "matching heuristic" in {
+    measure method "sequential" in {
       using(params) in { case (points, k) =>
-        MatchingHeuristic.run(points, k, distance)
+        MatchingHeuristic.runSeq(points, k, distance)
       }
     }
+
+    measure method "parallel" in {
+      using(params) in { case (points, k) =>
+        MatchingHeuristic.runPar(points, k, distance)
+      }
+    }
+
   }
 
 }
