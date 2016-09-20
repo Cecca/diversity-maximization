@@ -30,10 +30,8 @@ object MainPoints {
     val opts = new Conf(args)
     opts.verify()
     val algorithm = opts.algorithm()
-    val sourcesList = opts.source().split(",")
-    val dimList = opts.spaceDimension().split(",").map{_.toInt}
+    val input = opts.input()
     val kList = opts.delegates().split(",").map{_.toInt}
-    val numPointsList = opts.numPoints().split(",").map{_.toInt}
     val kernelSizeList = opts.kernelSize().split(",").map{_.toInt}
     val runs = opts.runs()
     val approxRuns = opts.approxRuns()
@@ -52,32 +50,33 @@ object MainPoints {
     // Cycle through parameter configurations
     for {
       r <- 0 until runs
-      sourceName <- sourcesList
-      dim      <- dimList
       k        <- kList
-      n        <- numPointsList
       kernSize <- kernelSizeList
     } {
       println(
         s"""
-          |Experiment with:
-          |  $n points from $sourceName (dimension $dim)
+          |Experiment on $input with:
           |  k  = $k
           |  k' = $kernSize
         """.stripMargin)
+      
       val experiment = new Experiment()
         .tag("experiment", "Points")
         .tag("version", BuildInfo.version)
         .tag("git-revision", BuildInfo.gitRevision)
         .tag("git-revcount", BuildInfo.gitRevCount)
         .tag("git-branch", BuildInfo.gitBranch)
-        .tag("source", sourceName)
-        .tag("space-dimension", dim)
         .tag("k", k)
-        .tag("num-points", n)
         .tag("kernel-size", kernSize)
         .tag("computeFarthest", computeFarthest)
         .tag("computeMatching", computeMatching)
+      val metadata = SerializationUtils.metadata(input)
+      for ((k, v) <- metadata) {
+        experiment.tag(k, v)
+      }
+
+      val dim = metadata("data.dimension").toInt
+      val n = metadata("data.num-points").toInt
 
       val coreset: Coreset[Point] = algorithm match {
 
@@ -85,8 +84,7 @@ object MainPoints {
           val parallelism = sc.defaultParallelism
           experiment.tag("parallelism", parallelism)
           experiment.tag("partitioning", partitioning)
-          val inputPoints = sc.objectFile[Point](
-            DatasetGenerator.filename(directory, sourceName, dim, n, k), parallelism)
+          val inputPoints = SerializationUtils.sequenceFile(sc, input, parallelism)
           val points = partitioning match {
             case "random"  => Partitioning.random(inputPoints, experiment)
             case "polar2D" => Partitioning.polar2D(inputPoints, experiment)
@@ -100,8 +98,10 @@ object MainPoints {
 
         case "streaming" =>
           val parallelism = sc.defaultParallelism
-          val points = Partitioning.shuffle(sc.objectFile[Point](
-            DatasetGenerator.filename(directory, sourceName, dim, n, k), parallelism), experiment).persist(StorageLevel.MEMORY_AND_DISK)
+          val points = Partitioning.shuffle(
+            SerializationUtils.sequenceFile(sc, input, parallelism),
+            experiment)
+            .persist(StorageLevel.MEMORY_AND_DISK)
 
           val _coreset = Algorithm.streaming(points.toLocalIterator, k, kernSize, distance, experiment)
           experiment.append("streaming-implementation",
@@ -113,13 +113,11 @@ object MainPoints {
           _coreset
 
         case "sequential" =>
-          val points = SerializationUtils.sequenceFile(
-            DatasetGenerator.filename(directory, sourceName, dim, n, k))
+          val points = SerializationUtils.sequenceFile(input)
           Algorithm.sequential(points.toVector, experiment)
 
         case "random" =>
-          val points = SerializationUtils.sequenceFile(
-            DatasetGenerator.filename(directory, sourceName, dim, n, k))
+          val points = SerializationUtils.sequenceFile(input)
           val prob = kernSize.toDouble / n
           Algorithm.random(points, k, prob, distance, experiment)
 
@@ -145,23 +143,19 @@ object MainPoints {
 
     lazy val algorithm = opt[String](default = Some("sequential"))
 
-    lazy val source = opt[String](default = Some("versor"))
-
     lazy val partitioning = opt[String](default = Some("random"))
-
-    lazy val spaceDimension = opt[String](default = Some("2"))
 
     lazy val delegates = opt[String](required = true)
 
     lazy val kernelSize = opt[String](required = true)
-
-    lazy val numPoints = opt[String](required = true)
 
     lazy val runs = opt[Int](default = Some(1))
 
     lazy val approxRuns = opt[Int](default = Some(1))
 
     lazy val directory = opt[String](default = Some("/tmp"))
+
+    lazy val input = opt[String](required = true)
 
     lazy val farthest = toggle(
       default=Some(true),

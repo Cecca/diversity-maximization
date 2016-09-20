@@ -111,12 +111,12 @@ object SerializationUtils {
     val conf = new Configuration()
     
     val meta = metadata(Map(
-      "far-points" -> source.k,
-      "source.name" -> source.name,
-      "dimension" -> source.dim,
-      "num-points" -> source.n,
-      "git-revision" -> BuildInfo.gitRevision,
-      "git-revcount" -> BuildInfo.gitRevCount
+      "data.far-points" -> source.k,
+      "data.source" -> source.name,
+      "data.dimension" -> source.dim,
+      "data.num-points" -> source.n,
+      "data.git-revision" -> BuildInfo.gitRevision,
+      "data.git-revcount" -> BuildInfo.gitRevCount
     ))
 
     if (path.getFileSystem(conf).exists(path)) {
