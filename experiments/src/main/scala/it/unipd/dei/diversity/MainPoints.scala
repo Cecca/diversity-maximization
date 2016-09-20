@@ -31,7 +31,7 @@ object MainPoints {
     opts.verify()
     val algorithm = opts.algorithm()
     val input = opts.input()
-    val kList = opts.delegates().split(",").map{_.toInt}
+    val kList = opts.target().split(",").map{_.toInt}
     val kernelSizeList = opts.kernelSize().split(",").map{_.toInt}
     val runs = opts.runs()
     val approxRuns = opts.approxRuns()
@@ -145,7 +145,7 @@ object MainPoints {
 
     lazy val partitioning = opt[String](default = Some("random"))
 
-    lazy val delegates = opt[String](required = true)
+    lazy val target = opt[String](required = true)
 
     lazy val kernelSize = opt[String](required = true)
 

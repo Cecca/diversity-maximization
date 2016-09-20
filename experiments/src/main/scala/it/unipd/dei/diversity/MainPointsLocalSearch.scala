@@ -22,19 +22,16 @@ import org.rogach.scallop.ScallopConf
 
 object MainPointsLocalSearch {
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]) = {
 
     // Read command line options
     val opts = new Conf(args)
     opts.verify()
-    val sourcesList = opts.source().split(",")
-    val dimList = opts.spaceDimension().split(",").map{_.toInt}
-    val kList = opts.k().split(",").map{_.toInt}
+    val input = opts.input()
+    val kList = opts.target().split(",").map{_.toInt}
     val epsilonList = opts.epsilon().split(",").map{_.toDouble}
-    val numPointsList = opts.numPoints().split(",").map{_.toInt}
     val runs = opts.runs()
     val approxRuns = opts.approxRuns()
-    val directory = opts.directory()
 
     val distance: (Point, Point) => Double = Distance.euclidean
     val diversity: (IndexedSeq[Point], (Point, Point) => Double) => Double =
@@ -48,10 +45,7 @@ object MainPointsLocalSearch {
     // Cycle through parameter configurations
     for {
       r <- 0 until runs
-      sourceName <- sourcesList
-      dim      <- dimList
-      k        <- kList
-      n        <- numPointsList
+      k <- kList
       epsilon  <- epsilonList
     } {
       val experiment = new Experiment()
@@ -60,20 +54,19 @@ object MainPointsLocalSearch {
         .tag("git-revision", BuildInfo.gitRevision)
         .tag("git-revcount", BuildInfo.gitRevCount)
         .tag("git-branch", BuildInfo.gitBranch)
-        .tag("source", sourceName)
-        .tag("space-dimension", dim)
         .tag("k", k)
         .tag("epsilon", epsilon)
-        .tag("num-points", n)
         .tag("computeFarthest", false)
         .tag("computeMatching", true)
+      val metadata = SerializationUtils.metadata(input)
+      for ((k, v) <- metadata) {
+        experiment.tag(k, v)
+      }
 
       val coreset: Coreset[Point] = {
         val parallelism = sc.defaultParallelism
         experiment.tag("parallelism", parallelism)
-        val points = sc.objectFile[Point](
-          DatasetGenerator.filename(directory, sourceName, dim, n, k),
-          parallelism)
+        val points = SerializationUtils.sequenceFile(sc, input, parallelism)
         Algorithm.localSearch(
           Partitioning.random(points, experiment),
           k, epsilon, distance, diversity, experiment)
@@ -90,22 +83,15 @@ object MainPointsLocalSearch {
 
   class Conf(args: Array[String]) extends ScallopConf(args) {
 
-    lazy val source = opt[String](default = Some("versor"))
-
-    lazy val spaceDimension = opt[String](default = Some("2"))
-
-    lazy val k = opt[String](required = true)
-
-    lazy val numPoints = opt[String](required = true)
+    lazy val target = opt[String](required = true)
 
     lazy val runs = opt[Int](default = Some(1))
 
     lazy val approxRuns = opt[Int](default = Some(1))
 
-    lazy val directory = opt[String](default = Some("/tmp"))
-
     lazy val epsilon = opt[String](default = Some("1.0"))
 
+    lazy val input = opt[String](required = true)
   }
 
 
