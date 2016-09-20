@@ -16,6 +16,7 @@
 
 package it.unipd.dei.diversity
 
+import it.unimi.dsi.logging.ProgressLogger
 import java.io._
 import java.util.concurrent.TimeUnit
 
@@ -33,6 +34,7 @@ import org.apache.hadoop.io.Text
 import org.apache.hadoop.io.compress.DeflateCodec
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
+import org.slf4j.LoggerFactory
 
 object SerializationUtils {
 
@@ -127,6 +129,9 @@ object SerializationUtils {
       Writer.keyClass(classOf[NullWritable]),
       Writer.valueClass(classOf[BytesWritable]))
 
+    val pl = new ProgressLogger(LoggerFactory.getLogger("serialization") , "points")
+    pl.displayFreeMemory = true
+    pl.start("Serializing point source....")
     var cnt = 0l
     val key = NullWritable.get()
     val (_, time) = ExperimentUtil.timed {
@@ -136,12 +141,11 @@ object SerializationUtils {
         kryo.writeObject(buf, point)
         val value = new BytesWritable(buf.toBytes())
         writer.append(key, value)
+        pl.update()
         cnt += 1
-        if (cnt % 10000 == 0) {
-          println(s"--> $cnt points")
-        }
       }
     }
+    pl.stop("Serialization complete!")
     println(s"${ExperimentUtil.convertDuration(time, TimeUnit.MILLISECONDS)} elapsed")
 
     writer.close()
@@ -175,13 +179,8 @@ object SerializationUtils {
 
   def main(args: Array[String]) = {
     val path = args(0)
-    val conf = new SparkConf(true).setAppName("test serialization")
-    val sc = new SparkContext(conf)
-    val points = sequenceFile(sc, path, 2)
-    println("------ spark -------")
-    println(points.collect.mkString("\n"))
-    println("------ sequential -------")
-    println(sequenceFile(path).mkString("\n"))
+    println(s"Metadata for $path")
+    println(metadata(path).mkString("\n"))
   }
 
 }

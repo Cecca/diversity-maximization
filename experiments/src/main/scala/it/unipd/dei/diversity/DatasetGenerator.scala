@@ -40,9 +40,6 @@ object DatasetGenerator {
 
     val randomGen = new Random()
 
-    val sparkConfig = new SparkConf(loadDefaults = true)
-      .setAppName("MapReduce coresets")
-    val sc = new SparkContext(sparkConfig)
     for {
       sourceName   <- sourcesList
       dim      <- dimList
