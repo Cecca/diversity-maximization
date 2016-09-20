@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory
 
 object SerializationUtils {
 
-  val kryo: Kryo = {
+  def getKryo: Kryo = {
     val _kryo = new Kryo()
     _kryo.register(classOf[Point], new PointSerializer())
     _kryo
@@ -48,7 +48,7 @@ object SerializationUtils {
   def sequenceFile(sc: SparkContext, path: String, parallelism: Int): RDD[Point] = {
     val bytes = sc.sequenceFile(path, classOf[NullWritable], classOf[BytesWritable], parallelism)
     bytes.map { case (_, bytesArr) =>
-      kryo.readObject(new Input(bytesArr.copyBytes()), classOf[Point])
+      getKryo.readObject(new Input(bytesArr.copyBytes()), classOf[Point])
     }
   }
 
@@ -70,6 +70,8 @@ object SerializationUtils {
       s"Key class should be ${classOf[NullWritable]}")
     require(reader.getValueClass.equals(classOf[BytesWritable]),
       s"Value class should be ${classOf[BytesWritable]}")
+
+    val kryo = getKryo
 
     new Iterator[Point] {
       var key = NullWritable.get()
@@ -131,6 +133,8 @@ object SerializationUtils {
       Writer.metadata(meta),
       Writer.keyClass(classOf[NullWritable]),
       Writer.valueClass(classOf[BytesWritable]))
+
+    val kryo = getKryo
 
     val pl = new ProgressLogger(LoggerFactory.getLogger("serialization") , "points")
     pl.displayFreeMemory = true
