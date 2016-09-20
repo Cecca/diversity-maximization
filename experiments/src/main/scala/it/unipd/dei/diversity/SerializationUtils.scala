@@ -27,6 +27,8 @@ import org.apache.hadoop.io.Text
 import org.apache.hadoop.io.SequenceFile.{Reader, Writer}
 import org.apache.hadoop.io.{BytesWritable, NullWritable, SequenceFile}
 import org.slf4j.LoggerFactory
+//import scala.collection.JavaConversions
+import scala.collection.JavaConverters._
 
 import scala.reflect.ClassTag
 
@@ -107,11 +109,13 @@ object SerializationUtils {
   def saveAsSequenceFile[T:ClassTag](source: PointSource, directory: String): Long = {
     val path = new Path(filename(directory, source.name, source.dim, source.n, source.k))
     val conf = new Configuration()
-    val meta = new SequenceFile.Metadata()
-    meta.set(new Text("far-points"), new Text(source.k.toString))
-    meta.set(new Text("source-name"), new Text(source.name))
-    meta.set(new Text("dimension"), new Text(source.dim.toString))
-    meta.set(new Text("num-points"), new Text(source.n.toString))
+    
+    val meta = metadata(Map(
+      "far-points" -> source.k,
+      "source.name" -> source.name,
+      "dimension" -> source.dim,
+      "num-points" -> source.n
+    ))
 
     if (path.getFileSystem(conf).exists(path)) {
       throw new IOException(s"File $path already exists")
@@ -143,37 +147,19 @@ object SerializationUtils {
     cnt
   }
 
-  // def saveAsSequenceFile[T:ClassTag](iterator: Iterator[T], file: String): Long = {
-  //   val path = new Path(file)
-  //   val conf = new Configuration()
+  def metadata(path: String): Map[String, String] = {
+    val conf = new Configuration()
+    val reader = new SequenceFile.Reader(conf, Reader.file(new Path(path)))
+    val meta: Map[Text, Text] = reader.getMetadata().getMetadata().asScala.toMap
+    meta.map { case (k, v) => (k.toString, v.toString) }
+  }
 
-  //   if (path.getFileSystem(conf).exists(path)) {
-  //     throw new IOException(s"File $path already exists")
-  //   }
-
-  //   val writer = SequenceFile.createWriter(
-  //     conf,
-  //     Writer.file(path),
-  //     Writer.keyClass(classOf[NullWritable]),
-  //     Writer.valueClass(classOf[BytesWritable]))
-
-  //   var cnt = 0
-  //   val key = NullWritable.get()
-  //   // The value must be wrapped in a Array because of how the values are
-  //   // deserialized by Spark. We wrap more points in a single array for efficiency
-  //   val (_, time) = ExperimentUtil.timed {
-  //     for (vs <- iterator.grouped(16384)) {
-  //       val varr = vs.toArray
-  //       val value = new BytesWritable(serialize(varr))
-  //       writer.append(key, value)
-  //       cnt += varr.length
-  //       println(s"--> $cnt items")
-  //     }
-  //   }
-  //   println(s"${ExperimentUtil.convertDuration(time, TimeUnit.MILLISECONDS)} elapsed")
-
-  //   writer.close()
-  //   cnt
-  // }
+  def metadata(metaMap: Map[String, Any]): SequenceFile.Metadata = {
+    val meta = new SequenceFile.Metadata()
+    for ((k, v) <- metaMap) {
+      meta.set(new Text(k), new Text(v.toString))
+    }
+    meta
+  }
 
 }
