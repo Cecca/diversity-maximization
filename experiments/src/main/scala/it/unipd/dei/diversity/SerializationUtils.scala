@@ -16,23 +16,29 @@
 
 package it.unipd.dei.diversity
 
+import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.io.{ Input, Output }
 import java.io._
 import java.util.concurrent.TimeUnit
 
-import it.unipd.dei.diversity.source.PointSource
-import it.unimi.dsi.logging.ProgressLogger
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.Path
-import org.apache.hadoop.io.Text
-import org.apache.hadoop.io.SequenceFile.{Reader, Writer}
-import org.apache.hadoop.io.{BytesWritable, NullWritable, SequenceFile}
-import org.slf4j.LoggerFactory
-//import scala.collection.JavaConversions
 import scala.collection.JavaConverters._
-
 import scala.reflect.ClassTag
 
+import com.esotericsoftware.kryo.Serializer
+import it.unipd.dei.diversity.source.PointSource
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.Path
+import org.apache.hadoop.io.{BytesWritable, NullWritable, SequenceFile}
+import org.apache.hadoop.io.SequenceFile.{Reader, Writer}
+import org.apache.hadoop.io.Text
+
 object SerializationUtils {
+
+  val kryo: Kryo = {
+    val _kryo = new Kryo()
+    _kryo.register(classOf[Point], new PointSerializer())
+    _kryo
+  }
 
   /** Deserialize an object using Java serialization */
   def deserialize[T](bytes: Array[Byte]): T = {
@@ -75,7 +81,9 @@ object SerializationUtils {
         if(!_hasNext)
           throw new NoSuchElementException("No next element")
         value = nextValue
-        val toReturn = deserialize[Array[Point]](value.copyBytes())
+        val toReturn = kryo.readObject(
+          new Input(value.copyBytes()),
+          classOf[Array[Point]])
         _hasNext = reader.next(key, nextValue)
         toReturn
       }
@@ -135,7 +143,10 @@ object SerializationUtils {
     val (_, time) = ExperimentUtil.timed {
       for (vs <- source.iterator.grouped(16384)) {
         val varr = vs.toArray
-        val value = new BytesWritable(serialize(varr))
+        val bytesRequired = varr.map{_.data.length*16}.sum
+        val buf = new Output(bytesRequired)
+        kryo.writeObject(buf, varr)
+        val value = new BytesWritable(buf.toBytes())
         writer.append(key, value)
         cnt += varr.length
         println(s"--> $cnt items")
@@ -160,6 +171,22 @@ object SerializationUtils {
       meta.set(new Text(k), new Text(v.toString))
     }
     meta
+  }
+
+
+  class PointSerializer extends Serializer[Point] {
+    def write(kryo: Kryo, output: Output, point: Point) = {
+      kryo.writeObject(output, point.data)
+    }
+    def read(kryo: Kryo, input: Input, clazz: Class[Point]) = {
+      val data = kryo.readObject(input, classOf[Array[Double]])
+      Point(data)
+    }
+  }
+
+  def main(args: Array[String]) = {
+    val path = args(0)
+    println(metadata(path).mkString("\n"))
   }
 
 }
