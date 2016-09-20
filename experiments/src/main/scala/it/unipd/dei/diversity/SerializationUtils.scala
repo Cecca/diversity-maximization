@@ -22,15 +22,16 @@ import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
 
-import com.esotericsoftware.kryo.{Serializer, Kryo}
+import com.esotericsoftware.kryo.{Kryo, Serializer}
 import com.esotericsoftware.kryo.io.{Input, Output}
 import it.unipd.dei.diversity.source.PointSource
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.{BytesWritable, NullWritable, SequenceFile}
-import org.apache.hadoop.io.SequenceFile.{Reader, Writer}
+import org.apache.hadoop.io.SequenceFile.{CompressionType, Reader, Writer}
 import org.apache.hadoop.io.Text
-import org.apache.spark.{SparkContext, SparkConf}
+import org.apache.hadoop.io.compress.DeflateCodec
+import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
 
 object SerializationUtils {
@@ -121,6 +122,7 @@ object SerializationUtils {
     val writer = SequenceFile.createWriter(
       conf,
       Writer.file(path),
+      Writer.compression(CompressionType.BLOCK, new DeflateCodec()),
       Writer.metadata(meta),
       Writer.keyClass(classOf[NullWritable]),
       Writer.valueClass(classOf[BytesWritable]))
