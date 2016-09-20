@@ -40,6 +40,7 @@ object MainPointsLocalSearch {
     // Set up Spark lazily, it will be initialized only if the algorithm needs it.
     lazy val sparkConfig = new SparkConf(loadDefaults = true)
       .setAppName("MapReduce coresets")
+    SerializationUtils.configSerialization(sparkConfig)
     lazy val sc = new SparkContext(sparkConfig)
 
     // Cycle through parameter configurations

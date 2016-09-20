@@ -19,6 +19,7 @@ package it.unipd.dei.diversity
 import it.unimi.dsi.logging.ProgressLogger
 import java.io._
 import java.util.concurrent.TimeUnit
+import org.apache.spark.serializer.KryoRegistrator
 
 import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
@@ -169,14 +170,9 @@ object SerializationUtils {
     meta
   }
 
-  class PointSerializer extends Serializer[Point] {
-    def write(kryo: Kryo, output: Output, point: Point) = {
-      kryo.writeObject(output, point.data)
-    }
-    def read(kryo: Kryo, input: Input, clazz: Class[Point]) = {
-      val data = kryo.readObject(input, classOf[Array[Double]])
-      Point(data)
-    }
+  def configSerialization(conf: SparkConf) = {
+    conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+    conf.set("spark.kryo.registrator", "it.unipd.dei.diversity.PointsKryoRegistrator")
   }
 
   def main(args: Array[String]) = {
@@ -185,4 +181,21 @@ object SerializationUtils {
     println(metadata(path).mkString("\n"))
   }
 
+}
+
+class PointSerializer extends Serializer[Point] {
+  def write(kryo: Kryo, output: Output, point: Point) = {
+    kryo.writeObject(output, point.data)
+  }
+  def read(kryo: Kryo, input: Input, clazz: Class[Point]) = {
+    val data = kryo.readObject(input, classOf[Array[Double]])
+    Point(data)
+  }
+}
+
+
+class PointsKryoRegistrator extends KryoRegistrator {
+  override def registerClasses(k: Kryo) = {
+    k.register(classOf[Point], new PointSerializer())
+  }
 }
