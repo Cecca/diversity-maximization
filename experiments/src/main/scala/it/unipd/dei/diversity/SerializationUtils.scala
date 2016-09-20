@@ -31,6 +31,9 @@ import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.{BytesWritable, NullWritable, SequenceFile}
 import org.apache.hadoop.io.SequenceFile.{Reader, Writer}
 import org.apache.hadoop.io.Text
+import org.apache.spark.rdd.RDD
+import org.apache.spark.SparkContext
+import org.apache.spark.SparkConf
 
 object SerializationUtils {
 
@@ -45,6 +48,13 @@ object SerializationUtils {
     val bis = new ByteArrayInputStream(bytes)
     val ois = new ObjectInputStream(bis)
     ois.readObject.asInstanceOf[T]
+  }
+
+  def sequenceFile(sc: SparkContext, path: String, parallelism: Int): RDD[Point] = {
+    val bytes = sc.sequenceFile(path, classOf[NullWritable], classOf[BytesWritable], parallelism)
+    bytes.map { case (_, bytesArr) =>
+      kryo.readObject(new Input(bytesArr.copyBytes()), classOf[Point])
+    }
   }
 
   def sequenceFile(file: String): Iterator[Point] = {
@@ -66,7 +76,7 @@ object SerializationUtils {
     require(reader.getValueClass.equals(classOf[BytesWritable]),
       s"Value class should be ${classOf[BytesWritable]}")
 
-    val blocks = new Iterator[Array[Point]] {
+    new Iterator[Point] {
       var key = NullWritable.get()
       var nextValue = new BytesWritable()
       var value = new BytesWritable()
@@ -77,20 +87,17 @@ object SerializationUtils {
 
       override def hasNext: Boolean = _hasNext
 
-      override def next(): Array[Point] = {
+      override def next(): Point = {
         if(!_hasNext)
           throw new NoSuchElementException("No next element")
         value = nextValue
         val toReturn = kryo.readObject(
           new Input(value.copyBytes()),
-          classOf[Array[Point]])
+          classOf[Point])
         _hasNext = reader.next(key, nextValue)
         toReturn
       }
     }
-
-    // Flatten the blocks
-    blocks.flatMap(_.iterator)
   }
 
   private def multiSequenceFile(path: Path, conf: Configuration): Iterator[Point] = {
@@ -138,18 +145,17 @@ object SerializationUtils {
 
     var cnt = 0l
     val key = NullWritable.get()
-    // The value must be wrapped in a Array because of how the values are
-    // deserialized by Spark. We wrap more points in a single array for efficiency
     val (_, time) = ExperimentUtil.timed {
-      for (vs <- source.iterator.grouped(16384)) {
-        val varr = vs.toArray
-        val bytesRequired = varr.map{_.data.length*16}.sum
+      for (point <- source.iterator) {
+        val bytesRequired = point.data.length*16
         val buf = new Output(bytesRequired)
-        kryo.writeObject(buf, varr)
+        kryo.writeObject(buf, point)
         val value = new BytesWritable(buf.toBytes())
         writer.append(key, value)
-        cnt += varr.length
-        println(s"--> $cnt items")
+        cnt += 1
+        if (cnt % 10000 == 0) {
+          println(s"--> $cnt points")
+        }
       }
     }
     println(s"${ExperimentUtil.convertDuration(time, TimeUnit.MILLISECONDS)} elapsed")
@@ -186,7 +192,13 @@ object SerializationUtils {
 
   def main(args: Array[String]) = {
     val path = args(0)
-    println(metadata(path).mkString("\n"))
+    val conf = new SparkConf(true).setAppName("test serialization")
+    val sc = new SparkContext(conf)
+    val points = sequenceFile(sc, path, 2)
+    println("------ spark -------")
+    println(points.collect.mkString("\n"))
+    println("------ sequential -------")
+    println(sequenceFile(path).mkString("\n"))
   }
 
 }
