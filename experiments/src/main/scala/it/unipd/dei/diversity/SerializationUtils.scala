@@ -114,7 +114,9 @@ object SerializationUtils {
       "far-points" -> source.k,
       "source.name" -> source.name,
       "dimension" -> source.dim,
-      "num-points" -> source.n
+      "num-points" -> source.n,
+      "git-revision" -> BuildInfo.gitRevision,
+      "git-revcount" -> BuildInfo.gitRevCount
     ))
 
     if (path.getFileSystem(conf).exists(path)) {
