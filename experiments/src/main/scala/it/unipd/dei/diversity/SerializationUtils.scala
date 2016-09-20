@@ -16,24 +16,22 @@
 
 package it.unipd.dei.diversity
 
-import com.esotericsoftware.kryo.Kryo
-import com.esotericsoftware.kryo.io.{ Input, Output }
 import java.io._
 import java.util.concurrent.TimeUnit
 
 import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
 
-import com.esotericsoftware.kryo.Serializer
+import com.esotericsoftware.kryo.{Serializer, Kryo}
+import com.esotericsoftware.kryo.io.{Input, Output}
 import it.unipd.dei.diversity.source.PointSource
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.{BytesWritable, NullWritable, SequenceFile}
 import org.apache.hadoop.io.SequenceFile.{Reader, Writer}
 import org.apache.hadoop.io.Text
+import org.apache.spark.{SparkContext, SparkConf}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.SparkContext
-import org.apache.spark.SparkConf
 
 object SerializationUtils {
 
@@ -41,13 +39,6 @@ object SerializationUtils {
     val _kryo = new Kryo()
     _kryo.register(classOf[Point], new PointSerializer())
     _kryo
-  }
-
-  /** Deserialize an object using Java serialization */
-  def deserialize[T](bytes: Array[Byte]): T = {
-    val bis = new ByteArrayInputStream(bytes)
-    val ois = new ObjectInputStream(bis)
-    ois.readObject.asInstanceOf[T]
   }
 
   def sequenceFile(sc: SparkContext, path: String, parallelism: Int): RDD[Point] = {
@@ -107,15 +98,6 @@ object SerializationUtils {
       val file = fileStatus.getPath
       singleSequenceFile(file, conf)
     }
-  }
-
-  /** Serialize an object using Java serialization */
-  def serialize[T](o: T): Array[Byte] = {
-    val bos = new ByteArrayOutputStream()
-    val oos = new ObjectOutputStream(bos)
-    oos.writeObject(o)
-    oos.close()
-    bos.toByteArray
   }
 
   def filename(dir: String, sourceName: String, dim: Int, n: Int, k: Int) =
@@ -178,7 +160,6 @@ object SerializationUtils {
     }
     meta
   }
-
 
   class PointSerializer extends Serializer[Point] {
     def write(kryo: Kryo, output: Output, point: Point) = {
