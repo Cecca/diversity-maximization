@@ -118,9 +118,8 @@ object MainPoints {
           Algorithm.sequential(points.toVector, experiment)
 
         case "random" =>
-          val points = SerializationUtils.sequenceFile(input)
-          val prob = kernSize.toDouble / n
-          Algorithm.random(points, k, prob, distance, experiment)
+          val points = SerializationUtils.sequenceFile(sc, input, sc.defaultParallelism)
+          Algorithm.random(points, k, distance, experiment)
 
       }
 

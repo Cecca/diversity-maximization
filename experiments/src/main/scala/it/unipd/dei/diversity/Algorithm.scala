@@ -165,6 +165,27 @@ object Algorithm {
     }
   }
 
+  def random[T:ClassTag](input: RDD[T],
+                         k: Int,
+                         distance: (T, T) => Double,
+                         experiment: Experiment): Coreset[T] = {
+    experiment.tag("algorithm", "Random")
+    println("Run random algorithm!")
+    val (sample, time) = timed {
+      input.takeSample(withReplacement= false, num = k)
+    }
+
+    experiment.append("times",
+      jMap(
+        "component" -> "algorithm",
+        "time"      -> convertDuration(time, reportTimeUnit)
+      ))
+    new Coreset[T] {
+      override def kernel: Vector[T] = sample.toVector
+      override def delegates: Vector[T] = Vector.empty
+    }
+  }
+
   def random[T:ClassTag](input: Iterator[T],
                          k: Int,
                          sampleProb: Double,
@@ -194,31 +215,5 @@ object Algorithm {
       override def delegates: Vector[T] = Vector.empty
     }
   }
-
-  def random[T:ClassTag](input: RDD[T],
-                         k: Int,
-                         sampleProb: Double,
-                         distance: (T, T) => Double,
-                         experiment: Experiment): Coreset[T] = {
-    experiment.tag("algorithm", "Random")
-    println("Run random parallel algorithm!")
-
-    val (sample, time) = timed {
-      input.sample(withReplacement = false, fraction = sampleProb).collect().take(k).toVector
-    }
-    require(sample.length == k,
-      s"Got a sample of only ${sample.length} documents, instead of $k")
-
-    experiment.append("times",
-      jMap(
-        "component" -> "algorithm",
-        "time"      -> convertDuration(time, reportTimeUnit)
-      ))
-    new Coreset[T] {
-      override def kernel: Vector[T] = sample
-      override def delegates: Vector[T] = Vector.empty
-    }
-  }
-
 
 }
