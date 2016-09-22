@@ -32,7 +32,11 @@ object MainPoints {
     val algorithm = opts.algorithm()
     val input = opts.input()
     val kList = opts.target().split(",").map{_.toInt}
-    val kernelSizeList = opts.kernelSize().split(",").map{_.toInt}
+    // The kernel size list is actually optional
+    val kernelSizeList: Seq[Option[Int]] =
+      opts.kernelSize.get.map { arg =>
+        arg.split(",").map({x => Some(x.toInt)}).toSeq
+      }.getOrElse(Seq(None))
     val runs = opts.runs()
     val approxRuns = opts.approxRuns()
     val computeFarthest = opts.farthest()
@@ -68,9 +72,11 @@ object MainPoints {
         .tag("git-revcount", BuildInfo.gitRevCount)
         .tag("git-branch", BuildInfo.gitBranch)
         .tag("k", k)
-        .tag("kernel-size", kernSize)
         .tag("computeFarthest", computeFarthest)
         .tag("computeMatching", computeMatching)
+      if (kernSize.nonEmpty) {
+        experiment.tag("kernel-size", kernSize.get)
+      }
       val metadata = SerializationUtils.metadata(input)
       for ((k, v) <- metadata) {
         experiment.tag(k, v)
@@ -82,6 +88,9 @@ object MainPoints {
       val coreset: Coreset[Point] = algorithm match {
 
         case "mapreduce" =>
+          if(kernSize.isEmpty) {
+            throw new IllegalArgumentException("Should specify kernel size on the command line")
+          }
           val parallelism = sc.defaultParallelism
           experiment.tag("parallelism", parallelism)
           experiment.tag("partitioning", partitioning)
@@ -95,16 +104,19 @@ object MainPoints {
             case "radius-old"  => Partitioning.radiusOld(inputPoints, Point.zero(dim), distance, experiment)
             case err       => throw new IllegalArgumentException(s"Unknown partitioning scheme $err")
           }
-          Algorithm.mapReduce(points, kernSize, k, distance, experiment)
+          Algorithm.mapReduce(points, kernSize.get, k, distance, experiment)
 
         case "streaming" =>
+          if(kernSize.isEmpty) {
+            throw new IllegalArgumentException("Should specify kernel size on the command line")
+          }
           val parallelism = sc.defaultParallelism
           val points = Partitioning.shuffle(
             SerializationUtils.sequenceFile(sc, input, parallelism),
             experiment)
             .persist(StorageLevel.MEMORY_AND_DISK)
 
-          val _coreset = Algorithm.streaming(points.toLocalIterator, k, kernSize, distance, experiment)
+          val _coreset = Algorithm.streaming(points.toLocalIterator, k, kernSize.get, distance, experiment)
           experiment.append("streaming-implementation",
             jMap(
               "num-merges" -> _coreset.numRestructurings,
@@ -147,7 +159,7 @@ object MainPoints {
 
     lazy val target = opt[String](required = true)
 
-    lazy val kernelSize = opt[String](required = true)
+    lazy val kernelSize = opt[String](required = false)
 
     lazy val runs = opt[Int](default = Some(1))
 

@@ -37,7 +37,11 @@ object MainWiki {
     val dataset = opts.dataset()
     val algorithm = opts.algorithm()
     val kList = opts.delegates().split(",").map{_.toInt}
-    val kernelSizeList = opts.kernelSize().split(",").map{_.toInt}
+    // The kernel size list is actually optional
+    val kernelSizeList: Seq[Option[Int]] =
+      opts.kernelSize.get.map { arg =>
+        arg.split(",").map({x => Some(x.toInt)}).toSeq
+      }.getOrElse(Seq(None))
     val runs = opts.runs()
     val approxRuns = opts.approxRuns()
     val computeFarthest = opts.farthest()
@@ -69,9 +73,12 @@ object MainWiki {
         .tag("git-revcount", BuildInfo.gitRevCount)
         .tag("git-branch", BuildInfo.gitBranch)
         .tag("k", k)
-        .tag("kernel-size", kernSize)
         .tag("computeFarthest", computeFarthest)
         .tag("computeMatching", computeMatching)
+
+      if (kernSize.nonEmpty) {
+        experiment.tag("kernel-size", kernSize.get)
+      }
 
       val parallelism = sc.defaultParallelism
       experiment.tag("parallelism", parallelism)
@@ -89,8 +96,11 @@ object MainWiki {
       documents.unpersist()
       val coreset: Coreset[WikiBagOfWords] = algorithm match {
         case "mapreduce" =>
-          Algorithm.mapReduce(filteredDocuments, kernSize, k, distance, experiment)
-        case "random" => Algorithm.random(filteredDocuments, k, (k*math.log(k))/docCount, distance, experiment)
+          if(kernSize.isEmpty) {
+            throw new IllegalArgumentException("Should specify kernel size on the command line")
+          }
+          Algorithm.mapReduce(filteredDocuments, kernSize.get, k, distance, experiment)
+        case "random" => Algorithm.random(filteredDocuments, k, distance, experiment)
       }
 
       // Display coreset on console
@@ -112,7 +122,7 @@ object MainWiki {
 
     lazy val delegates = opt[String](required = true)
 
-    lazy val kernelSize = opt[String](required = true)
+    lazy val kernelSize = opt[String](required = false)
 
     lazy val runs = opt[Int](default = Some(1))
 
