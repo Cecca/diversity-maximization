@@ -31,9 +31,9 @@ object MatchingHeuristicTest extends Properties("Matching") {
         val kSubset = MatchingHeuristic.run(points, k, distance).toSet
         (kSubset.size == k) :| s"Actual size ${kSubset.size}"
       }
-  }
+    }
 
-  property("same solution") =
+  property("same solution (parallel)") =
     forAll(Gen.listOf[Double](Gen.choose[Double](0.0, 1.0)), Gen.choose[Int](2, 100))
     { (pts: List[Double], k: Int) =>
       (pts.size >= 2 && k < pts.size) ==> {
@@ -42,6 +42,29 @@ object MatchingHeuristicTest extends Properties("Matching") {
         val parSol = MatchingHeuristic.runPar(points, k, distance).toSet
         seqSol == parSol
       }
-  }
+    }
+
+  property("same solution (memoized)") =
+    forAll(Gen.listOf[Double](Gen.choose[Double](0.0, 1.0)), Gen.choose[Int](2, 100))
+    { (pts: List[Double], k: Int) =>
+      (pts.size >= 2 && k < pts.size) ==> {
+        val points = pts.map(p => Point(p)).toArray
+        val seqSol = MatchingHeuristic.runSeq(points, k, distance).toSet
+        val memSol = MatchingHeuristic.runSeqMemoized(points, k, distance).toSet
+        seqSol == memSol
+      }
+    }
+
+  property("same solution (parallel memoized)") =
+    forAll(Gen.listOf[Double](Gen.choose[Double](0.0, 1.0)), Gen.choose[Int](2, 100))
+    { (pts: List[Double], k: Int) =>
+      (pts.size >= 2 && k < pts.size) ==> {
+        val points = pts.map(p => Point(p)).toArray
+        val seqSol = MatchingHeuristic.runSeq(points, k, distance).toSet
+        val parMemSol = MatchingHeuristic.runParMemoized(points, k, distance).toSet
+        seqSol == parMemSol
+      }
+    }
+
 
 }

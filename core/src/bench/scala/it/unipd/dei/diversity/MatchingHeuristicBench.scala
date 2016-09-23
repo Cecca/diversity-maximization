@@ -66,9 +66,21 @@ object MatchingHeuristicBench extends Bench.OfflineReport {
       }
     }
 
+    measure method "memoized" in {
+      using(params) in { case (points, k) =>
+        MatchingHeuristic.runSeqMemoized(points, k, distance)
+      }
+    }
+
     measure method "parallel" in {
       using(params) in { case (points, k) =>
         MatchingHeuristic.runPar(points, k, distance)
+      }
+    }
+
+    measure method "parallel memoized" in {
+      using(params) in { case (points, k) =>
+        MatchingHeuristic.runParMemoized(points, k, distance)
       }
     }
 
