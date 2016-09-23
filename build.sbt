@@ -18,7 +18,7 @@ lazy val commonSettings = baseSettings ++ Seq(
     "-unchecked"))
 
 lazy val root = (project in file(".")).
-  aggregate(core).
+  aggregate(core, experiments).
   settings(baseSettings :_*)
 
 /** Configuration for benchmarks */
