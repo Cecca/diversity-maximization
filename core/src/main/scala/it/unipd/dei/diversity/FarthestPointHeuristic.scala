@@ -44,6 +44,46 @@ object FarthestPointHeuristic {
     if (points.length <= k) {
       points
     } else {
+      val minDist = Array.fill(points.size)(Double.PositiveInfinity)
+      val result = Array.ofDim[T](k)
+      // Init the result with an arbitrary point
+      result(0) = points(startIdx)
+      var i = 1
+      while (i < k) {
+        var farthest = points(0)
+        var maxDist = 0.0
+
+        var h = 0
+        while (h < points.length) {
+          // Look for the farthest node
+          val lastDist = distance(points(h), result(i-1))
+          if (lastDist < minDist(h)) {
+            minDist(h) = lastDist
+          }
+          if (minDist(h) > maxDist) {
+            maxDist = minDist(h)
+            farthest = points(h)
+          }
+          h += 1
+        }
+        result(i) = farthest
+        i += 1
+      }
+      result
+    }
+  }
+
+  /* Just for benchmarking purposes: this is a more idiomatic,
+   * albeit slower, implementation of the algorithm
+   */
+  private[diversity]
+  def runSlow[T: ClassTag](points: IndexedSeq[T],
+                           k: Int,
+                           startIdx: Int,
+                           distance: (T, T) => Double): IndexedSeq[T] = {
+    if (points.length <= k) {
+      points
+    } else {
       val result = Array.ofDim[T](k)
       // Init the result with an arbitrary point
       result(0) = points(startIdx)
@@ -56,7 +96,7 @@ object FarthestPointHeuristic {
         while (h < points.length) {
           var minDist = Double.PositiveInfinity
           var j = 0
-          while (j<i) {
+          while (j<i) { 
             val d = distance(result(j), points(h))
             if (d < minDist){
               minDist = d
@@ -80,9 +120,9 @@ object FarthestPointHeuristic {
    * albeit slower, implementation of the algorithm
    */
   private[diversity]
-  def runSlow[T: ClassTag](points: IndexedSeq[T],
-                           k:Int,
-                           distance: (T, T) => Double): IndexedSeq[T] = {
+  def runIdiomatic[T: ClassTag](points: IndexedSeq[T],
+                                k:Int,
+                                distance: (T, T) => Double): IndexedSeq[T] = {
     if (points.length <= k) {
       points
     } else {

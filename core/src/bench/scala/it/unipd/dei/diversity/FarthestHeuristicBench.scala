@@ -26,7 +26,7 @@ object FarthestHeuristicBench extends Bench.OfflineReport {
   val distance: (Point, Point) => Double = Distance.euclidean
 
   val sets: Gen[Array[Point]] = for {
-    size <- Gen.range("size")(100, 500, 100)
+    size <- Gen.range("size")(100, 500, 100 )
   } yield Array.ofDim[Point](size).map{_ => Point.random(10, randomGen)}
 
   val ks: Gen[Int] = Gen.range("k")(10, 90, 10)
@@ -39,15 +39,21 @@ object FarthestHeuristicBench extends Bench.OfflineReport {
 
   performance of "gmm" in {
 
+    measure method "runIdiomatic" in {
+      using(params) in { case (points, k) =>
+        FarthestPointHeuristic.runIdiomatic(points, k, distance)
+      }
+    }
+
     measure method "runSlow" in {
       using(params) in { case (points, k) =>
-        FarthestPointHeuristic.runSlow(points, k, distance)
+        FarthestPointHeuristic.runSlow(points, k, 0, distance)
       }
     }
 
     measure method "run" in {
       using(params) in { case (points, k) =>
-        FarthestPointHeuristic.run(points, k, distance)
+        FarthestPointHeuristic.run(points, k, 0, distance)
       }
     }
 

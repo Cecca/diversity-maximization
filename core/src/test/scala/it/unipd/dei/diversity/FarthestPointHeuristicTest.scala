@@ -42,7 +42,7 @@ object FarthestPointHeuristicTest extends Properties("FarthestPointHeuristic") {
       (pts.size >= 2 && k < pts.size) ==> {
         val points = pts.map(p => Point(p)).toArray
         val actual = FarthestPointHeuristic.run(points, k, 0, distance).toSet
-        val expected = FarthestPointHeuristic.runSlow(points, k, distance).toSet
+        val expected = FarthestPointHeuristic.runIdiomatic(points, k, distance).toSet
         s"$actual != $expected" |:(actual == expected)
       }
     }
