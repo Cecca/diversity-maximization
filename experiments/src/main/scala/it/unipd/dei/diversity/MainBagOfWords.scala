@@ -16,7 +16,7 @@
 
 package it.unipd.dei.diversity
 
-import it.unipd.dei.diversity.words.{BagOfWordsDataset, UCIBagOfWords}
+import it.unipd.dei.diversity.words.{UCIBagOfWordsDataset, UCIBagOfWords}
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.{SparkConf, SparkContext}
 import org.rogach.scallop.ScallopConf
@@ -64,7 +64,7 @@ object MainBagOfWords {
         .tag("computeFarthest", computeFarthest)
         .tag("computeMatching", computeMatching)
 
-      val data = BagOfWordsDataset.fromName(dataset, directory)
+      val data = UCIBagOfWordsDataset.fromName(dataset, directory)
 
       val coreset: Coreset[UCIBagOfWords] = algorithm match {
 

@@ -19,18 +19,17 @@ package it.unipd.dei.diversity.words
 import java.io.{File, FileInputStream, FileOutputStream}
 import java.util.zip.GZIPInputStream
 
+import scala.collection.mutable
+import scala.io.Source
+
 import com.esotericsoftware.kryo.{Kryo, Serializer}
 import com.esotericsoftware.kryo.io.{Input, Output}
-import it.unipd.dei.diversity.{Distance, Utils}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 
-import scala.collection.mutable
-import scala.io.Source
-
-class BagOfWordsDataset(val documentsFile: String,
-                        val vocabularyFile: String) {
+class UCIBagOfWordsDataset(val documentsFile: String,
+                           val vocabularyFile: String) {
 
   val sparkCacheFile = documentsFile + ".cache"
   val streamingCacheFile = documentsFile + ".streaming.cache"
@@ -81,19 +80,19 @@ class BagOfWordsDataset(val documentsFile: String,
     }
 }
 
-object BagOfWordsDataset {
+object UCIBagOfWordsDataset {
 
   def fromName(name: String, directory: String) = {
     val docword = s"$directory/docword.$name.txt.gz"
     val vocab   = s"$directory/vocab.$name.txt"
-    new BagOfWordsDataset(docword, vocab)
+    new UCIBagOfWordsDataset(docword, vocab)
   }
 
   def main(args: Array[String]) {
     val documentsFile = args(0)
     val vocabularyFile = args(1)
 
-    val dataset = new BagOfWordsDataset(documentsFile, vocabularyFile)
+    val dataset = new UCIBagOfWordsDataset(documentsFile, vocabularyFile)
 
     for (doc <- dataset.documents()) {
       val words = doc.words.map(w => dataset.wordMap.getOrElse(w, w.toString)).toSeq.sorted
