@@ -49,7 +49,7 @@ class UCIBagOfWordsDataset(val documentsFile: String,
     lines.zipWithIndex.map(_.swap).toMap
   }
 
-  def documents(sc: SparkContext): RDD[UCIBagOfWords] = {
+  def documents(sc: SparkContext): RDD[DocumentBagOfWords] = {
     if (hasSparkCacheFile(sc)) {
       println("Loading documents from cache")
       sc.objectFile(sparkCacheFile, sc.defaultParallelism)
@@ -63,14 +63,14 @@ class UCIBagOfWordsDataset(val documentsFile: String,
           Iterator((tokens(0).toInt, (tokens(1).toInt, tokens(2).toDouble)))
         }
       }.groupByKey().map { case (docId, wordCounts) =>
-        new UCIBagOfWords(docId, wordCounts.toSeq)
+        new DocumentBagOfWords(docId.toString, wordCounts.toSeq)
       }.cache()
       docs.saveAsObjectFile(sparkCacheFile)
       docs
     }
   }
 
-  def documents(): Iterator[UCIBagOfWords] =
+  def documents(): Iterator[DocumentBagOfWords] =
     if (hasStreamingCacheFile) {
       println(s"Loading stream from cache file $streamingCacheFile")
       new UCICacheFileIterator(streamingCacheFile)
@@ -102,22 +102,22 @@ object UCIBagOfWordsDataset {
 
 }
 
-class UCIKryoSerializer extends Serializer[UCIBagOfWords] {
-  override def write(kryo: Kryo, output: Output, bow: UCIBagOfWords): Unit = {
+class UCIKryoSerializer extends Serializer[DocumentBagOfWords] {
+  override def write(kryo: Kryo, output: Output, bow: DocumentBagOfWords): Unit = {
     kryo.writeObject(output, bow.documentId)
     kryo.writeObject(output, bow.wordsArray)
     kryo.writeObject(output, bow.scoresArray)
   }
 
-  override def read(kryo: Kryo, input: Input, cls: Class[UCIBagOfWords]): UCIBagOfWords = {
+  override def read(kryo: Kryo, input: Input, cls: Class[DocumentBagOfWords]): DocumentBagOfWords = {
     val docId = kryo.readObject(input, classOf[Int])
     val wordsArray = kryo.readObject(input, classOf[Array[Int]])
     val countsArray = kryo.readObject(input, classOf[Array[Double]])
-    new UCIBagOfWords(docId, wordsArray, countsArray)
+    new DocumentBagOfWords(docId.toString, wordsArray, countsArray)
   }
 }
 
-class UCICacheFileIterator(val cacheFile: String) extends Iterator[UCIBagOfWords] {
+class UCICacheFileIterator(val cacheFile: String) extends Iterator[DocumentBagOfWords] {
 
   val kryo = new Kryo()
   val input = new Input(new FileInputStream(cacheFile))
@@ -125,8 +125,8 @@ class UCICacheFileIterator(val cacheFile: String) extends Iterator[UCIBagOfWords
 
   override def hasNext: Boolean = input.available() > 0
 
-  override def next(): UCIBagOfWords =
-    kryo.readObject(input, classOf[UCIBagOfWords], serializer)
+  override def next(): DocumentBagOfWords =
+    kryo.readObject(input, classOf[DocumentBagOfWords], serializer)
 
   override def finalize(): Unit = {
     input.close()
@@ -135,7 +135,7 @@ class UCICacheFileIterator(val cacheFile: String) extends Iterator[UCIBagOfWords
 
 class UCITextFileIterator(val documentsFile: String,
                           val cacheFile: String)
-extends Iterator[UCIBagOfWords] {
+extends Iterator[DocumentBagOfWords] {
 
   val source = Source.fromInputStream(
     new GZIPInputStream(new FileInputStream(documentsFile)))
@@ -165,7 +165,7 @@ extends Iterator[UCIBagOfWords] {
     hn
   }
 
-  override def next(): UCIBagOfWords = {
+  override def next(): DocumentBagOfWords = {
     val (docId, word, count) = first
     val words = mutable.HashMap[Int, Double](word -> count)
     var current = first
@@ -178,7 +178,7 @@ extends Iterator[UCIBagOfWords] {
       }
     }
 
-    val bow = new UCIBagOfWords(docId, words.toSeq)
+    val bow = new DocumentBagOfWords(docId.toString, words.toSeq)
     kryo.writeObject(cacheOutput, bow, serializer)
     bow
   }

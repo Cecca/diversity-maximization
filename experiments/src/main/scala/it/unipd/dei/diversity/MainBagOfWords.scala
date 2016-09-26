@@ -16,7 +16,7 @@
 
 package it.unipd.dei.diversity
 
-import it.unipd.dei.diversity.words.{UCIBagOfWordsDataset, UCIBagOfWords}
+import it.unipd.dei.diversity.words.{UCIBagOfWordsDataset, DocumentBagOfWords}
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.{SparkConf, SparkContext}
 import org.rogach.scallop.ScallopConf
@@ -38,7 +38,7 @@ object MainBagOfWords {
     val datasets = opts.dataset().split(",")
     val directory = opts.directory()
 
-    val distance: (UCIBagOfWords, UCIBagOfWords) => Double = Distance.euclidean[Int]
+    val distance: (DocumentBagOfWords, DocumentBagOfWords) => Double = Distance.euclidean[Int]
 
     // Set up Spark lazily, it will be initialized only if the algorithm needs it.
     lazy val sparkConfig = new SparkConf(loadDefaults = true)
@@ -66,7 +66,7 @@ object MainBagOfWords {
 
       val data = UCIBagOfWordsDataset.fromName(dataset, directory)
 
-      val coreset: Coreset[UCIBagOfWords] = algorithm match {
+      val coreset: Coreset[DocumentBagOfWords] = algorithm match {
 
         case "mapreduce" =>
           val parallelism = sc.defaultParallelism
@@ -88,7 +88,7 @@ object MainBagOfWords {
 
       }
 
-      Approximation.approximate[UCIBagOfWords](
+      Approximation.approximate[DocumentBagOfWords](
         coreset, k, distance, computeFarthest, computeMatching, 16, experiment)
 
       experiment.saveAsJsonFile()

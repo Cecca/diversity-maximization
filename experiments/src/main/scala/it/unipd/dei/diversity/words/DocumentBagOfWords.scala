@@ -18,21 +18,21 @@ package it.unipd.dei.diversity.words
 
 import it.unipd.dei.diversity.ArrayBagOfWords
 
-class UCIBagOfWords(val documentId: Int,
-                    override val wordsArray: Array[Int],
-                    override val scoresArray: Array[Double])
+class DocumentBagOfWords(val documentId: String,
+                         override val wordsArray: Array[Int],
+                         override val scoresArray: Array[Double])
 extends ArrayBagOfWords(wordsArray, scoresArray) with Serializable {
 
-  def this(docId: Int, arrayPair: (Array[Int], Array[Double])) {
+  def this(docId: String, arrayPair: (Array[Int], Array[Double])) {
     this(docId, arrayPair._1, arrayPair._2)
   }
 
-  def this(docId: Int, counts: Seq[(Int, Double)]) {
+  def this(docId: String, counts: Seq[(Int, Double)]) {
     this(docId, ArrayBagOfWords.buildArrayPair(counts))
   }
 
   override def equals(o: scala.Any): Boolean = o match {
-    case other: UCIBagOfWords =>
+    case other: DocumentBagOfWords =>
       // FIXME: Make more efficient
       this.documentId == documentId &&
         this.wordsArray.toSeq == other.wordsArray.toSeq &&
@@ -40,7 +40,7 @@ extends ArrayBagOfWords(wordsArray, scoresArray) with Serializable {
     case _ => false
   }
 
-  override def hashCode(): Int = documentId
+  override def hashCode(): Int = documentId.hashCode()
 
   override def toString: String =
     s"Document $documentId"
