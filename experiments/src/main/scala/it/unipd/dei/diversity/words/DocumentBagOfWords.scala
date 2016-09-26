@@ -80,7 +80,7 @@ class BOWKryoSerializer extends Serializer[DocumentBagOfWords] {
   }
 
   override def read(kryo: Kryo, input: Input, cls: Class[DocumentBagOfWords]): DocumentBagOfWords = {
-    val docId = kryo.readObject(input, classOf[Int])
+    val docId = kryo.readObject(input, classOf[String])
     val wordsArray = kryo.readObject(input, classOf[Array[Int]])
     val countsArray = kryo.readObject(input, classOf[Array[Double]])
     new DocumentBagOfWords(docId.toString, wordsArray, countsArray)

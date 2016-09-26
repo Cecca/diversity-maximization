@@ -21,6 +21,7 @@ import org.apache.spark.rdd.RDD
 import it.unipd.dei.diversity.ExperimentUtil._
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.storage.StorageLevel
+import scala.reflect.ClassTag
 
 import scala.util.Random
 
@@ -55,9 +56,9 @@ object Partitioning {
     result
   }
 
-  def shuffle(rdd: RDD[Point], experiment: Experiment): RDD[Point] = {
+  def shuffle[T:ClassTag](rdd: RDD[T], experiment: Experiment): RDD[T] = {
     println("Shuffling the data!")
-    val (result, time): (RDD[Point], Long) = timed {
+    val (result, time): (RDD[T], Long) = timed {
       val parallelism = rdd.sparkContext.defaultParallelism
       val _res = rdd.map { p =>
         val pidx = Random.nextInt(parallelism)

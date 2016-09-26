@@ -16,7 +16,7 @@
 
 package it.unipd.dei.diversity
 
-import it.unipd.dei.diversity.words.{UCIBagOfWordsDataset, DocumentBagOfWords}
+import it.unipd.dei.diversity.words.{BagOfWordsDataset, DocumentBagOfWords}
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.{SparkConf, SparkContext}
 import org.rogach.scallop.ScallopConf
@@ -29,16 +29,19 @@ object MainBagOfWords {
     val opts = new Conf(args)
     opts.verify()
     val algorithm = opts.algorithm()
-    val kList = opts.delegates().split(",").map{_.toInt}
-    val kernelSizeList = opts.kernelSize().split(",").map{_.toInt}
+    val kList = opts.target().split(",").map{_.toInt}
+    // The kernel size list is actually optional
+    val kernelSizeList: Seq[Option[Int]] =
+      opts.kernelSize.get.map { arg =>
+        arg.split(",").map({x => Some(x.toInt)}).toSeq
+      }.getOrElse(Seq(None))
     val runs = opts.runs()
     val approxRuns = opts.approxRuns()
     val computeFarthest = opts.farthest()
     val computeMatching = opts.matching()
     val datasets = opts.dataset().split(",")
-    val directory = opts.directory()
 
-    val distance: (DocumentBagOfWords, DocumentBagOfWords) => Double = Distance.euclidean[Int]
+    val distance: (DocumentBagOfWords, DocumentBagOfWords) => Double = ArrayBagOfWords.cosineDistance
 
     // Set up Spark lazily, it will be initialized only if the algorithm needs it.
     lazy val sparkConfig = new SparkConf(loadDefaults = true)
@@ -59,37 +62,42 @@ object MainBagOfWords {
         .tag("git-revcount", BuildInfo.gitRevCount)
         .tag("git-branch", BuildInfo.gitBranch)
         .tag("k", k)
-        .tag("kernel-size", kernSize)
         .tag("dataset", dataset)
         .tag("computeFarthest", computeFarthest)
         .tag("computeMatching", computeMatching)
 
-      val data = UCIBagOfWordsDataset.fromName(dataset, directory)
+      for (ks <- kernSize) {
+        experiment.tag("kernel-size", ks)
+      }
+
+      val data = new BagOfWordsDataset(dataset)
 
       val coreset: Coreset[DocumentBagOfWords] = algorithm match {
 
         case "mapreduce" =>
           val parallelism = sc.defaultParallelism
           experiment.tag("parallelism", parallelism)
-          val input = data.documents(sc)
-          Algorithm.mapReduce(input, kernSize, k, distance, experiment)
+          val input = Partitioning.shuffle(
+            data.documents(sc, sc.defaultParallelism), experiment)
+          Algorithm.mapReduce(input, kernSize.get, k, distance, experiment)
 
         case "streaming" =>
-          val input = data.documents()
-          Algorithm.streaming(input, k, kernSize, distance, experiment)
+          val input = Partitioning.shuffle(
+            data.documents(sc, sc.defaultParallelism), experiment)
+          Algorithm.streaming(input.toLocalIterator, k, kernSize.get, distance, experiment)
 
         case "sequential" =>
           val input = data.documents()
           Algorithm.sequential(input.toVector, experiment)
 
         case "random" =>
-          val input = data.documents()
-          Algorithm.random(input, k, kernSize, distance, experiment)
+          val input = data.documents(sc, sc.defaultParallelism)
+          Algorithm.random(input, k, distance, experiment)
 
       }
 
       Approximation.approximate[DocumentBagOfWords](
-        coreset, k, distance, computeFarthest, computeMatching, 16, experiment)
+        coreset, k, distance, computeFarthest, computeMatching, approxRuns, experiment)
 
       experiment.saveAsJsonFile()
       println(experiment.toSimpleString)
@@ -103,11 +111,9 @@ object MainBagOfWords {
 
     lazy val dataset = opt[String](required = true)
 
-    lazy val directory = opt[String](required = true)
+    lazy val target = opt[String](required = true)
 
-    lazy val delegates = opt[String](required = true)
-
-    lazy val kernelSize = opt[String](required = true)
+    lazy val kernelSize = opt[String](required = false)
 
     lazy val runs = opt[Int](default = Some(1))
 

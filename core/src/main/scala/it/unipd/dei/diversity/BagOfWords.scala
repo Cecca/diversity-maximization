@@ -106,6 +106,47 @@ object ArrayBagOfWords {
     res
   }
 
+  def cosineSimilarity(a: ArrayBagOfWords, b: ArrayBagOfWords): Double = {
+    var numerator = 0.0
+    var aIdx = 0
+    var bIdx = 0
+    while(aIdx < a.wordsArray.length && bIdx < b.wordsArray.length) {
+      if (a.wordsArray(aIdx) == b.wordsArray(bIdx)) {
+        numerator += a.scoresArray(aIdx) * b.scoresArray(bIdx)
+        aIdx += 1
+        bIdx += 1
+      } else if (a.wordsArray(aIdx) < b.wordsArray(bIdx)) {
+        aIdx += 1
+      } else {
+        bIdx += 1
+      }
+    }
+
+    var denominatorA = 0.0
+    aIdx = 0
+    while (aIdx < a.scoresArray.length) {
+      val v = a.scoresArray(aIdx)
+      denominatorA += v*v
+      aIdx += 1
+    }
+    var denominatorB = 0.0
+    bIdx = 0
+    while (bIdx < b.scoresArray.length) {
+      val v = b.scoresArray(bIdx)
+      denominatorB += v*v
+      bIdx += 1
+    }
+
+    val res = numerator / ( math.sqrt(denominatorA) * math.sqrt(denominatorB) )
+    // See the comment in Distance.cosineSimilarity for the motivation of the
+    // following operation.
+    math.min(1.0, res)
+  }
+
+  def cosineDistance(a: ArrayBagOfWords, b: ArrayBagOfWords): Double = {
+    2*math.acos(cosineSimilarity(a,b)) / math.Pi
+  }
+
 }
 
 class MapBagOfWords[T](val wordCounts: mutable.HashMap[T, Double]) extends BagOfWords[T] {
