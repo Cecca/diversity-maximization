@@ -16,6 +16,8 @@
 
 package it.unipd.dei.diversity.words
 
+import com.esotericsoftware.kryo.io.{ Input, Output }
+import com.esotericsoftware.kryo.{ Kryo, Serializer }
 import it.unipd.dei.diversity.ArrayBagOfWords
 
 class DocumentBagOfWords(val documentId: String,
@@ -68,4 +70,19 @@ extends ArrayBagOfWords(wordsArray, scoresArray) with Serializable {
     sb.toString()
   }
 
+}
+
+class BOWKryoSerializer extends Serializer[DocumentBagOfWords] {
+  override def write(kryo: Kryo, output: Output, bow: DocumentBagOfWords): Unit = {
+    kryo.writeObject(output, bow.documentId)
+    kryo.writeObject(output, bow.wordsArray)
+    kryo.writeObject(output, bow.scoresArray)
+  }
+
+  override def read(kryo: Kryo, input: Input, cls: Class[DocumentBagOfWords]): DocumentBagOfWords = {
+    val docId = kryo.readObject(input, classOf[Int])
+    val wordsArray = kryo.readObject(input, classOf[Array[Int]])
+    val countsArray = kryo.readObject(input, classOf[Array[Double]])
+    new DocumentBagOfWords(docId.toString, wordsArray, countsArray)
+  }
 }

@@ -41,10 +41,13 @@ class MXMBagOfWordsDataset(val file: String) {
         Iterator.empty
       } else {
         line.split(",") match {
-          case Array(id, rest@_*) =>
+          case Array(id, _, rest@_*) =>
             val counts = rest.map { wc =>
               wc.split(":") match {
                 case Array(w, c) => (w.toInt, c.toDouble)
+                case err =>
+                  throw new IllegalArgumentException(
+                    s"Wrong token ${err.mkString(",")} (line: ${line})")
               }
             }
             Iterator(new DocumentBagOfWords(id, counts))
