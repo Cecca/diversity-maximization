@@ -284,29 +284,41 @@ object MatchingHeuristic {
     if (points.size <= k) {
       points
     } else {
+      var _start_t = 0l
+      var _end_t = 0l
+
+      _start_t = System.currentTimeMillis()
       // Compute distances that will be used
       val maxPqSize = k*points.size
       val reverseDistances =
         new ObjectHeapPriorityQueue[(Double, Int, Int)](maxPqSize, PqMinDistComparator())
-      var i=0
-      while(i < points.size) {
-        var j = i+1
-        while(j < points.size) {
-          reverseDistances.enqueue((distance(points(i), points(j)), i, j))
-          if (reverseDistances.size() > maxPqSize) {
-            reverseDistances.dequeue()
-          }
-          j += 1
+      (0 until points.size).par.map { i =>
+        val pairs = ((i+1) until points.size).map { j =>
+          (distance(points(i), points(j)), i, j)
         }
-        i += 1
+        reverseDistances.synchronized {
+          pairs.foreach { triplet =>
+            reverseDistances.enqueue(triplet)
+            if (reverseDistances.size() > maxPqSize) {
+              reverseDistances.dequeue()
+            }
+          }
+        }
       }
+      _end_t = System.currentTimeMillis()
+      //println(s"Priority queue building ${_end_t - _start_t} ms")
+
       // Reverse the queue
+      _start_t = System.currentTimeMillis()
       val distances =
         new ObjectHeapPriorityQueue[(Double, Int, Int)](maxPqSize, PqMaxDistComparator())
       while(!reverseDistances.isEmpty()) {
         distances.enqueue(reverseDistances.dequeue())
       }
+      _end_t = System.currentTimeMillis()
+      //println(s"Priority queue reversal ${_end_t - _start_t} ms")
 
+      _start_t = System.currentTimeMillis()
       val result = Array.ofDim[T](k)
       val flags = Array.fill[Boolean](points.length)(true)
       var idx = 0
@@ -340,6 +352,8 @@ object MatchingHeuristic {
         }
         result(k-1) = points(h)
       }
+      _end_t = System.currentTimeMillis()
+      //println(s"Solution construction ${_end_t - _start_t} ms")
       result.toArray[T]
     }
   }
