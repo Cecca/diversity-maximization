@@ -84,6 +84,12 @@ object MatchingHeuristicBench extends Bench.OfflineReport {
       }
     }
 
+    measure method "priority queue" in {
+      using(params) in { case (points, k) =>
+        MatchingHeuristic.runPriorityQueue(points, k, distance)
+      }
+    }
+
   }
 
 }
