@@ -306,7 +306,7 @@ object MatchingHeuristic {
         }
       }
       _end_t = System.currentTimeMillis()
-      //println(s"Priority queue building ${_end_t - _start_t} ms")
+      println(s"Priority queue building ${_end_t - _start_t} ms")
 
       // Reverse the queue
       _start_t = System.currentTimeMillis()
@@ -316,7 +316,7 @@ object MatchingHeuristic {
         distances.enqueue(reverseDistances.dequeue())
       }
       _end_t = System.currentTimeMillis()
-      //println(s"Priority queue reversal ${_end_t - _start_t} ms")
+      println(s"Priority queue reversal ${_end_t - _start_t} ms")
 
       _start_t = System.currentTimeMillis()
       val result = Array.ofDim[T](k)
@@ -353,7 +353,7 @@ object MatchingHeuristic {
         result(k-1) = points(h)
       }
       _end_t = System.currentTimeMillis()
-      //println(s"Solution construction ${_end_t - _start_t} ms")
+      println(s"Solution construction ${_end_t - _start_t} ms")
       result.toArray[T]
     }
   }

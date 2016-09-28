@@ -103,6 +103,17 @@ object Approximation {
             }
         }
       }
+    } else if (computeFarthest) {
+      println("Using GMM solution for remote-clique and remote-star")
+      val edgeSet = edgeSolution.get._2.toVector
+      val treeSet = treeSolution.get._2.toVector
+      val edgeSetDiv = Diversity.clique(edgeSet, distance)
+      val treeSetDiv = Diversity.clique(treeSet, distance)
+      if (edgeSetDiv >= treeSetDiv) {
+        (Some((edgeSetDiv, Diversity.star(edgeSet, distance), edgeSet)), 0l)
+      } else {
+        (Some((treeSetDiv, Diversity.star(treeSet, distance), treeSet)), 0l)
+      }
     } else {
       (None, 0)
     }
