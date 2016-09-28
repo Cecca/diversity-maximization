@@ -33,6 +33,8 @@ extends ArrayBagOfWords(wordsArray, scoresArray) with Serializable {
     this(docId, ArrayBagOfWords.buildArrayPair(counts))
   }
 
+  def numWords: Int = wordsArray.length
+
   override def equals(o: scala.Any): Boolean = o match {
     case other: DocumentBagOfWords =>
       // FIXME: Make more efficient

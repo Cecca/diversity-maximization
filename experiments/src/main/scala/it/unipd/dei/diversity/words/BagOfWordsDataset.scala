@@ -25,7 +25,7 @@ import org.apache.hadoop.io.SequenceFile.{ CompressionType, Writer }
 import org.apache.hadoop.io.compress.DeflateCodec
 import org.apache.hadoop.io.{ BytesWritable, NullWritable, SequenceFile }
 import org.apache.hadoop.io.SequenceFile.Reader
-import org.apache.spark.{ SparkConf, SparkContext }
+import org.apache.spark.{ Accumulator, SparkConf, SparkContext }
 import org.apache.spark.rdd.SequenceFileRDDFunctions
 import org.apache.spark.rdd.RDD
 import org.rogach.scallop.ScallopConf
@@ -135,8 +135,25 @@ object BagOfWordsDataset {
         UCIBagOfWordsDataset.fromName(opts.input(), opts.directory()).documents(sc)
     }
 
-    saveAsSequenceFile(documents, opts.output())
+    val beforeCnt = sc.accumulator(0l)
+    val afterCnt = sc.accumulator(0l)
 
+    val transformed = opts.transform.get match {
+      case None => BagOfWordsTransformations.count(documents, beforeCnt)
+      case Some(transforms) =>
+        import BagOfWordsTransformations._
+        
+        parseTransformations(transforms)
+          .foldLeft(count(documents, beforeCnt)) { case (bows, tr) =>
+            run(bows, tr)
+        }
+    }
+    val output = BagOfWordsTransformations.count(transformed, afterCnt)
+
+    saveAsSequenceFile(output, opts.output())
+
+    println(s"Documents loaded: ${beforeCnt.value}")
+    println(s"Documents written: ${afterCnt.value}")
   }
 
   class Opts(args: Array[String]) extends ScallopConf(args) {
@@ -148,6 +165,44 @@ object BagOfWordsDataset {
     lazy val directory = opt[String](required=false, descr="Directory for UCI datasets")
 
     lazy val output = opt[String](required=true, descr="Output path")
+
+    lazy val transform = opt[String](required=false, default=None)
+
+  }
+
+  object BagOfWordsTransformations {
+
+    def parseTransformations(desc: String): Seq[String] =
+      desc.split(",").map(_.trim) match {
+        case Array("") => Seq.empty
+        case other => other
+      }
+
+    def run(bows: RDD[DocumentBagOfWords], desc: String): RDD[DocumentBagOfWords] = desc match {
+      case biggerRegex(threshold) => filterBigger(bows, threshold.toInt)
+      case containingRegex(w) => filterContaining(bows, Seq(w.toInt))
+      case containingRegex(w, ws) => filterContaining(bows, Seq(w.toInt) ++ ws.map(_.toInt))
+      case _ => throw new MatchError(s"String $desc did not mach any known transformation. ${containingRegex.findFirstIn(desc)}")
+    }
+
+    val biggerRegex = "bigger\\((\\d+)\\)".r
+
+    def filterBigger(bows: RDD[DocumentBagOfWords], threshold: Int): RDD[DocumentBagOfWords] =
+      bows.filter { bow => bow.numWords > threshold }
+
+    val containingRegex = "containing\\((\\d+)((?:,\\d+)*)\\)".r
+
+    def filterContaining(bows: RDD[DocumentBagOfWords], words: Seq[Int]): RDD[DocumentBagOfWords] =
+      bows.filter { bow =>
+        val wordsSet = bow.words.toSet
+        words.map { w => wordsSet.contains(w) }.reduce(_ || _)
+      }
+
+    def count(bows: RDD[DocumentBagOfWords], counter: Accumulator[Long]): RDD[DocumentBagOfWords] =
+      bows.map { bow =>
+        counter += 1
+        bow
+      }
 
   }
 
