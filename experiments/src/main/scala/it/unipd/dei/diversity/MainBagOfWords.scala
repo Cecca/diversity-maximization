@@ -97,13 +97,18 @@ object MainBagOfWords {
       }
 
       Approximation.approximate[DocumentBagOfWords](
-        coreset, k, distance, computeFarthest, computeMatching, approxRuns, experiment)
+        coreset, k, distance, computeFarthest, computeMatching, approxRuns, Some(formatDocument _), experiment)
 
       experiment.saveAsJsonFile()
       println(experiment.toSimpleString)
     }
 
   }
+
+  def formatDocument(d: DocumentBagOfWords): Map[String, String] = Map(
+    "id" -> d.documentId,
+    "words" -> d.toLongString
+  )
 
   class Conf(args: Array[String]) extends ScallopConf(args) {
 

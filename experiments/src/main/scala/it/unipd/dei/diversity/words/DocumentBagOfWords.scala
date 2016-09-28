@@ -47,6 +47,10 @@ extends ArrayBagOfWords(wordsArray, scoresArray) with Serializable {
   override def toString: String =
     s"Document $documentId"
 
+  def toLongString: String =
+    wordsArray.zip(scoresArray).sorted
+      .map({wc => s"${wc._1} -> ${wc._2}"}).mkString("[", ", ", "]")
+
   def toString(wordMap: Map[Int, String]): String = {
     val wrapCol = 80
     val sb = new StringBuilder()
