@@ -41,6 +41,9 @@ object Algorithm {
     }
     val updatesTimer = coreset.updatesTimer.getSnapshot
 
+    println(s"Kernel size: ${coreset.kernel.size}")
+    println(s"Number of delegates: ${coreset.delegates.size}")
+
     // Because of the inner workings of the streaming algorithm, the
     // actual kernel size may be smaller than the parameter kernelSize
     require(coreset.kernel.size <= kernelSize,

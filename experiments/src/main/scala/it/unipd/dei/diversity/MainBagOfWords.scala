@@ -96,8 +96,15 @@ object MainBagOfWords {
 
       }
 
+      val formatFn =
+        if (opts.outputSolution()) {
+          Some(formatDocument _)
+        } else {
+          None
+        }
+
       Approximation.approximate[DocumentBagOfWords](
-        coreset, k, distance, computeFarthest, computeMatching, approxRuns, Some(formatDocument _), experiment)
+        coreset, k, distance, computeFarthest, computeMatching, approxRuns, formatFn, experiment)
 
       experiment.saveAsJsonFile()
       println(experiment.toSimpleString)
@@ -133,6 +140,8 @@ object MainBagOfWords {
       default=Some(true),
       descrYes = "Compute metrics based on the matching heuristic",
       descrNo  = "Don't compute metrics based on the matching heuristic")
+
+    lazy val outputSolution = toggle(default=Some(false))
 
   }
 
