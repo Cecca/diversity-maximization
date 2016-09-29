@@ -46,11 +46,13 @@ object Approximation {
     val (edgeSolution, _): (Option[(Double, Seq[T])], Long) =
       if (computeFarthest) {
         timed {
-          val pts = if(coreset.kernel.length < k) {
-            coreset.points
+          val kern = coreset.kernel
+          val pts = if(kern.length < k) {
+            kern ++ coreset.delegates.take(k - kern.length)
           } else {
-            coreset.kernel
+            kern
           }
+          require(pts.size == k)
           println(s"Compute approximation for remote-edge (${pts.length} points)")
           val (bestApprox, set) = (0 until math.min(runNumber, pts.length)).par.map { i =>
             print("|")
