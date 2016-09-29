@@ -107,7 +107,8 @@ object MainWiki {
       println(coreset.points.map(bow => s"${bow.title} :: ${bow.categories}").mkString("\n"))
 
       Approximation.approximate(
-        coreset, k, distance, computeFarthest, computeMatching,
+        coreset, k, kernSize.getOrElse(k)*parallelism,
+        distance, computeFarthest, computeMatching,
         approxRuns, Some(wikiBowToMap _), experiment)
 
       experiment.saveAsJsonFile()

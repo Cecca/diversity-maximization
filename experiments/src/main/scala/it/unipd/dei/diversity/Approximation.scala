@@ -26,15 +26,17 @@ object Approximation {
 
   def approximate[T:ClassTag](coreset: Coreset[T],
                               k: Int,
+                              kernelSize: Int,
                               distance: (T, T) => Double,
                               computeFarthest: Boolean,
                               computeMatching: Boolean,
                               runNumber: Int,
                               experiment: Experiment): Unit =
-    approximate(coreset, k, distance, computeFarthest, computeMatching, runNumber, None, experiment)
+    approximate(coreset, k, kernelSize, distance, computeFarthest, computeMatching, runNumber, None, experiment)
 
   def approximate[T:ClassTag](coreset: Coreset[T],
                               k: Int,
+                              kernelSize: Int,
                               distance: (T, T) => Double,
                               computeFarthest: Boolean,
                               computeMatching: Boolean,
@@ -47,12 +49,13 @@ object Approximation {
       if (computeFarthest) {
         timed {
           val kern = coreset.kernel
-          val pts = if(kern.length < k) {
-            kern ++ coreset.delegates.take(k - kern.length)
+          val pts = if(kern.length < kernelSize) {
+            kern ++ coreset.delegates.take(kernelSize - kern.length)
           } else {
             kern
           }
-          require(pts.size == k)
+          require(k <= pts.size && pts.size <= kernelSize,
+            s"Should not compute remote-edge on ${pts.size} points, when $k <= x <= $kernelSize are required")
           println(s"Compute approximation for remote-edge (${pts.length} points)")
           val (bestApprox, set) = (0 until math.min(runNumber, pts.length)).par.map { i =>
             print("|")

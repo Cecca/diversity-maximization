@@ -72,10 +72,14 @@ object MainBagOfWords {
 
       val data = new BagOfWordsDataset(dataset)
 
+      val parallelism = algorithm match {
+        case "mapreduce" => sc.defaultParallelism
+        case _ => 1
+      }
+
       val coreset: Coreset[DocumentBagOfWords] = algorithm match {
 
         case "mapreduce" =>
-          val parallelism = sc.defaultParallelism
           experiment.tag("parallelism", parallelism)
           val input = Partitioning.shuffle(
             data.documents(sc, sc.defaultParallelism), experiment)
@@ -104,7 +108,8 @@ object MainBagOfWords {
         }
 
       Approximation.approximate[DocumentBagOfWords](
-        coreset, k, distance, computeFarthest, computeMatching, approxRuns, formatFn, experiment)
+        coreset, k, kernSize.getOrElse(k)*parallelism,
+        distance, computeFarthest, computeMatching, approxRuns, formatFn, experiment)
 
       experiment.saveAsJsonFile()
       println(experiment.toSimpleString)

@@ -85,13 +85,17 @@ object MainPoints {
       val dim = metadata("data.dimension").toInt
       val n = metadata("data.num-points").toInt
 
+      val parallelism = algorithm match {
+        case "mapreduce" => sc.defaultParallelism
+        case _ => 1
+      }
+
       val coreset: Coreset[Point] = algorithm match {
 
         case "mapreduce" =>
           if(kernSize.isEmpty) {
             throw new IllegalArgumentException("Should specify kernel size on the command line")
           }
-          val parallelism = sc.defaultParallelism
           experiment.tag("parallelism", parallelism)
           experiment.tag("partitioning", partitioning)
           val inputPoints = SerializationUtils.sequenceFile(sc, input, parallelism)
@@ -136,7 +140,8 @@ object MainPoints {
       }
 
       Approximation.approximate(
-        coreset, k, distance, computeFarthest, computeMatching, approxRuns,
+        coreset, k, kernSize.getOrElse(k)*parallelism,
+        distance, computeFarthest, computeMatching, approxRuns,
         Some(pointToRow(distance, dim) _), experiment)
 
       experiment.saveAsJsonFile()
