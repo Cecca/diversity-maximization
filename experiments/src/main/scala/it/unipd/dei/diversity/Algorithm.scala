@@ -40,6 +40,15 @@ object Algorithm {
       }
     }
     val updatesTimer = coreset.updatesTimer.getSnapshot
+
+    // Because of the inner workings of the streaming algorithm, the
+    // actual kernel size may be smaller than the parameter kernelSize
+    require(coreset.kernel.size <= kernelSize,
+      s"Unexpected kernel size: ${coreset.kernel.size} > ${kernelSize}")
+    require(coreset.kernel.size + coreset.delegates.size <= kernelSize*k,
+      "Unexpected coreset size " +
+        s"${coreset.kernel.size} + ${coreset.delegates.size} > ${kernelSize*k}")
+
     experiment.append("times",
       jMap(
         "component" -> "algorithm",
