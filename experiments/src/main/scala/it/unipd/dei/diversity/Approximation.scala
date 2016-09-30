@@ -92,7 +92,7 @@ object Approximation {
       println(s"Compute approximation for remote-clique and remote-star (${points.length} points)")
       timed {
         val sub = MatchingHeuristic.run(points, k, distance)
-        edgeSolution match {
+        treeSolution match {
           case None => Some((Diversity.clique(sub, distance), Diversity.star(sub, distance), sub))
           case Some((_, gmmSet)) =>
             val divCliqueGmm = Diversity.clique(gmmSet.toVector, distance)
