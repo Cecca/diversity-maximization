@@ -18,12 +18,13 @@ package it.unipd.dei.diversity
 
 import it.unimi.dsi.logging.ProgressLogger
 import java.io._
+import java.util.Properties
 import java.util.concurrent.TimeUnit
+
 import org.apache.spark.serializer.KryoRegistrator
 
 import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
-
 import com.esotericsoftware.kryo.{Kryo, Serializer}
 import com.esotericsoftware.kryo.io.{Input, Output}
 import it.unipd.dei.diversity.source.PointSource
@@ -36,6 +37,8 @@ import org.apache.hadoop.io.compress.DeflateCodec
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
 import org.slf4j.LoggerFactory
+
+import scala.io.Source
 
 object SerializationUtils {
 
@@ -113,14 +116,16 @@ object SerializationUtils {
     val path = new Path(filename(directory, source.name, source.dim, source.n, source.k))
     val conf = new Configuration()
     
-    val meta = metadata(Map(
+    val meta = Map(
       "data.far-points" -> source.k,
       "data.source" -> source.name,
       "data.dimension" -> source.dim,
       "data.num-points" -> source.n,
       "data.git-revision" -> BuildInfo.gitRevision,
       "data.git-revcount" -> BuildInfo.gitRevCount
-    ))
+    )
+
+    writeMetadata(path.toString, meta)
 
     if (path.getFileSystem(conf).exists(path)) {
       throw new IOException(s"File $path already exists")
@@ -130,7 +135,6 @@ object SerializationUtils {
       conf,
       Writer.file(path),
       Writer.compression(CompressionType.BLOCK, new DeflateCodec()),
-      Writer.metadata(meta),
       Writer.keyClass(classOf[NullWritable]),
       Writer.valueClass(classOf[BytesWritable]))
 
@@ -159,19 +163,31 @@ object SerializationUtils {
     cnt
   }
 
+  private def metadataName(path: String): String =
+    path + ".metadata"
+
   def metadata(path: String): Map[String, String] = {
-    val conf = new Configuration()
-    val reader = new SequenceFile.Reader(conf, Reader.file(new Path(path)))
-    val meta: Map[Text, Text] = reader.getMetadata().getMetadata().asScala.toMap
-    meta.map { case (k, v) => (k.toString, v.toString) }
+    val props = new Properties()
+    val stream = Source.fromFile(metadataName(path)).reader()
+    props.load(stream)
+    stream.close()
+
+    val pairs: Seq[(String, String)] =
+      props.stringPropertyNames().asScala.map { p =>
+        (p, props.getProperty(p))
+      }.toSeq
+
+    pairs.toMap
   }
 
-  def metadata(metaMap: Map[String, Any]): SequenceFile.Metadata = {
-    val meta = new SequenceFile.Metadata()
+  def writeMetadata(fname: String, metaMap: Map[String, Any]): Unit = {
+    val props = new Properties()
     for ((k, v) <- metaMap) {
-      meta.set(new Text(k), new Text(v.toString))
+      props.setProperty(k.toString, v.toString)
     }
-    meta
+    val out = new FileOutputStream(metadataName(fname))
+    props.store(out, "")
+    out.close()
   }
 
   def configSerialization(conf: SparkConf) = {
