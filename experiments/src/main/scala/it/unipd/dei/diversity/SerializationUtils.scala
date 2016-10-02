@@ -112,8 +112,9 @@ object SerializationUtils {
   def filename(dir: String, sourceName: String, dim: Int, n: Int, k: Int) =
     s"$dir/$sourceName-$dim-$n-$k.points"
 
-  def saveAsSequenceFile[T:ClassTag](source: PointSource, directory: String): Long = {
+  def saveAsSequenceFile[T:ClassTag](sc: SparkContext, source: PointSource, directory: String): Long = {
     val path = new Path(filename(directory, source.name, source.dim, source.n, source.k))
+    val tmpPath = new Path(path.toString + ".tmp")
     val conf = new Configuration()
     
     val meta = Map(
@@ -125,15 +126,13 @@ object SerializationUtils {
       "data.git-revcount" -> BuildInfo.gitRevCount
     )
 
-    writeMetadata(path.toString, meta)
-
     if (path.getFileSystem(conf).exists(path)) {
       throw new IOException(s"File $path already exists")
     }
 
     val writer = SequenceFile.createWriter(
       conf,
-      Writer.file(path),
+      Writer.file(tmpPath),
       Writer.compression(CompressionType.BLOCK, new DeflateCodec()),
       Writer.keyClass(classOf[NullWritable]),
       Writer.valueClass(classOf[BytesWritable]))
@@ -160,17 +159,29 @@ object SerializationUtils {
     println(s"${ExperimentUtil.convertDuration(time, TimeUnit.MILLISECONDS)} elapsed")
 
     writer.close()
+
+    writeMetadata(path.toString, meta)
+
+    // FIXME: Should directly generate in parallel
+    println("Redistributing as multiple files")
+    val sf = sc.sequenceFile(tmpPath.toString, classOf[NullWritable], classOf[BytesWritable], sc.defaultParallelism)
+    sf.saveAsSequenceFile(path.toString, Some(classOf[DeflateCodec]))
+
+    tmpPath.getFileSystem(conf).delete(tmpPath, true)
+
     cnt
   }
 
   private def metadataName(path: String): String =
     path + ".metadata"
 
-  def metadata(path: String): Map[String, String] = {
+  def metadata(name: String): Map[String, String] = {
     val props = new Properties()
-    val stream = Source.fromFile(metadataName(path)).reader()
-    props.load(stream)
-    stream.close()
+    val path = new Path(metadataName(name))
+    val conf = new Configuration()
+    val input = path.getFileSystem(conf).open(path)
+    props.load(input)
+    input.close()
 
     val pairs: Seq[(String, String)] =
       props.stringPropertyNames().asScala.map { p =>
@@ -185,7 +196,9 @@ object SerializationUtils {
     for ((k, v) <- metaMap) {
       props.setProperty(k.toString, v.toString)
     }
-    val out = new FileOutputStream(metadataName(fname))
+    val path = new Path(metadataName(fname))
+    val conf = new Configuration()
+    val out = path.getFileSystem(conf).create(path)
     props.store(out, "")
     out.close()
   }

@@ -48,7 +48,10 @@ object DatasetGenerator {
     } {
       val source = PointSource(sourceName, dim, n, k, Distance.euclidean, randomGen)
 
-      val numGenerated = SerializationUtils.saveAsSequenceFile(source, outputDir)
+      val sconf = new SparkConf(true).setAppName("Generator")
+      val sc = new SparkContext(sconf)
+
+      val numGenerated = SerializationUtils.saveAsSequenceFile(sc, source, outputDir)
       require(numGenerated >= n,
         s"Not enough points have been generated! $numGenerated < $n")
       println(s"Generated $numGenerated points")
