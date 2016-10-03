@@ -16,29 +16,26 @@
 
 package it.unipd.dei.diversity
 
-import it.unimi.dsi.logging.ProgressLogger
 import java.io._
 import java.util.Properties
 import java.util.concurrent.TimeUnit
 
-import org.apache.spark.serializer.KryoRegistrator
-
 import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
+
 import com.esotericsoftware.kryo.{Kryo, Serializer}
 import com.esotericsoftware.kryo.io.{Input, Output}
+import it.unimi.dsi.logging.ProgressLogger
 import it.unipd.dei.diversity.source.PointSource
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.{BytesWritable, NullWritable, SequenceFile}
 import org.apache.hadoop.io.SequenceFile.{CompressionType, Reader, Writer}
-import org.apache.hadoop.io.Text
 import org.apache.hadoop.io.compress.DeflateCodec
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
+import org.apache.spark.serializer.KryoRegistrator
 import org.slf4j.LoggerFactory
-
-import scala.io.Source
 
 object SerializationUtils {
 
@@ -50,8 +47,11 @@ object SerializationUtils {
 
   def sequenceFile(sc: SparkContext, path: String, parallelism: Int): RDD[Point] = {
     val bytes = sc.sequenceFile(path, classOf[NullWritable], classOf[BytesWritable], parallelism)
-    bytes.map { case (_, bytesArr) =>
-      getKryo.readObject(new Input(bytesArr.copyBytes()), classOf[Point])
+    bytes.mapPartitions { iter =>
+      val kr = getKryo
+      iter.map { case (_, bytesArr) =>
+        kr.readObject(new Input(bytesArr.copyBytes()), classOf[Point])
+      }
     }
   }
 
