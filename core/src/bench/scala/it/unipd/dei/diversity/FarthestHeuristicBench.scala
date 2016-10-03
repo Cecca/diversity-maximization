@@ -26,7 +26,7 @@ object FarthestHeuristicBench extends Bench.OfflineReport {
   val distance: (Point, Point) => Double = Distance.euclidean
 
   val sets: Gen[Array[Point]] = for {
-    size <- Gen.range("size")(100, 500, 100 )
+    size <- Gen.range("size")(100, 500, 100)
   } yield Array.ofDim[Point](size).map{_ => Point.random(10, randomGen)}
 
   val ks: Gen[Int] = Gen.range("k")(10, 90, 10)

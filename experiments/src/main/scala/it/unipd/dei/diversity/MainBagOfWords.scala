@@ -88,6 +88,7 @@ object MainBagOfWords {
         case "streaming" =>
           val input = Partitioning.shuffle(
             data.documents(sc, sc.defaultParallelism), experiment)
+            .flatMap { pts => pts.iterator }
           Algorithm.streaming(input.toLocalIterator, k, kernSize.get, distance, experiment)
 
         case "sequential" =>

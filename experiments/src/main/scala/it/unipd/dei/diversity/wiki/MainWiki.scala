@@ -99,7 +99,7 @@ object MainWiki {
           if(kernSize.isEmpty) {
             throw new IllegalArgumentException("Should specify kernel size on the command line")
           }
-          Algorithm.mapReduce(filteredDocuments, kernSize.get, k, distance, experiment)
+          Algorithm.mapReduce(filteredDocuments.glom(), kernSize.get, k, distance, experiment)
         case "random" => Algorithm.random(filteredDocuments, k, distance, experiment)
       }
 

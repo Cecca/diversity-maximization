@@ -31,8 +31,8 @@ import scala.util.Random
   */
 object Partitioning {
 
-  def random(rdd: RDD[Point], experiment: Experiment): RDD[Point] = {
-    val (result, time): (RDD[Point], Long) = timed {
+  def random(rdd: RDD[Point], experiment: Experiment): RDD[Array[Point]] = {
+    val (result, time): (RDD[Array[Point]], Long) = timed {
       val parallelism = rdd.sparkContext.defaultParallelism
       val _res =
         if (rdd.getNumPartitions < parallelism) {
@@ -45,8 +45,9 @@ object Partitioning {
           rdd
         }.persist(StorageLevel.MEMORY_AND_DISK)
       // Force count to compute time
-      _res.count()
-      _res
+      val _glom = _res.glom()
+      _glom.count()
+      _glom
     }
     experiment.append("times",
       jMap(
@@ -56,14 +57,16 @@ object Partitioning {
     result
   }
 
-  def shuffle[T:ClassTag](rdd: RDD[T], experiment: Experiment): RDD[T] = {
+  def shuffle[T:ClassTag](rdd: RDD[T], experiment: Experiment): RDD[Array[T]] = {
     println("Shuffling the data!")
-    val (result, time): (RDD[T], Long) = timed {
+    val (result, time): (RDD[Array[T]], Long) = timed {
       val parallelism = rdd.sparkContext.defaultParallelism
       val _res = rdd.map { p =>
         val pidx = Random.nextInt(parallelism)
         (pidx, p)
-      }.partitionBy(new HashPartitioner(parallelism)).mapPartitions({ points => points.map(_._2) }, preservesPartitioning = true)
+      }.partitionBy(new HashPartitioner(parallelism)).mapPartitions({ points =>
+        Iterator(points.map(_._2).toArray)
+      }, preservesPartitioning = true)
         .persist(StorageLevel.MEMORY_AND_DISK)
       // Force count to compute time
       _res.count()
@@ -80,14 +83,14 @@ object Partitioning {
   def radius(rdd: RDD[Point],
              zero: Point,
              distance: (Point, Point) => Double,
-             experiment: Experiment): RDD[Point] = {
+             experiment: Experiment): RDD[Array[Point]] = {
     val parallelism = rdd.sparkContext.defaultParallelism
-    val (result, time): (RDD[Point], Long) = timed {
+    val (result, time): (RDD[Array[Point]], Long) = timed {
       val _res = rdd.map { p =>
         val pidx = math.floor(distance(p, zero)*parallelism).toInt
         (pidx, p)
       }.partitionBy(new HashPartitioner(parallelism))
-        .mapPartitions({ points => points.map(_._2) }, preservesPartitioning = true)
+        .mapPartitions({ points => Iterator(points.map(_._2).toArray) }, preservesPartitioning = true)
         .persist(StorageLevel.MEMORY_AND_DISK)
       // Force evaluation to get timing
       _res.count()
@@ -104,14 +107,14 @@ object Partitioning {
   def radiusOld(rdd: RDD[Point],
                 zero: Point,
                 distance: (Point, Point) => Double,
-                experiment: Experiment): RDD[Point] = {
+                experiment: Experiment): RDD[Array[Point]] = {
     val parallelism = rdd.sparkContext.defaultParallelism
-    val (result, time): (RDD[Point], Long) = timed {
+    val (result, time): (RDD[Array[Point]], Long) = timed {
       val _res = rdd.map { p =>
         val pidx = math.floor(distance(p, zero) / 0.8 * parallelism).toInt
         (pidx, p)
       }.partitionBy(new HashPartitioner(parallelism))
-        .mapPartitions({ points => points.map(_._2) }, preservesPartitioning = true)
+        .mapPartitions({ points => Iterator(points.map(_._2).toArray) }, preservesPartitioning = true)
         .persist(StorageLevel.MEMORY_AND_DISK)
       // Force evaluation to get timing
       _res.count()
@@ -125,7 +128,7 @@ object Partitioning {
     result
   }
 
-  def polar2D(rdd: RDD[Point], experiment: Experiment): RDD[Point] = {
+  def polar2D(rdd: RDD[Point], experiment: Experiment): RDD[Array[Point]] = {
     val parallelism = rdd.sparkContext.defaultParallelism
     val (res, time) = timed {
       val _res = rdd.map { p =>
@@ -137,7 +140,7 @@ object Partitioning {
         val pidx = math.floor(shiftedAngle / (2 * math.Pi) * parallelism).toInt
         (pidx, p)
       }.partitionBy(new HashPartitioner(parallelism)).mapPartitions(
-        { points => points.map(_._2) },
+        { points => Iterator(points.map(_._2).toArray) },
         preservesPartitioning = true).persist(StorageLevel.MEMORY_AND_DISK)
       _res.count()
       _res
@@ -151,7 +154,7 @@ object Partitioning {
     res
   }
 
-  def grid(rdd: RDD[Point], experiment: Experiment): RDD[Point] = {
+  def grid(rdd: RDD[Point], experiment: Experiment): RDD[Array[Point]] = {
     val parallelism = rdd.sparkContext.defaultParallelism
     val (res, time) = timed {
       val _res = rdd.map { p =>
@@ -166,7 +169,7 @@ object Partitioning {
         }
         (index, p)
       }.partitionBy(new HashPartitioner(parallelism)).mapPartitions(
-        { points => points.map(_._2) },
+        { points => Iterator(points.map(_._2).toArray) },
         preservesPartitioning = true).persist(StorageLevel.MEMORY_AND_DISK)
       _res.count()
       _res
@@ -179,7 +182,7 @@ object Partitioning {
     res
   }
 
-  def unitGrid(rdd: RDD[Point], experiment: Experiment): RDD[Point] = {
+  def unitGrid(rdd: RDD[Point], experiment: Experiment): RDD[Array[Point]] = {
     val parallelism = rdd.sparkContext.defaultParallelism
     val (res, time) = timed {
       val _res = rdd.map { p =>
@@ -194,7 +197,7 @@ object Partitioning {
         }
         (index, p)
       }.partitionBy(new HashPartitioner(parallelism)).mapPartitions(
-        { points => points.map(_._2) },
+        { points => Iterator(points.map(_._2).toArray) },
         preservesPartitioning = true).persist(StorageLevel.MEMORY_AND_DISK)
       _res.count()
       _res

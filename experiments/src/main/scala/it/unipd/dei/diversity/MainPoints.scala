@@ -118,6 +118,7 @@ object MainPoints {
           val points = Partitioning.shuffle(
             SerializationUtils.sequenceFile(sc, input, parallelism),
             experiment)
+            .flatMap { pts => pts.iterator }
             .persist(StorageLevel.MEMORY_AND_DISK)
 
           val _coreset = Algorithm.streaming(points.toLocalIterator, k, kernSize.get, distance, experiment)

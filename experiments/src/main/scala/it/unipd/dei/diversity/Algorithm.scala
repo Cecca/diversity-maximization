@@ -69,7 +69,7 @@ object Algorithm {
     coreset
   }
 
-  def mapReduce[T:ClassTag](points: RDD[T],
+  def mapReduce[T:ClassTag](points: RDD[Array[T]],
                             kernelSize: Int,
                             k: Int,
                             distance: (T, T) => Double,
@@ -84,7 +84,7 @@ object Algorithm {
     val partitionCnt = points.sparkContext.accumulator(0L, "partition counter")
     val pointsCnt = points.sparkContext.accumulator(0L, "points counter")
     val (coreset, mrTime) = timed {
-      points.glom().map{ pointsArr =>
+      points.map { pointsArr =>
         require(pointsArr.length > 0, "Cannot work on empty partitions!")
         partitionCnt += 1
         pointsCnt += pointsArr.length
@@ -124,7 +124,7 @@ object Algorithm {
   }
 
 
-  def localSearch[T:ClassTag](points: RDD[T],
+  def localSearch[T:ClassTag](points: RDD[Array[T]],
                               k: Int,
                               epsilon: Double,
                               distance: (T, T) => Double,
@@ -138,11 +138,10 @@ object Algorithm {
     println("Run LocalSearch algorithm!")
     val partitionCnt = points.sparkContext.accumulator(0L, "partition counter")
     val (coreset, mrTime) = timed {
-      points.mapPartitions { pts =>
+      points.map { pointsArr =>
         partitionCnt += 1
-        val pointsArr: Array[T] = pts.toArray
         val coreset = LocalSearch.coreset(pointsArr, k, epsilon, distance, diversity)
-        Iterator(coreset)
+        coreset
       }.reduce { (a, b) =>
         MapReduceCoreset.compose(a, b)
       }

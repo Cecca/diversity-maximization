@@ -142,4 +142,25 @@ object FarthestPointHeuristic {
     }
   }
 
+  def main(args: Array[String]): Unit = {
+    val n = args(0).toInt
+    val dim = args(1).toInt
+    val k = args(2).toInt
+
+    val rnd = new Random()
+    val distance: (Point, Point) => Double = Distance.euclidean
+
+    println("Generating points")
+    var start = System.currentTimeMillis()
+    val points = Array.fill(n)(Point.random(dim, rnd))
+    var end = System.currentTimeMillis()
+    println(s"Elapsed time ${end - start} ms")
+
+    println("Computing farthest point heuristic")
+    start = System.currentTimeMillis()
+    run(points, k, distance)
+    end = System.currentTimeMillis()
+    println(s"Elapsed time ${end - start} ms")
+  }
+
 }
