@@ -43,9 +43,9 @@ object Partitioning {
           rdd.coalesce(parallelism)
         } else {
           rdd
-        }.persist(StorageLevel.MEMORY_AND_DISK)
+        }
       // Force count to compute time
-      val _glom = _res.glom()
+      val _glom = _res.glom().persist(StorageLevel.MEMORY_AND_DISK)
       _glom.count()
       _glom
     }
