@@ -101,6 +101,7 @@ object MainPoints {
           val inputPoints = SerializationUtils.sequenceFile(sc, input, parallelism)
           val points = partitioning match {
             case "random"  => Partitioning.random(inputPoints, experiment)
+            case "shuffle" => Partitioning.shuffle(inputPoints, experiment)
             case "polar2D" => Partitioning.polar2D(inputPoints, experiment)
             case "grid"    => Partitioning.grid(inputPoints, experiment)
             case "unit-grid"  => Partitioning.unitGrid(inputPoints, experiment)
