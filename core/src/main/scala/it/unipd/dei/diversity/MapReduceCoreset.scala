@@ -32,10 +32,15 @@ extends Coreset[T] with Serializable {
 
 object MapReduceCoreset {
 
-  def compose[T:ClassTag](a: MapReduceCoreset[T], b: MapReduceCoreset[T]): MapReduceCoreset[T] =
+  def composeDistinct[T:ClassTag](a: MapReduceCoreset[T], b: MapReduceCoreset[T]): MapReduceCoreset[T] =
     new MapReduceCoreset(
       (a.kernel ++ b.kernel).distinct,
       (a.delegates ++ b.delegates).distinct)
+
+  def compose[T:ClassTag](a: MapReduceCoreset[T], b: MapReduceCoreset[T]): MapReduceCoreset[T] =
+    new MapReduceCoreset(
+      a.kernel ++ b.kernel,
+      a.delegates ++ b.delegates)
   
   def run[T:ClassTag](points: Array[T],
                       kernelSize: Int,
