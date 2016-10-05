@@ -83,7 +83,7 @@ object MainPoints {
       }
 
       val dim = metadata("data.dimension").toInt
-      val n = metadata("data.num-points").toInt
+      val n = metadata("data.num-points").toLong
 
       val parallelism = algorithm match {
         case "mapreduce" => sc.defaultParallelism

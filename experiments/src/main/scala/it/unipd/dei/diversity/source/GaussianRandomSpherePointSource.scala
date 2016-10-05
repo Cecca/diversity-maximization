@@ -22,7 +22,7 @@ import it.unipd.dei.diversity.Point
 import scala.util.Random
 
 class GaussianRandomSpherePointSource(override val dim: Int,
-                                      override val n: Int,
+                                      override val n: Long,
                                       override val k: Int,
                                       override val distance: (Point, Point) => Double,
                                       val randomGen: Random)

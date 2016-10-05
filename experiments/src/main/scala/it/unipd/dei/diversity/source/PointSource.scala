@@ -28,7 +28,7 @@ trait PointSource extends Iterable[Point] {
 
   val dim: Int
 
-  val n: Int
+  val n: Long
 
   val k: Int
 
@@ -56,11 +56,9 @@ trait PointSource extends Iterable[Point] {
 
 object PointSource {
 
-
-
   def apply(name: String,
             dim: Int,
-            n: Int,
+            n: Long,
             k: Int,
             distance: (Point, Point) => Double,
             randomGen: Random): PointSource = name match {
@@ -82,11 +80,11 @@ object PointSource {
 
 class InterleavingPointIterator(val certificate: Array[Point],
                                 val points: Iterator[Point],
-                                val num: Int,
+                                val num: Long,
                                 val randomGen: Random)
 extends Iterator[Point] {
 
-  private var _cnt = 0
+  private var _cnt: Long = 0L
   private val _toEmit = mutable.Set[Point](certificate :_*)
   private val _emissionProb: Double = certificate.length.toDouble / num
 

@@ -35,7 +35,7 @@ object DatasetGenerator {
     val sourcesList = opts.source().split(",")
     val dimList = opts.spaceDimension().split(",").map{_.toInt}
     val kList = opts.k().split(",").map{_.toInt}
-    val numPointsList = opts.numPoints().split(",").map{_.toInt}
+    val numPointsList = opts.numPoints().split(",").map{_.toLong}
     val outputDir = opts.directory()
 
     val randomGen = new Random()

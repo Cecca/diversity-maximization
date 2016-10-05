@@ -109,7 +109,7 @@ object SerializationUtils {
     }
   }
 
-  def filename(dir: String, sourceName: String, dim: Int, n: Int, k: Int) =
+  def filename(dir: String, sourceName: String, dim: Int, n: Long, k: Int) =
     s"$dir/$sourceName-$dim-$n-$k.points"
 
   def saveAsSequenceFile[T:ClassTag](sc: SparkContext, source: PointSource, directory: String): Long = {
