@@ -226,9 +226,46 @@ class PointSerializer extends Serializer[Point] {
   }
 }
 
+class PointsArraySerializer extends Serializer[Array[Point]] {
+  def write(kryo: Kryo, output: Output, points: Array[Point]) = {
+    val n = points.length
+    val dim = points(0).dimension
+    output.writeInt(n)
+    output.writeInt(dim)
+    var i = 0
+    while (i < n) {
+      val data = points(i).data
+      var j = 0
+      while (j < dim) {
+        output.writeDouble(data(j))
+        j += 1
+      }
+      i += 1
+    }
+  }
+  def read(kryo: Kryo, input: Input, clazz: Class[Array[Point]]) = {
+    val n = input.readInt()
+    val dim = input.readInt()
+    val points = Array.ofDim[Point](n)
+    var i = 0
+    while (i < n) {
+      val data = Array.ofDim[Double](dim)
+      var j = 0
+      while (j < dim) {
+        data(j) = input.readDouble()
+        j += 1
+      }
+      points(i) = Point(data)
+      i += 1
+    }
+    points
+  }
+}
+
 
 class PointsKryoRegistrator extends KryoRegistrator {
   override def registerClasses(k: Kryo) = {
     k.register(classOf[Point], new PointSerializer())
+    k.register(classOf[Array[Point]], new PointsArraySerializer())
   }
 }
