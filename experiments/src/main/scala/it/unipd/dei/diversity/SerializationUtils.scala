@@ -133,7 +133,7 @@ object SerializationUtils {
     val writer = SequenceFile.createWriter(
       conf,
       Writer.file(tmpPath),
-      //Writer.compression(CompressionType.BLOCK, new DeflateCodec()),
+      Writer.compression(CompressionType.BLOCK, new DeflateCodec()),
       Writer.keyClass(classOf[NullWritable]),
       Writer.valueClass(classOf[BytesWritable]))
 
