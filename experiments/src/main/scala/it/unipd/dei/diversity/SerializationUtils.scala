@@ -133,7 +133,7 @@ object SerializationUtils {
     val writer = SequenceFile.createWriter(
       conf,
       Writer.file(tmpPath),
-      Writer.compression(CompressionType.BLOCK, new DeflateCodec()),
+      //Writer.compression(CompressionType.BLOCK, new DeflateCodec()),
       Writer.keyClass(classOf[NullWritable]),
       Writer.valueClass(classOf[BytesWritable]))
 
@@ -141,6 +141,7 @@ object SerializationUtils {
 
     val pl = new ProgressLogger(LoggerFactory.getLogger("serialization") , "points")
     pl.displayFreeMemory = true
+    pl.expectedUpdates = source.n
     pl.start("Serializing point source....")
     var cnt = 0l
     val key = NullWritable.get()
