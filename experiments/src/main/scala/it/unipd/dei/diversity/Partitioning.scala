@@ -58,6 +58,10 @@ object Partitioning {
   }
 
   def shuffle[T:ClassTag](rdd: RDD[T], experiment: Experiment): RDD[Array[T]] = {
+    if (rdd.sparkContext.getCheckpointDir.isEmpty) {
+      rdd.sparkContext.setCheckpointDir("/tmp")
+      println(s"Checkpoint directory set to ${rdd.sparkContext.getCheckpointDir.get}")
+    }
     println("Shuffling the data!")
     val (result, time): (RDD[Array[T]], Long) = timed {
       val parallelism = rdd.sparkContext.defaultParallelism
@@ -67,7 +71,19 @@ object Partitioning {
       }.partitionBy(new HashPartitioner(parallelism)).mapPartitions({ points =>
         Iterator(points.map(_._2).toArray)
       }, preservesPartitioning = true)
-        .persist(StorageLevel.MEMORY_AND_DISK)
+        .persist(StorageLevel.MEMORY_ONLY)
+
+      // Note: it would be nice to be able to call
+      // _res.localCheckpoint(), since it is faster. However, it
+      // implies setting the persistence level of the RDD to
+      // disk. When we have blocks with more than 2 GB of data (and
+      // this happens in our experiments) this results in a
+      // `IllegalArgumentException: Size exceeds Integer.MAX_VALUE`
+      // exception. This is a known limitation of Spark:
+      //
+      //   https://issues.apache.org/jira/browse/SPARK-6235
+      //
+      _res.checkpoint()
       // Force count to compute time
       _res.count()
       _res
