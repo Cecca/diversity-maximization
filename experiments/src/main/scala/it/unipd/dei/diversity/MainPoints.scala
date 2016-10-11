@@ -122,7 +122,19 @@ object MainPoints {
             .flatMap { pts => pts.iterator }
             .persist(StorageLevel.MEMORY_AND_DISK)
 
-          val _coreset = Algorithm.streaming(points.toLocalIterator, k, kernSize.get, distance, experiment)
+          val requiredMemory = n*(dim*8 + 4) // in bytes
+          require(Runtime.getRuntime().maxMemory() < Long.MaxValue)
+          val availableMemory = Runtime.getRuntime().maxMemory() - (Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory())
+          val pointsIterator: Iterator[Point] =
+            if (requiredMemory < availableMemory) {
+              println(s"Materializing all the points in RAM (required ${requiredMemory/1048576}m, free ${availableMemory/1048576}m)")
+              points.collect().iterator
+            } else {
+              println("Not enough memory to materialize the points in RAM, streaming from the coreset")
+              points.toLocalIterator
+            }
+
+          val _coreset = Algorithm.streaming(pointsIterator, k, kernSize.get, distance, experiment)
           experiment.append("streaming-implementation",
             jMap(
               "num-merges" -> _coreset.numRestructurings,
