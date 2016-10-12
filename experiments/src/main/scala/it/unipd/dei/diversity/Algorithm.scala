@@ -128,7 +128,7 @@ object Algorithm {
                               k: Int,
                               epsilon: Double,
                               distance: (T, T) => Double,
-                              diversity: (Array[Boolean], IndexedSeq[Array[Double]]) => Double,
+                              diversity: (Array[Boolean], Array[Array[Double]]) => Double,
                               experiment: Experiment): MapReduceCoreset[T] = {
     experiment.tag("algorithm", "LocalSearch")
 
@@ -139,16 +139,6 @@ object Algorithm {
     val partitionCnt = points.sparkContext.accumulator(0L, "partition counter")
     val (coreset, mrTime) = timed {
       points.map { pointsArr =>
-        val requiredBytes: Long = (pointsArr.length*pointsArr.length)*8L
-        println(
-          s"${pointsArr.length} elements: " +
-          s"${MemoryUtils.bytesToMegs(MemoryUtils.availableBytes)} available " +
-          s"(${MemoryUtils.bytesToMegs(requiredBytes)} required [$requiredBytes])")
-
-        require(MemoryUtils.canAllocate(requiredBytes),
-          "Can't allocate distance table: only "+
-            s"${MemoryUtils.bytesToMegs(MemoryUtils.availableBytes)} available " +
-            s"(${MemoryUtils.bytesToMegs(requiredBytes)} required)")
         partitionCnt += 1
         val coreset = LocalSearch.coreset(pointsArr, k, epsilon, distance, diversity)
         coreset
