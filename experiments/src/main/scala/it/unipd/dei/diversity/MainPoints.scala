@@ -128,7 +128,9 @@ object MainPoints {
           val pointsIterator: Iterator[Point] =
             if (requiredMemory < availableMemory) {
               println(s"Materializing all the points in RAM (required ${requiredMemory/1048576}m, free ${availableMemory/1048576}m)")
-              points.collect().iterator
+              val pts = points.collect()
+              sc.stop() // we no longer need Spark at this point
+              pts.iterator
             } else {
               println("Not enough memory to materialize the points in RAM, streaming from the coreset")
               points.toLocalIterator
