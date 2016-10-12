@@ -34,9 +34,9 @@ import scala.reflect.ClassTag
   */
 object LocalSearch {
 
-  private def initialSet[T:ClassTag](input: IndexedSeq[T],
+  def initialSet[T:ClassTag](input: IndexedSeq[T],
                              k: Int,
-                             distances: Array[Array[Double]]): Array[T] = {
+                             distance: (T, T) => Double): Array[T] = {
     if (input.length <= k) {
       input.toArray
     } else {
@@ -49,7 +49,7 @@ object LocalSearch {
       while (i<input.length) {
         var j = i+1
         while (j<input.length) {
-          val d = distances(i)(j)
+          val d = distance(input(i), input(j))
           if (d > maxDist) {
             a = i
             b = j
@@ -93,98 +93,6 @@ object LocalSearch {
     }
   }
 
-  def cliqueDiversity(flags: Array[Boolean], distances: Array[Array[Double]]): Double = {
-    var sum: Double = 0.0
-    var i = 0
-    while (i < flags.length) {
-      if (flags(i)) {
-        var j =  i+1
-        while (j < flags.length) {
-          if (flags(j)) {
-            sum += distances(i)(j)
-          }
-          j += 1
-        }
-      }
-      i += 1
-    }
-    sum
-  }
-
-  def runMemoized[T:ClassTag](input: IndexedSeq[T],
-                              k: Int,
-                              epsilon: Double,
-                              distance: (T, T) => Double,
-                              diversity: (Array[Boolean], Array[Array[Double]]) => Double)
-  : IndexedSeq[T] = {
-    if (input.length <= k) {
-      input
-    } else {
-      val distances = Array.fill(input.size, input.size)(Double.PositiveInfinity)
-      var _di = 0
-      while (_di < input.size) {
-        var _dj = _di
-        while (_dj < input.size) {
-          val dist = distance(input(_di), input(_dj))
-          distances(_di)(_dj) = dist
-          distances(_dj)(_di) = dist
-          _dj += 1
-        }
-        _di += 1
-      }
-
-      // Partial solution: it will be used to store the partial results
-      val partial = initialSet(input, k, distances)
-      require(partial.length == k)
-      // The "inside" and "outside" sets as an array of flags
-      val flags = Array.fill[Boolean](input.length)(false)
-      // set the initial partial solution
-      var h = 0
-      while(h < input.length) {
-        if (partial.contains(input(h))) {
-          flags(h) = true
-        }
-        h += 1
-      }
-      var foundImprovingSwap = true
-      while(foundImprovingSwap) {
-        // This will be reset to true if a swap is found
-        foundImprovingSwap = false
-        // Compute the threshold for this iteration
-        val threshold = (1+epsilon/k)*diversity(flags, distances)
-
-        // Try to find an improving swap
-        var i = 0
-        while (i < flags.length && !foundImprovingSwap) {
-          if (flags(i)) { // If i is inside the partial solution
-            var j = i + 1
-            while (j < flags.length && !foundImprovingSwap) {
-              if (!flags(j)) { // If j is not inside the partial solution
-                // Try the swap
-                flags(i) = false // move i-th point outside the solution
-                flags(j) = true  // move j-th point inside the solution
-                if (diversity(flags, distances) > threshold) {
-                  // Swap successful, set foundImprovingSwap to break the inner loops
-                  foundImprovingSwap = true
-                } else {
-                  // Swap unsuccessful, reset to previous situation
-                  flags(i) = true  // move i-th point inside the solution again
-                  flags(j) = false // move j-th point outside the solution again
-                }
-              }
-              j += 1
-            }
-          }
-          i += 1
-        }
-      }
-
-      flagsToArray(input, flags, partial)
-      require(partial.length == k)
-      partial
-    }
-  }
-
   def run[T:ClassTag](input: IndexedSeq[T],
                       k: Int,
                       epsilon: Double,
@@ -194,21 +102,8 @@ object LocalSearch {
     if (input.length <= k) {
       input
     } else {
-      val distances = Array.fill(input.size, input.size)(Double.PositiveInfinity)
-      var _di = 0
-      while (_di < input.size) {
-        var _dj = _di
-        while (_dj < input.size) {
-          val dist = distance(input(_di), input(_dj))
-          distances(_di)(_dj) = dist
-          distances(_dj)(_di) = dist
-          _dj += 1
-        }
-        _di += 1
-      }
-
       // Partial solution: it will be used to store the partial results
-      val partial = initialSet(input, k, distances)
+      val partial = initialSet(input, k, distance)
       require(partial.length == k)
       // The "inside" and "outside" sets as an array of flags
       val flags = Array.fill[Boolean](input.length)(false)
@@ -265,10 +160,10 @@ object LocalSearch {
                           k: Int,
                           epsilon: Double,
                           distance: (T, T) => Double,
-                          diversity: (Array[Boolean], Array[Array[Double]]) => Double)
+                          diversity: (IndexedSeq[T], (T, T) => Double) => Double)
   : MapReduceCoreset[T] =
     new MapReduceCoreset(
-      runMemoized(points, k, epsilon, distance, diversity).toVector,
+      run(points, k, epsilon, distance, diversity).toVector,
       Vector.empty[T])
 
 }

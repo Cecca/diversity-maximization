@@ -128,7 +128,7 @@ object Algorithm {
                               k: Int,
                               epsilon: Double,
                               distance: (T, T) => Double,
-                              diversity: (Array[Boolean], Array[Array[Double]]) => Double,
+                              diversity: (IndexedSeq[T], (T, T) => Double) => Double,
                               experiment: Experiment): MapReduceCoreset[T] = {
     experiment.tag("algorithm", "LocalSearch")
 
