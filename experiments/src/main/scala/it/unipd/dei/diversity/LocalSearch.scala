@@ -36,7 +36,7 @@ object LocalSearch {
 
   private def initialSet[T:ClassTag](input: IndexedSeq[T],
                              k: Int,
-                             distances: Array[Array[Double]]): Array[T] = {
+                             distances: IndexedSeq[Array[Double]]): Array[T] = {
     if (input.length <= k) {
       input.toArray
     } else {
@@ -93,7 +93,7 @@ object LocalSearch {
     }
   }
 
-  def cliqueDiversity(flags: Array[Boolean], distances: Array[Array[Double]]): Double = {
+  def cliqueDiversity(flags: Array[Boolean], distances: IndexedSeq[Array[Double]]): Double = {
     var sum: Double = 0.0
     var i = 0
     while (i < flags.length) {
@@ -115,23 +115,19 @@ object LocalSearch {
                               k: Int,
                               epsilon: Double,
                               distance: (T, T) => Double,
-                              diversity: (Array[Boolean], Array[Array[Double]]) => Double)
+                              diversity: (Array[Boolean], IndexedSeq[Array[Double]]) => Double)
   : IndexedSeq[T] = {
     if (input.length <= k) {
       input
     } else {
-      val distances = Array.fill(input.size, input.size)(Double.PositiveInfinity)
-      var _di = 0
-      while (_di < input.size) {
-        var _dj = _di
-        while (_dj < input.size) {
-          val dist = distance(input(_di), input(_dj))
-          distances(_di)(_dj) = dist
-          distances(_dj)(_di) = dist
-          _dj += 1
+      // We use Vector instead of Array because arrays require
+      // contiguous storage, which may not always be available
+      val distances = Vector.tabulate[Array[Double]](input.size){ i =>
+        Array.tabulate[Double](input.size) { j =>
+          distance(input(i), input(j))
         }
-        _di += 1
       }
+      println("Computed distances table")
 
       // Partial solution: it will be used to store the partial results
       val partial = initialSet(input, k, distances)
@@ -194,17 +190,12 @@ object LocalSearch {
     if (input.length <= k) {
       input
     } else {
-      val distances = Array.fill(input.size, input.size)(Double.PositiveInfinity)
-      var _di = 0
-      while (_di < input.size) {
-        var _dj = _di
-        while (_dj < input.size) {
-          val dist = distance(input(_di), input(_dj))
-          distances(_di)(_dj) = dist
-          distances(_dj)(_di) = dist
-          _dj += 1
+      // We use Vector instead of Array because arrays require
+      // contiguous storage, which may not always be available
+      val distances = Vector.tabulate[Array[Double]](input.size){ i =>
+        Array.tabulate[Double](input.size) { j =>
+          distance(input(i), input(j))
         }
-        _di += 1
       }
 
       // Partial solution: it will be used to store the partial results
@@ -265,7 +256,7 @@ object LocalSearch {
                           k: Int,
                           epsilon: Double,
                           distance: (T, T) => Double,
-                          diversity: (Array[Boolean], Array[Array[Double]]) => Double)
+                          diversity: (Array[Boolean], IndexedSeq[Array[Double]]) => Double)
   : MapReduceCoreset[T] =
     new MapReduceCoreset(
       runMemoized(points, k, epsilon, distance, diversity).toVector,

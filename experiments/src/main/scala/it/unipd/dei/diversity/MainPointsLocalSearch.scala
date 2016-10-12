@@ -34,12 +34,11 @@ object MainPointsLocalSearch {
     val approxRuns = opts.approxRuns()
 
     val distance: (Point, Point) => Double = Distance.euclidean
- 
-    // Set up Spark lazily, it will be initialized only if the algorithm needs it.
-    lazy val sparkConfig = new SparkConf(loadDefaults = true)
+
+    val sparkConfig = new SparkConf(loadDefaults = true)
       .setAppName("MapReduce coresets")
     SerializationUtils.configSerialization(sparkConfig)
-    lazy val sc = new SparkContext(sparkConfig)
+    val sc = new SparkContext(sparkConfig)
 
     // Cycle through parameter configurations
     for {
@@ -65,10 +64,10 @@ object MainPointsLocalSearch {
       val coreset: Coreset[Point] = {
         val parallelism = sc.defaultParallelism
         experiment.tag("parallelism", parallelism)
-        val points = SerializationUtils.sequenceFile(sc, input, parallelism)
+        val points = Partitioning.shuffle(SerializationUtils.sequenceFile(sc, input, parallelism), experiment)
+        println("Partitioned points")
         Algorithm.localSearch(
-          Partitioning.random(points, experiment),
-          k, epsilon, distance, LocalSearch.cliqueDiversity, experiment)
+          points, k, epsilon, distance, LocalSearch.cliqueDiversity, experiment)
       }
 
       Approximation.approximate(
