@@ -1,5 +1,8 @@
-Diversity maximization
-======================
+========================
+ Diversity maximization
+========================
+
+{<img src="https://travis-ci.org/Cecca/diversity-maximization.svg?branch=master" alt="Build Status" />}[https://travis-ci.org/Cecca/diversity-maximization]
 
 This repository contains code implementing the algorithms presented in
 [CeccarelloPPU16]_. From the abstract of the paper
@@ -24,7 +27,7 @@ If you find this software useful for your research, please cite the
 paper [CeccarelloPPU16]_.
 
 Project organization
---------------------
+====================
 
 The code is organized in subprojects
 
@@ -33,7 +36,7 @@ The code is organized in subprojects
   the algorithms
 
 Building the software
----------------------
+=====================
 
 The project is built using `sbt <http://www.scala-sbt.org/>`_. To
 build all the subprojects and run the tests, use the following command::
@@ -45,7 +48,7 @@ or, if you prefer to skip the tests, just run::
   sbt core/compile experiments/compile
   
 Implemented algorithms
-----------------------
+======================
 
 The paper [CeccarelloPPU16]_ describes algorithms in the MapReduce and
 Streaming setting for several diversity maximization problems. This
@@ -66,7 +69,7 @@ some distance functions, including the Euclidean distance
 
   
 References
-----------
+==========
   
 .. [CeccarelloPPU16] Matteo Ceccarello, Andrea Pietracaprina,
    Geppino Pucci, Eli Upfal. *MapReduce and Streaming Algorithms for
