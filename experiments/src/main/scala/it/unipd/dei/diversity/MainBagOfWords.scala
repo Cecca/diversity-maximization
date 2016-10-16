@@ -86,10 +86,12 @@ object MainBagOfWords {
           Algorithm.mapReduce(input, kernSize.get, k, distance, experiment)
 
         case "streaming" =>
+          println("Collecting all the bag-0f-words in memory")
           val input = Partitioning.shuffle(
             data.documents(sc, sc.defaultParallelism), experiment)
-            .flatMap { pts => pts.iterator }
-          Algorithm.streaming(input.toLocalIterator, k, kernSize.get, distance, experiment)
+            .flatMap { pts => pts.iterator }.collect()
+          sc.stop()
+          Algorithm.streaming(input.iterator, k, kernSize.get, distance, experiment)
 
         case "sequential" =>
           val input = data.documents()
