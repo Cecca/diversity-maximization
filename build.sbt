@@ -1,3 +1,5 @@
+import sbt.complete.DefaultParsers
+
 lazy val baseSettings = Seq(
   organization := "it.unipd.dei",
   version := "0.1.0",
@@ -16,6 +18,14 @@ lazy val commonSettings = baseSettings ++ Seq(
     "-feature",
     "-deprecation",
     "-unchecked"))
+
+////////////////////////////////////////////////////////////
+// Custom task definition
+
+lazy val deploy = inputKey[Unit]("Deploy the jar to the given ssh host (using rsync)")
+
+////////////////////////////////////////////////////////////
+// Projects
 
 lazy val root = (project in file(".")).
   aggregate(core, experiments).
@@ -50,8 +60,7 @@ lazy val experiments = (project in file("experiments")).
       "org.rogach" %% "scallop" % "1.0.1",
       "org.apache.spark" %% "spark-core" % "2.1.0" % "provided",
       "com.storm-enroute" %% "scalameter" % "0.7" % "bench"
-    ),
-    deploy := deployTaskImpl.value
+    )
   ).
   enablePlugins(BuildInfoPlugin).
   settings(
@@ -64,19 +73,21 @@ lazy val experiments = (project in file("experiments")).
     buildInfoPackage := "it.unipd.dei.diversity"
   ).
   configs(Benchmark).
-  settings(inConfig(Benchmark)(Defaults.testSettings): _*)
+  settings(inConfig(Benchmark)(Defaults.testSettings): _*).
+  settings(
+    deploy := {
+      import sbt._
+      import complete.DefaultParsers._
 
-//////////////////////////////////////////////////////////////////////////////
-// Custom tasks
-
-lazy val deploy = Def.taskKey[Unit]("Deploy the jar")
-
-lazy val deployTaskImpl = Def.task {
-  val log = streams.value.log
-  val account = "ceccarel@stargate.dei.unipd.it"
-  val local = assembly.value.getPath
-  val fname = assembly.value.getName
-  val remote = s"$account:/mnt/gluster/ceccarel/lib/$fname"
-  log.info(s"Deploy $fname to $remote")
-  Seq("rsync", "--progress", "-z", local, remote) !
-}
+      val arg = spaceDelimited("<user@domain:path>").parsed
+      arg.headOption match {
+        case None => sys.error("Please provide the remote to which you want to deploy")
+        case Some(remote) =>
+          val log = streams.value.log
+          val local = assembly.value.getPath
+          val fname = assembly.value.getName
+          log.info(s"Deploy $fname to $remote")
+          Seq("rsync", "--progress", "-z", local, remote) !
+      }
+    }
+  )
