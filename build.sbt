@@ -30,7 +30,6 @@ lazy val core = (project in file("core")).
     name := "diversity-maximization-core",
     libraryDependencies ++= Seq(
       "com.storm-enroute" %% "scalameter" % "0.7" % "bench",
-      "org.roaringbitmap" % "RoaringBitmap" % "0.5.11",
       "io.dropwizard.metrics" % "metrics-core" % "3.1.2",
       "it.unimi.dsi" % "dsiutils" % "2.3.2" exclude("ch.qos.logback", "logback-classic")
     ),
@@ -49,8 +48,7 @@ lazy val experiments = (project in file("experiments")).
     libraryDependencies ++= Seq(
       "it.unipd.dei" % "experiment-reporter" % "0.3.0",
       "org.rogach" %% "scallop" % "1.0.1",
-      "com.typesafe.akka" %% "akka-stream" % "2.4.5" % "provided",
-      "org.apache.spark" %% "spark-core" % "1.6.1" % "provided",
+      "org.apache.spark" %% "spark-core" % "2.1.0" % "provided",
       "com.storm-enroute" %% "scalameter" % "0.7" % "bench"
     ),
     deploy := deployTaskImpl.value
