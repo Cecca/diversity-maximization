@@ -1,4 +1,4 @@
-import sbt.complete.DefaultParsers
+
 
 lazy val baseSettings = Seq(
   organization := "it.unipd.dei",
@@ -28,7 +28,7 @@ lazy val deploy = inputKey[Unit]("Deploy the jar to the given ssh host (using rs
 // Projects
 
 lazy val root = (project in file(".")).
-  aggregate(core, experiments).
+  aggregate(core, mllib, experiments).
   settings(baseSettings :_*)
 
 /** Configuration for benchmarks */
@@ -49,6 +49,18 @@ lazy val core = (project in file("core")).
   ).
   configs(Benchmark).
   settings(inConfig(Benchmark)(Defaults.testSettings): _*)
+
+lazy val mllib = (project in file("mllib")).
+  settings(commonSettings: _*).
+  settings(
+    name := "diversity-maximization-mllib",
+    libraryDependencies ++= Seq(
+      "org.apache.spark" %% "spark-mllib" % "2.1.0" % "provided",
+      "edu.stanford.nlp" % "stanford-corenlp" % "3.6.0",
+      "edu.stanford.nlp" % "stanford-corenlp" % "3.6.0" classifier "models",
+      "com.google.protobuf" % "protobuf-java" % "3.2.0"
+    )
+  )
 
 lazy val experiments = (project in file("experiments")).
   dependsOn(core).
