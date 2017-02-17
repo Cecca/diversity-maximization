@@ -2,13 +2,13 @@ package it.unipd.dei.diversity.mllib
 
 import edu.stanford.nlp.simple.Document
 import org.apache.spark.SparkConf
-import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.ml.feature.{CountVectorizer, IDF, StopWordsRemover}
 import org.apache.spark.ml.linalg.Vector
-import org.apache.spark.ml.param.ParamMap
+import org.apache.spark.ml.param.{Param, ParamMap}
 import org.apache.spark.ml.util._
-import org.apache.spark.ml.{Model, UnaryTransformer}
-import org.apache.spark.sql.types.{ArrayType, DataType, StringType, StructType}
+import org.apache.spark.ml.{Estimator, Model, UnaryTransformer}
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 
 import scala.collection.JavaConversions._
@@ -55,18 +55,100 @@ object Lemmatizer extends DefaultParamsReadable[Lemmatizer] {
   override def load(path: String): Lemmatizer = super.load(path)
 }
 
-class CategoryMapperModel(override val uid: String)
-  extends Model[CategoryMapperModel] with DefaultParamsWritable {
+class CategoryMapper(override val uid: String)
+  extends Estimator[CategoryMapperModel] {
 
   def this() = this(Identifiable.randomUID("catmap"))
 
+  // Input and output columns
+  val inputCol: Param[String] = new Param[String](this, "inputCol", "input column name")
+
+  def getInputCol: String = $(inputCol)
+
+  def setInputCol(value: String): this.type = set(inputCol, value)
+
+  val outputCol: Param[String] = new Param[String](this, "outputCol", "output column name")
+
+  def getOutputCol: String = $(outputCol)
+
+  def setOutputCol(value: String): this.type = set(outputCol, value)
+
+  override def fit(dataset: Dataset[_]): CategoryMapperModel = {
+    transformSchema(dataset.schema, logging = true)
+
+    val input = dataset.select($(inputCol)).rdd.map(_.getAs[Seq[String]](0))
+    val categories = input.flatMap(cats => cats).distinct().collect()
+    copyValues(new CategoryMapperModel(uid, categories).setParent(this))
+  }
+
+  override def copy(extra: ParamMap): Estimator[CategoryMapperModel] = defaultCopy(extra)
+
+  override def transformSchema(schema: StructType): StructType = {
+    val requiredInType = ArrayType(StringType, containsNull = true)
+    val actualDataType = schema($(inputCol)).dataType
+    require(actualDataType.equals(requiredInType),
+      s"Column ${$(inputCol)} must be of type $requiredInType but was $actualDataType")
+    val col = StructField($(outputCol), ArrayType(StringType, containsNull = true))
+    require(!schema.fieldNames.contains(col.name, s"Column ${col.name} already exists"))
+    StructType(schema.fields :+ col)
+  }
+
+}
+
+class CategoryMapperModel(override val uid: String,
+                          private val categories: Array[String])
+  extends Model[CategoryMapperModel] with MLWritable {
+
+  java.util.Arrays.sort(categories.asInstanceOf[Array[AnyRef]])
+
+  def this(categories: Array[String]) = this(Identifiable.randomUID("catmap"), categories)
+
+  // Input and output columns
+  val inputCol: Param[String] = new Param[String](this, "inputCol", "input column name")
+
+  def getInputCol: String = $(inputCol)
+
+  def setInputCol(value: String): this.type = set(inputCol, value)
+
+  val outputCol: Param[String] = new Param[String](this, "outputCol", "output column name")
+
+  def getOutputCol: String = $(outputCol)
+
+  def setOutputCol(value: String): this.type = set(outputCol, value)
+
+  // Immutable view of categories
+  def getCategories: Seq[String] = categories
+
+  def getCategoriesMap: Map[String, Int] = categories.zipWithIndex.toMap
+
   override def copy(extra: ParamMap): CategoryMapperModel = defaultCopy(extra)
 
-  override def transform(dataset: Dataset[_]): DataFrame = ???
+  override def transform(dataset: Dataset[_]): DataFrame = {
+    transformSchema(dataset.schema, logging = true)
 
-  @DeveloperApi
-  override def transformSchema(schema: StructType): StructType = ???
+    val catBr = dataset.sparkSession.sparkContext.broadcast(categories)
+    val mapper = udf { docCats: Seq[String] =>
+      val catIds: Array[AnyRef] = catBr.value.asInstanceOf[Array[AnyRef]]
+      docCats.map({ c =>
+        val idx = java.util.Arrays.binarySearch(catIds, c.asInstanceOf[AnyRef])
+        require(idx >= 0, s"Unknown category $c")
+        idx
+      })
+    }
+    dataset.withColumn($(outputCol), mapper(col($(inputCol))))
+  }
 
+  override def transformSchema(schema: StructType): StructType = {
+    val requiredInType = ArrayType(StringType, containsNull = true)
+    val actualDataType = schema($(inputCol)).dataType
+    require(actualDataType.equals(requiredInType),
+      s"Column ${$(inputCol)} must be of type $requiredInType but was $actualDataType")
+    val col = StructField($(outputCol), ArrayType(StringType, containsNull = true))
+    require(!schema.fieldNames.contains(col.name, s"Column ${col.name} already exists"))
+    StructType(schema.fields :+ col)
+  }
+
+  override def write: MLWriter = ???
 }
 
 object Tryout {
@@ -121,9 +203,14 @@ object Tryout {
       .select("id", "title", "categories", "counts")
       .as[CategorizedBow]
 
-    vecs.printSchema()
-    vecs.explain()
+    val categories = new CategoryMapper()
+      .setInputCol("categories")
+      .setOutputCol("cats")
+      .fit(vecs)
+    //    println(s"Categories are:\n${categories.getCategories.mkString("\n")}")
+    val catVecs = categories.transform(vecs).drop("categories")
 
-    vecs.write.parquet("vectors.pq")
+    catVecs.explain(true)
+    catVecs.show()
   }
 }
