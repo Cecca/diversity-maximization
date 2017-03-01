@@ -51,6 +51,7 @@ lazy val core = (project in file("core")).
   settings(inConfig(Benchmark)(Defaults.testSettings): _*)
 
 lazy val mllib = (project in file("mllib")).
+  dependsOn(core).
   settings(commonSettings: _*).
   settings(
     name := "diversity-maximization-mllib",

@@ -28,7 +28,7 @@ class CategoriesToIndex(override val uid: String)
     val actualDataType = schema($(inputCol)).dataType
     require(actualDataType.equals(requiredInType),
       s"Column ${$(inputCol)} must be of type $requiredInType but was $actualDataType")
-    val col = StructField($(outputCol), ArrayType(StringType, containsNull = true))
+    val col = StructField($(outputCol), ArrayType(IntegerType, containsNull = true))
     require(!schema.fieldNames.contains(col.name, s"Column ${col.name} already exists"))
     StructType(schema.fields :+ col)
   }

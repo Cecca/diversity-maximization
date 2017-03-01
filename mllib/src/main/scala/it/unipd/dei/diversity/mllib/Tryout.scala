@@ -1,15 +1,35 @@
 package it.unipd.dei.diversity.mllib
 
+import it.unipd.dei.diversity.MapReduceCoreset
 import org.apache.spark.SparkConf
 import org.apache.spark.ml.feature.{CountVectorizer, IDF, StopWordsRemover}
-import org.apache.spark.ml.linalg.Vector
+import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 case class CategorizedBow(id: Long,
-                          categories: Array[String],
+                          categories: Array[Int],
                           title: String,
-                          counts: Vector)
+                          counts: Vector) {
+  override def toString: String = s"CategorizedBow($id, $title, ${categories.take(4).mkString(", ")})"
+}
 
+object CategorizedBow {
+
+  def cosineDistance(a: CategorizedBow, b: CategorizedBow): Double = {
+    val vecA = a.counts
+    val vecB = b.counts
+    require(vecA.size == vecB.size)
+    var numerator: Double = 0.0
+    vecA.foreachActive { case (i, ca) =>
+      numerator += ca * vecB(i)
+    }
+    val denomA = Vectors.norm(vecA, 2)
+    val denomB = Vectors.norm(vecB, 2)
+    val res = numerator / (denomA * denomB)
+    2 * math.acos(res) / math.Pi
+  }
+
+}
 
 object Tryout {
 
@@ -68,17 +88,19 @@ object Tryout {
       .setOutputCol("cats")
       .fit(vecs)
     //    println(s"Categories are:\n${categories.getCategories.mkString("\n")}")
-    val catVecs = categories.transform(vecs).drop("categories")
+    val catVecs = categories.transform(vecs).drop("categories").withColumnRenamed("cats", "categories")
 
-    catVecs.explain(true)
-    catVecs.show()
+    //    catVecs.explain(true)
+    //    catVecs.show()
 
-    val inverse = categories
-      .inverse
-      .setInputCol("cats")
-      .setOutputCol("origCats")
+    val rdd = catVecs.as[CategorizedBow].rdd
 
-    inverse.transform(catVecs).show()
+    val coreSets = rdd.mapPartitions { it =>
+      val docs = it.toArray
+      val coreset = MapReduceCoreset.run(docs, 4, 4, CategorizedBow.cosineDistance)
+      Iterator(coreset.points)
+    }
+    println(coreSets.take(1).head.mkString("\n"))
   }
 
 }
