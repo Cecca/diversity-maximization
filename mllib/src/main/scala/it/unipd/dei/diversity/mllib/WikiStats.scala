@@ -1,14 +1,28 @@
 package it.unipd.dei.diversity.mllib
 
 import org.apache.spark.ml.feature.{CountVectorizer, IDF, StopWordsRemover}
-import org.apache.spark.ml.linalg.Vector
+import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.SparkContext._
 
+case class Page(id: Long, vector: Vector)
 
 /**
   * Computes statistics about wikipedia dumps
   */
 object WikiStats {
+
+  def cosineDistance(a: Vector, b: Vector): Double = {
+    require(a.size == b.size)
+    var numerator: Double = 0.0
+    a.foreachActive { case (i, ca) =>
+      numerator += ca * b(i)
+    }
+    val denomA = Vectors.norm(a, 2)
+    val denomB = Vectors.norm(b, 2)
+    val res = numerator / (denomA * denomB)
+    2 * math.acos(res) / math.Pi
+  }
 
   def main(args: Array[String]) {
     val path = args(0)
@@ -16,6 +30,7 @@ object WikiStats {
     val spark = SparkSession.builder()
       .appName("WikiStats")
       .getOrCreate()
+    import spark.implicits._
 
     val jsonRdd = spark.sparkContext
       .wholeTextFiles(path)
@@ -48,24 +63,36 @@ object WikiStats {
     val countVectorizer = new CountVectorizer()
       .setInputCol("words")
       .setOutputCol("tmp-counts")
-      //      .setVocabSize(5000) // Restrict to the 5000 most-frequent words
+      .setVocabSize(5000) // Restrict to the 5000 most-frequent words
       .fit(withWords)
     val counts = countVectorizer.transform(withWords)
     val idf = new IDF()
       .setInputCol("tmp-counts")
-      .setOutputCol("tf-idf")
+      .setOutputCol("vector")
       .fit(counts)
-    val vectorized = idf.transform(counts).drop("tmp-counts")
+    val vectorized = idf.transform(counts).select("id" ,"vector").as[Page].cache()
 
-    val numWords = vectorized.select("tf-idf").rdd
-      .map(_.getAs[Vector](0))
-      .map { vec => (vec.numNonzeros, 1) }
-      .reduceByKey(_ + _)
-      .sortByKey()
-      .collect()
+    val numDocs = vectorized.count()
+
+    val (bounds, numWords) = vectorized.rdd
+      .map(_.vector.numNonzeros)
+      .histogram(10)
 
     println(s"Relevant word distribution (Vocabulary size: ${countVectorizer.vocabulary.size} words)")
-    println(numWords.mkString("\n"))
+    println(bounds.zip(numWords).mkString("\n"))
+
+    val sampleProb = math.min(1.0, 1000.0 / numDocs)
+    val Array(dataA, dataB) = vectorized.randomSplit(Array(0.5, 0.5))
+    val sampleA = dataA.sample(withReplacement = false, sampleProb)
+    val sampleB = dataB.sample(withReplacement = false, sampleProb)
+
+    val (buckets, distances) = sampleA.rdd.cartesian(sampleB.rdd)
+      .filter { case (a, b) => a.id != b.id}
+      .map { case (a, b) => cosineDistance(a.vector, b.vector) }
+      .histogram(10)
+
+    println("Distances histogram (from samples)")
+    println(s"${buckets.zip(distances).mkString("\n")}")
   }
 
 }
