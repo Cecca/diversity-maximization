@@ -1,11 +1,12 @@
 package it.unipd.dei.diversity.wiki
 
-import it.unipd.dei.diversity.mllib.Lemmatizer
+import it.unipd.dei.diversity.ExperimentUtil.jMap
+import it.unipd.dei.diversity.mllib.{Lemmatizer, SortingCountVectorizer}
 import it.unipd.dei.experiment.Experiment
-import org.apache.spark.ml.feature.{CountVectorizer, IDF, StopWordsRemover}
+import org.apache.spark.ml.feature.{IDF, StopWordsRemover}
 import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.sql.SparkSession
-import it.unipd.dei.diversity.ExperimentUtil.jMap
+import org.apache.spark.storage.StorageLevel
 import org.rogach.scallop.ScallopConf
 
 case class Page(id: Long, vector: Vector)
@@ -53,13 +54,14 @@ object WikiStats {
       .appName("WikiStats")
       .getOrCreate()
     import spark.implicits._
+    spark.sparkContext.hadoopConfiguration.set("mapreduce.input.fileinputformat.input.dir.recursive", "true")
 
     val jsonRdd = spark.sparkContext
-      .wholeTextFiles(path)
+      .wholeTextFiles(path, spark.sparkContext.defaultParallelism)
       .flatMap { case (_, text) => text.split("\n") }
     val raw = spark.read.json(jsonRdd)
-      .repartition(spark.sparkContext.defaultParallelism)
-      .persist()
+      .select("id", "text", "categories")
+      .persist(StorageLevel.MEMORY_ONLY_SER)
 
     if (!opts.onlyDistances()) {
       val (catBuckets, catCnts) = raw.select("categories").rdd
@@ -81,9 +83,9 @@ object WikiStats {
       .setOutputCol("words")
       .setCaseSensitive(false)
       .setStopWords(StopWordsRemover.loadDefaultStopWords("english"))
-    val withWords = stopWordsRemover.transform(lemmatizer.transform(raw))
+    val withWords = stopWordsRemover.transform(lemmatizer.transform(raw)).filter("size(words) > 0")
 
-    val countVectorizer = new CountVectorizer()
+    val countVectorizer = new SortingCountVectorizer()
       .setInputCol("words")
       .setOutputCol("tmp-counts")
       .setVocabSize(vocabLength)
@@ -112,6 +114,10 @@ object WikiStats {
     val sample = vectorized
       .filter(_.vector.numNonzeros > minLength)
       .sample(withReplacement = false, sampleProb)
+      .persist(StorageLevel.MEMORY_ONLY_SER)
+
+    // materialize the samples
+    sample.count()
 
     val (distBuckets, distCounts) = sample.rdd.cartesian(sample.rdd)
       .filter { case (a, b) => a.id != b.id }
