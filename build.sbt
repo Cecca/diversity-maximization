@@ -64,7 +64,7 @@ lazy val mllib = (project in file("mllib")).
   )
 
 lazy val experiments = (project in file("experiments")).
-  dependsOn(core).
+  dependsOn(core, mllib).
   settings(commonSettings :_*).
   settings(
     name := "diversity-maximization-experiments",
@@ -72,6 +72,7 @@ lazy val experiments = (project in file("experiments")).
       "it.unipd.dei" % "experiment-reporter" % "0.3.0",
       "org.rogach" %% "scallop" % "1.0.1",
       "org.apache.spark" %% "spark-core" % "2.1.0" % "provided",
+      "org.apache.spark" %% "spark-mllib" % "2.1.0" % "provided",
       "com.storm-enroute" %% "scalameter" % "0.7" % "bench"
     )
   ).
