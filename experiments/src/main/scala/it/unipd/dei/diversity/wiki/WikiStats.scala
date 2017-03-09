@@ -56,15 +56,11 @@ object WikiStats {
     import spark.implicits._
     spark.sparkContext.hadoopConfiguration.set("mapreduce.input.fileinputformat.input.dir.recursive", "true")
 
-    val jsonRdd = spark.sparkContext
-      .wholeTextFiles(path, spark.sparkContext.defaultParallelism)
-      .flatMap { case (_, text) => text.split("\n") }
-    val raw = spark.read.json(jsonRdd)
-      .select("id", "text", "categories")
-      .persist(StorageLevel.MEMORY_ONLY_SER)
+    val dataset = spark.read.parquet(path)
+      .select("id", "lemmas", "categories").cache()
 
     if (!opts.onlyDistances()) {
-      val (catBuckets, catCnts) = raw.select("categories").rdd
+      val (catBuckets, catCnts) = dataset.select("categories").rdd
         .map(_.getAs[Seq[String]](0).length)
         .histogram(20)
       for ((b, cnt) <- catBuckets.zip(catCnts)) {
@@ -75,15 +71,12 @@ object WikiStats {
       }
     }
 
-    val lemmatizer = new Lemmatizer()
-      .setInputCol("text")
-      .setOutputCol("lemmas")
     val stopWordsRemover = new StopWordsRemover()
       .setInputCol("lemmas")
       .setOutputCol("words")
       .setCaseSensitive(false)
       .setStopWords(StopWordsRemover.loadDefaultStopWords("english"))
-    val withWords = stopWordsRemover.transform(lemmatizer.transform(raw)).filter("size(words) > 0")
+    val withWords = stopWordsRemover.transform(dataset).filter("size(words) > 0")
 
     val countVectorizer = new SortingCountVectorizer()
       .setInputCol("words")
