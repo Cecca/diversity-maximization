@@ -28,11 +28,11 @@ object WikiStats {
     }
     val denomA = Vectors.norm(a, 2)
     val denomB = Vectors.norm(b, 2)
-    val res = numerator / (denomA * denomB)
+    val res = math.min(numerator / (denomA * denomB), 1.0)
     val dist = TWO_OVER_PI * math.acos(res)
+    require(dist != Double.NaN, "Distance NaN")
     require(dist < Double.PositiveInfinity, s"Points at infinite distance!! numerator=$numerator normA=$denomA normB=$denomB")
     require(dist > Double.NegativeInfinity, "Points at negative infinite distance!!")
-    require(dist != Double.NaN, "Distance NaN")
     dist
   }
 
@@ -49,6 +49,7 @@ object WikiStats {
       .tag("input", path)
       .tag("minimum document length", minLength)
       .tag("vocabulary size", opts.vocabulary.get.orNull)
+      .tag("sample size", opts.sampleSize())
 
     val spark = SparkSession.builder()
       .appName("WikiStats")
@@ -78,24 +79,13 @@ object WikiStats {
       .setStopWords(StopWordsRemover.loadDefaultStopWords("english"))
     val withWords = stopWordsRemover.transform(dataset).filter("size(words) > 0")
 
-//    val countVectorizer = new SortingCountVectorizer()
-//      .setInputCol("words")
-//      .setOutputCol("tmp-counts")
-//      .setVocabSize(vocabLength)
-//      .fit(withWords)
-//    val counts = countVectorizer.transform(withWords)
-//    val idf = new IDF()
-//      .setInputCol("tmp-counts")
-//      .setOutputCol("vector")
-//      .fit(counts)
-//    val vectorized = idf.transform(counts).select("id" ,"vector").as[Page].cache()
-
     val tfIdf = new TfIdf()
       .setInputCol("words")
       .setOutputCol("vector")
       .setVocabSize(vocabLength)
       .fit(withWords)
-    val vectorized = tfIdf.transform(withWords).as[Page].cache()
+    val vectorized = tfIdf.transform(withWords)
+      .select("id", "vector").as[Page].cache()
 
     if (!opts.onlyDistances()) {
       val (docLenBuckets, docLenCounts) = vectorized.rdd
@@ -110,14 +100,14 @@ object WikiStats {
     }
 
     val numDocs = vectorized.count()
-    val sampleProb = math.min(1.0, 1000.0 / numDocs)
+    val sampleProb = math.min(1.0, opts.sampleSize() / numDocs.toDouble)
     val sample = vectorized
       .filter(_.vector.numNonzeros > minLength)
       .sample(withReplacement = false, sampleProb)
       .persist(StorageLevel.MEMORY_ONLY_SER)
 
     // materialize the samples
-    sample.count()
+    println(s"Samples taken ${sample.count()}")
 
     val (distBuckets, distCounts) = sample.rdd.cartesian(sample.rdd)
       .filter { case (a, b) => a.id != b.id }
@@ -136,6 +126,8 @@ object WikiStats {
 
     println(experiment.toSimpleString)
     experiment.saveAsJsonFile(true)
+    spark.sparkContext.cancelAllJobs()
+    spark.stop()
   }
 
   class Opts(args: Array[String]) extends ScallopConf(args) {
@@ -147,6 +139,8 @@ object WikiStats {
     val minLength = opt[Int]()
 
     val onlyDistances = toggle(default = Some(false))
+
+    val sampleSize = opt[Long](default = Some(1000L))
 
   }
 

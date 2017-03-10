@@ -155,30 +155,21 @@ extends Estimator[TfIdfModel] with TfIdfParams {
     }.cache()
     val fullVocabSize = wordAndDocCounts.count()
 
-    val vocab = wordAndDocCounts
-      .map { case (word, (count, dfCount)) =>
-        (word, count)
-      }.top(math.min(fullVocabSize, vocSize).toInt)(Ordering.by(_._2))
-      .map(_._1)
-    require(vocab.length > 0, "The vocabulary size should be > 0. Lower minDF as necessary.")
-
-    val strOrd = Ordering[String]
-    val vocabBr = input.sparkContext.broadcast(vocab.toSet)//.sorted(strOrd))
+    val topWords = wordAndDocCounts
+      .top(math.min(fullVocabSize, vocSize).toInt)(Ordering.by({case (_, (count, _)) => count}))
+    require(topWords.length > 0, "The vocabulary size should be > 0. Lower minDF as necessary.")
 
     val numDocs: Long = totalDocs.value
-    val idf = wordAndDocCounts
-      .filter{ case (word, _) =>
-//        java.util.Arrays.binarySearch(vocabBr.value, word, strOrd) >= 0
-        vocabBr.value.contains(word)
-      }.map { case (word, (count, dfCount)) =>
-        val docFreq = dfCount.toLong/numDocs
-        (word, math.log((numDocs + 1L) / (docFreq + 1)))
-      }.collectAsMap()
-    vocabBr.unpersist()
 
-    val idfArr = Array.ofDim[Double](vocab.length)
-    for (i <- vocab.indices) {
-      idfArr(i) = idf(vocab(i))
+    val vocab = Array.ofDim[String](topWords.length)
+    val idfArr = Array.ofDim[Double](topWords.length)
+    for (i <- topWords.indices) {
+      topWords(i) match {
+        case (word, (wordCount, documentCount)) =>
+          vocab(i) = word
+          val df = documentCount.toDouble / numDocs
+          idfArr(i) = math.log((numDocs + 1) / (df + 1))
+      }
     }
 
     copyValues(new TfIdfModel(uid, vocab, idfArr).setParent(this))
