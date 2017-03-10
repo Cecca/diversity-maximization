@@ -114,6 +114,7 @@ object WikiStats {
     require(sampleCnt > 0, "No samples taken!")
 
     val (distBuckets, distCounts) = sample.rdd.cartesian(sample.rdd)
+      .coalesce(spark.sparkContext.defaultParallelism)
       .filter { case (a, b) => a.id != b.id }
       .map { case (a, b) => cosineDistance(a.vector, b.vector) }
       .histogram(100)
