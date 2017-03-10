@@ -85,7 +85,9 @@ object WikiStats {
       .setVocabSize(vocabLength)
       .fit(withWords)
     val vectorized = tfIdf.transform(withWords)
-      .select("id", "vector").as[Page].cache()
+      .select("id", "vector").as[Page]
+      .filter(_.vector.numNonzeros >= minLength)
+      .cache()
 
     if (!opts.onlyDistances()) {
       val (docLenBuckets, docLenCounts) = vectorized.rdd
@@ -101,13 +103,15 @@ object WikiStats {
 
     val numDocs = vectorized.count()
     val sampleProb = math.min(1.0, opts.sampleSize() / numDocs.toDouble)
+    println(s"Sampling with probability $sampleProb (from $numDocs documents)")
     val sample = vectorized
-      .filter(_.vector.numNonzeros > minLength)
       .sample(withReplacement = false, sampleProb)
-      .persist(StorageLevel.MEMORY_ONLY_SER)
+      .persist()
 
     // materialize the samples
-    println(s"Samples taken ${sample.count()}")
+    val sampleCnt = sample.count()
+    println(s"Samples taken $sampleCnt")
+    require(sampleCnt > 0, "No samples taken!")
 
     val (distBuckets, distCounts) = sample.rdd.cartesian(sample.rdd)
       .filter { case (a, b) => a.id != b.id }
