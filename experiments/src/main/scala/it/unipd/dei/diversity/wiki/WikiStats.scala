@@ -1,7 +1,7 @@
 package it.unipd.dei.diversity.wiki
 
 import it.unipd.dei.diversity.ExperimentUtil.jMap
-import it.unipd.dei.diversity.mllib.{Lemmatizer, SortingCountVectorizer}
+import it.unipd.dei.diversity.mllib.{Lemmatizer, SortingCountVectorizer, TfIdf}
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.ml.feature.{IDF, StopWordsRemover}
 import org.apache.spark.ml.linalg.{Vector, Vectors}
@@ -78,17 +78,24 @@ object WikiStats {
       .setStopWords(StopWordsRemover.loadDefaultStopWords("english"))
     val withWords = stopWordsRemover.transform(dataset).filter("size(words) > 0")
 
-    val countVectorizer = new SortingCountVectorizer()
+//    val countVectorizer = new SortingCountVectorizer()
+//      .setInputCol("words")
+//      .setOutputCol("tmp-counts")
+//      .setVocabSize(vocabLength)
+//      .fit(withWords)
+//    val counts = countVectorizer.transform(withWords)
+//    val idf = new IDF()
+//      .setInputCol("tmp-counts")
+//      .setOutputCol("vector")
+//      .fit(counts)
+//    val vectorized = idf.transform(counts).select("id" ,"vector").as[Page].cache()
+
+    val tfIdf = new TfIdf()
       .setInputCol("words")
-      .setOutputCol("tmp-counts")
+      .setOutputCol("vector")
       .setVocabSize(vocabLength)
       .fit(withWords)
-    val counts = countVectorizer.transform(withWords)
-    val idf = new IDF()
-      .setInputCol("tmp-counts")
-      .setOutputCol("vector")
-      .fit(counts)
-    val vectorized = idf.transform(counts).select("id" ,"vector").as[Page].cache()
+    val vectorized = tfIdf.transform(withWords).as[Page].cache()
 
     if (!opts.onlyDistances()) {
       val (docLenBuckets, docLenCounts) = vectorized.rdd
