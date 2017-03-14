@@ -1,19 +1,17 @@
 package it.unipd.dei.diversity.mllib
 
-import it.unipd.dei.diversity.mllib.TfIdf.Buffer
-import org.apache.spark.annotation.{DeveloperApi, Since}
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
+import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.ml.feature.CountVectorizerModel
-import org.apache.spark.ml.{Estimator, Model}
 import org.apache.spark.ml.linalg.{SQLDataTypes, Vectors}
 import org.apache.spark.ml.param._
 import org.apache.spark.ml.util.{Identifiable, MLWritable, MLWriter}
+import org.apache.spark.ml.{Estimator, Model}
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{ArrayType, StringType, StructType}
 import org.apache.spark.sql.{DataFrame, Dataset}
-import org.apache.spark.sql.functions._
 
-import scala.collection.mutable.ArrayBuffer
 import scala.math.Ordering
 
 // TODO Add binary parameter
@@ -25,6 +23,7 @@ trait TfIdfParams extends Params with InputCol with OutputCol {
     * vocabSize terms ordered by term frequency across the corpus.
     *
     * Default: 2^18^
+    *
     * @group param
     */
   val vocabSize: IntParam =
@@ -41,6 +40,7 @@ trait TfIdfParams extends Params with InputCol with OutputCol {
     * documents.
     *
     * Default: 1.0
+    *
     * @group param
     */
   val minDF: DoubleParam = new DoubleParam(this, "minDF", "Specifies the minimum number of" +
@@ -62,6 +62,7 @@ trait TfIdfParams extends Params with InputCol with OutputCol {
     *
     *
     * Default: 1.0
+    *
     * @group param
     */
   val minTF: DoubleParam = new DoubleParam(this, "minTF", "Filter to ignore rare words in" +
@@ -112,41 +113,28 @@ extends Estimator[TfIdfModel] with TfIdfParams {
     val totalDocs = dataset.sparkSession.sparkContext.longAccumulator("TF-IDF: Document count")
 
     val wordAndDocCounts: RDD[(String, (Long, Long))] = input.mapPartitions { docs =>
-      // Reusable scratch buffers
-      val words = Buffer()
-      val counts = ArrayBuffer[Long]()
-      val distinctWords = ArrayBuffer[String]()
+      val wc = new Object2LongOpenHashMap[String]()
 
-      docs.flatMap { tokens =>
-        require(tokens.nonEmpty, "Empty tokens list")
+      for (tokens <- docs) {
         totalDocs.add(1L)
-        words.clear()
-        words.appendAll(tokens)
-        words.sortInPlace()
-
-        counts.clear()
-        counts.sizeHint(words.size)
-        var countsIdx = 0
-
-        distinctWords.clear()
-        distinctWords.sizeHint(words.size)
-        distinctWords.append(words(0))
-        counts.append(1L)
-
-        var lastWord = words(0)
-        var wordsIdx = 1 // start from the second word, the first is counted manually
-        while (wordsIdx < words.size) {
-          if (words(wordsIdx).equals(lastWord)) {
-            counts(countsIdx) += 1
+        for (w <- tokens) {
+          if (wc.containsKey(w)) {
+            wc.put(w, wc.getLong(w) + 1)
           } else {
-            countsIdx += 1
-            counts.append(1L)
-            distinctWords.append(words(wordsIdx))
-            lastWord = words(wordsIdx)
+            wc.put(w, 1L)
           }
-          wordsIdx += 1
         }
-        distinctWords.zip(counts).map { case (word, count) => (word, (count, 1L)) }
+      }
+
+      new Iterator[(String, (Long, Long))]() {
+        val it = wc.object2LongEntrySet().fastIterator()
+
+        override def hasNext: Boolean = it.hasNext
+
+        override def next(): (String, (Long, Long)) = {
+          val entry = it.next()
+          (entry.getKey, (entry.getLongValue, 1L))
+        }
       }
     }.reduceByKey { case ((wc1, df1), (wc2, df2)) =>
       (wc1 + wc2, df1 + df2)
@@ -160,6 +148,8 @@ extends Estimator[TfIdfModel] with TfIdfParams {
     require(topWords.length > 0, "The vocabulary size should be > 0. Lower minDF as necessary.")
 
     val numDocs: Long = totalDocs.value
+    require(numDocs > 0, "Counted only 0 documents!")
+    println(s"Total number of documents $numDocs")
 
     val vocab = Array.ofDim[String](topWords.length)
     val idfArr = Array.ofDim[Double](topWords.length)
@@ -169,6 +159,8 @@ extends Estimator[TfIdfModel] with TfIdfParams {
           vocab(i) = word
           val df = documentCount.toDouble / numDocs
           idfArr(i) = math.log((numDocs + 1) / (df + 1))
+          println(s"Word $word: wc=$wordCount, idf=${idfArr(i)} (df = $df, # docs appearing=${documentCount})")
+          require(idfArr(i) >= 0, s"Negative idf for word $word: ${idfArr(i)}")
       }
     }
 

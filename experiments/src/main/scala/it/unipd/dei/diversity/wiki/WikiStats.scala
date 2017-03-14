@@ -1,12 +1,11 @@
 package it.unipd.dei.diversity.wiki
 
 import it.unipd.dei.diversity.ExperimentUtil.jMap
-import it.unipd.dei.diversity.mllib.{Lemmatizer, SortingCountVectorizer, TfIdf}
+import it.unipd.dei.diversity.mllib.TfIdf
 import it.unipd.dei.experiment.Experiment
-import org.apache.spark.ml.feature.{IDF, StopWordsRemover}
+import org.apache.spark.ml.feature.StopWordsRemover
 import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.storage.StorageLevel
 import org.rogach.scallop.ScallopConf
 
 case class Page(id: Long, vector: Vector)
@@ -31,7 +30,11 @@ object WikiStats {
     val res = math.min(numerator / (denomA * denomB), 1.0)
     val dist = TWO_OVER_PI * math.acos(res)
     require(dist != Double.NaN, "Distance NaN")
-    require(dist < Double.PositiveInfinity, s"Points at infinite distance!! numerator=$numerator normA=$denomA normB=$denomB")
+    require(dist < Double.PositiveInfinity,
+      s"Points at infinite distance!! " +
+        s"numerator=$numerator normA=$denomA normB=$denomB \n" +
+        s"vecA: $a\n" +
+        s"vecB: $b")
     require(dist > Double.NegativeInfinity, "Points at negative infinite distance!!")
     dist
   }
@@ -86,7 +89,7 @@ object WikiStats {
       .fit(withWords)
     val vectorized = tfIdf.transform(withWords)
       .select("id", "vector").as[Page]
-      .filter(_.vector.numNonzeros >= minLength)
+      .filter(p => p.vector.numNonzeros > 0 && p.vector.numNonzeros >= minLength)
       .cache()
 
     if (!opts.onlyDistances()) {
