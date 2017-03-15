@@ -6,6 +6,19 @@ trait Matroid[T] {
 
   def isIndependent(elements: Seq[T]): Boolean
 
+  def independentSetOfSize(elements: Seq[T], k: Int): Seq[T] = {
+    // FIXME optimize
+    var is = Vector[T]()
+    val elemIterator = elements.iterator
+    while(is.size < k && elemIterator.hasNext) {
+      val e = elemIterator.next()
+      if (isIndependent(is :+ e)) {
+        is = is :+ e
+      }
+    }
+    is
+  }
+
 }
 
 /**
