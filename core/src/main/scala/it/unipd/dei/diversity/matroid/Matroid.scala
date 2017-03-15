@@ -71,8 +71,8 @@ class PartitionMatroid[T](val categories: Map[Int, Int],
 
 }
 
-class TransversalMatroid2[T:ClassTag, S](val sets: Array[S],
-                                         val getSets: T => Seq[S]) extends Matroid[T] {
+class TransversalMatroid[T:ClassTag, S](val sets: Array[S],
+                                        val getSets: T => Seq[S]) extends Matroid[T] {
 
   override def isIndependent(elements: Seq[T]): Boolean = {
     if (elements.length > sets.length) {
@@ -139,86 +139,6 @@ class TransversalMatroid2[T:ClassTag, S](val sets: Array[S],
       }
     }
     false
-  }
-
-}
-
-class TransversalMatroid[T](val sets: Array[Int],
-                            val getSets: T => Seq[Int]) extends Matroid[T] {
-
-  require(
-    sets.zip(sets.tail).map({ case (x, y) => x <= y }).reduce(_ && _),
-    s"The sets array should be sorted ${sets.mkString("[", ", ", "]")}")
-
-  override def isIndependent(elements: Seq[T]): Boolean = {
-    if (elements.length > sets.length) {
-      return false
-    }
-    val matched = Array.ofDim[Boolean](sets.length)
-
-    val elementsSets = elements.map(getSets(_).toArray).toArray
-    // Return true only if all the elements in the given set are matched to some set
-    TransversalMatroid.bipartiteMatchingSize(sets, elementsSets) == elements.length
-  }
-
-  override def coreSetPoints(elements: Seq[T], k: Int): Seq[T] = {
-    // First, get an independent set of size k
-    val is = independentSetOfSize(elements, k)
-    val numAdditionalPoints = is.size
-    // Then, compute the set of delegates. For each set represented by
-    // elements, we add at most numAdditionalPoints to the output.
-    val output = mutable.Set[T](is :_*)
-    val matchedSets = Set[Int](is.flatMap(x => getSets(x)) :_*)
-    val matchedSetsCounts = mutable.HashMap[Int, Int]()
-    for (elem <- is; set <- getSets(elem)) {
-      if (matchedSets.contains(set) && matchedSetsCounts.getOrElse(set, 0) < numAdditionalPoints) {
-        output.add(elem)
-        matchedSetsCounts.update(set, matchedSetsCounts.getOrElse(set, 0) + 1)
-      }
-    }
-    output.toSeq
-  }
-
-}
-
-object TransversalMatroid {
-
-  @inline def indexOf(sets: Array[Int], s: Int): Int = java.util.Arrays.binarySearch(sets, s)
-
-  def hasAugmentingPath(matched: Array[Int],
-                        sets: Array[Int],
-                        setsIncidentToElement: Array[Array[Int]],
-                        elementIdx: Int,
-                        seen: Array[Boolean]): Boolean = {
-    // Try all the jobs adjacent to the given element
-    for (s <- setsIncidentToElement(elementIdx)) {
-      val sIdx = indexOf(sets, s)
-      if (!seen(sIdx)) {
-        seen(sIdx) = true
-
-        if (matched(sIdx) < 0 || hasAugmentingPath(matched, sets, setsIncidentToElement, matched(sIdx), seen)) {
-          matched(sIdx) = elementIdx
-          return true
-        }
-      }
-    }
-    false
-  }
-
-  def bipartiteMatchingSize(sets: Array[Int], elements: Array[Array[Int]]): Int = {
-    val matched = Array.fill[Int](sets.length)(-1)
-    val seen = Array.fill[Boolean](sets.length)(false)
-    var matchedCnt = 0
-    for (eIdx <- elements.indices) {
-      for (i <- seen.indices) {
-        seen(i) = false
-      }
-      if (hasAugmentingPath(matched, sets, elements, eIdx, seen)) {
-        matchedCnt += 1
-      }
-    }
-
-    matchedCnt
   }
 
 }
