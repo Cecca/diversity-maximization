@@ -16,6 +16,8 @@
 
 package it.unipd.dei.diversity
 
+import it.unipd.dei.diversity.matroid.Matroid
+
 import scala.collection.mutable.ArrayBuffer
 import scala.reflect.ClassTag
 
@@ -41,7 +43,33 @@ object MapReduceCoreset {
     new MapReduceCoreset(
       a.kernel ++ b.kernel,
       a.delegates ++ b.delegates)
-  
+
+
+  def run[T:ClassTag](points: Array[T],
+                      kernelSize: Int,
+                      k: Int,
+                      matroid: Matroid[T],
+                      distance: (T, T) => Double): MapReduceCoreset[T] = {
+    val resultSize = kernelSize * k
+    if (points.length < kernelSize) {
+      new MapReduceCoreset(points.toVector, Vector.empty[T])
+    } else {
+      // FIXME Optimize
+      val kernel = FarthestPointHeuristic.run(points, kernelSize, distance)
+      val clusters: Map[T, Seq[T]] = points.map { p =>
+        val c = kernel.minBy(x => distance(x, p))
+        (c, p)
+      }.groupBy(_._1).mapValues(_.map(_._2))
+
+      val coreset = clusters.values.flatMap { cluster =>
+        matroid.coreSetPoints(cluster, k)
+      }
+
+      new MapReduceCoreset[T](coreset.toVector, Vector.empty)
+    }
+  }
+
+
   def run[T:ClassTag](points: Array[T],
                       kernelSize: Int,
                       numDelegates: Int,
