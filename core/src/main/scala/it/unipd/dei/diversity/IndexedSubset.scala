@@ -11,10 +11,25 @@ class IndexedSubset[T] private (val superSet: IndexedSeq[T], private val flags: 
 
   def contains(idx: Int): Boolean = flags(idx)
 
-  def toSet: Set[T] =
-    superSet.zipWithIndex.filter({case (e, i) => flags(i)}).map(_._1).toSet
+  private def traversableLike = superSet.zipWithIndex.filter({case (e, i) => flags(i)}).map(_._1)
+
+  def toSet: Set[T] = traversableLike.toSet
+
+  def toVector: Vector[T] = traversableLike.toVector
 
   def copy(): IndexedSubset[T] = new IndexedSubset[T](superSet, flags.clone())
+
+  def size: Int = {
+    var s = 0
+    var i = 0
+    while (i < flags.length) {
+      if (flags(i)) {
+        s += 1
+      }
+      i += 1
+    }
+    s
+  }
 
 }
 

@@ -16,6 +16,8 @@
 
 package it.unipd.dei.diversity
 
+import it.unipd.dei.diversity.matroid.Matroid
+
 import scala.reflect.ClassTag
 
 /**
@@ -155,6 +157,56 @@ object LocalSearch {
       partial
     }
   }
+
+  def run[T:ClassTag](input: IndexedSeq[T],
+                      k: Int,
+                      epsilon: Double,
+                      matroid: Matroid[T],
+                      distance: (T, T) => Double,
+                      diversity: (IndexedSubset[T], (T, T) => Double) => Double)
+  : IndexedSeq[T] = {
+    if (input.length <= k) {
+      input
+    } else {
+      val is = matroid.independentSetOfSize(input, k)
+      require(is.size == k, s"No idependent set of size $k in the input of LocalSearch")
+
+      var foundImprovingSwap = true
+      while(foundImprovingSwap) {
+        // This will be reset to true if a swap is found
+        foundImprovingSwap = false
+        // Compute the threshold for this iteration
+        val threshold = (1+epsilon/k)*diversity(is, distance)
+
+        // Try to find an improving swap
+        var i = 0
+        while (i < input.length && !foundImprovingSwap) {
+          if (is.contains(i)) { // If i is inside the partial solution
+            var j = i + 1
+            while (j < input.length && !foundImprovingSwap) {
+              if (!is.contains(j)) { // If j is not inside the partial solution
+                // Try the swap
+                is.remove(i) // move i-th point outside the solution
+                is.add(j) // move j-th point inside the solution
+                if (diversity(is, distance) > threshold) {
+                  // Swap successful, set foundImprovingSwap to break the inner loops
+                  foundImprovingSwap = true
+                } else {
+                  // Swap unsuccessful, reset to previous situation
+                  is.add(i) // move i-th point inside the solution again
+                  is.remove(j) // move j-th point outside the solution again
+                }
+              }
+              j += 1
+            }
+          }
+          i += 1
+        }
+      }
+      is.toVector
+    }
+  }
+
 
   def coreset[T:ClassTag](points: IndexedSeq[T],
                           k: Int,

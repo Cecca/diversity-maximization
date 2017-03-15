@@ -1,10 +1,17 @@
 package it.unipd.dei.diversity.matroid
 
+import it.unipd.dei.diversity.IndexedSubset
+
 import scala.collection.mutable
 
 trait Matroid[T] {
 
   def isIndependent(elements: Seq[T]): Boolean
+
+  def isIndependent(elements: IndexedSubset[T]): Boolean = {
+    println("WARNING: Using unoptimized implementation of isIndependent")
+    isIndependent(elements.toSet.toSeq)
+  }
 
   def coreSetPoints(elements: Seq[T], k: Int): Seq[T]
 
@@ -20,6 +27,20 @@ trait Matroid[T] {
     }
     is
   }
+
+  def independentSetOfSize(elements: IndexedSeq[T], k: Int): IndexedSubset[T] = {
+    val is = IndexedSubset(elements)
+    var i = 0
+    while (i < elements.size && is.size < k) {
+      is.add(i)
+      if(!isIndependent(is)) {
+        is.remove(i)
+      }
+      i += 1
+    }
+    is
+  }
+
 
 }
 
