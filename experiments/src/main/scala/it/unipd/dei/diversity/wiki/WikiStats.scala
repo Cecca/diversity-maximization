@@ -1,6 +1,8 @@
 package it.unipd.dei.diversity.wiki
 
 import it.unipd.dei.diversity.ExperimentUtil.jMap
+import it.unipd.dei.diversity.IndexedSubset
+import it.unipd.dei.diversity.matroid.TransversalMatroid
 import it.unipd.dei.diversity.mllib.TfIdf
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.ml.feature.StopWordsRemover
@@ -8,7 +10,9 @@ import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.sql.SparkSession
 import org.rogach.scallop.ScallopConf
 
-case class Page(id: Long, vector: Vector)
+import scala.collection.mutable.ArrayBuffer
+
+case class Page(id: Long, categories: Array[String], vector: Vector)
 
 /**
   * Computes statistics about wikipedia dumps
@@ -39,6 +43,19 @@ object WikiStats {
     dist
   }
 
+  def cosineDistance(a: Page, b: Page): Double = cosineDistance(a.vector, b.vector)
+
+  def diversity(points: IndexedSubset[Page],
+                distance: (Page, Page) => Double): Double = {
+    var sum = 0.0
+    for (i <- points.supersetIndices; j <- points.supersetIndices) {
+      if (i < j) {
+        sum += distance(points.superSet(i), points.superSet(j))
+      }
+    }
+    sum
+  }
+
   def main(args: Array[String]) {
     val opts = new Opts(args)
     opts.verify()
@@ -63,7 +80,7 @@ object WikiStats {
     val dataset = spark.read.parquet(path)
       .select("id", "lemmas", "categories").cache()
 
-    if (!opts.onlyDistances()) {
+    if (opts.categories()) {
       val (catBuckets, catCnts) = dataset.select("categories").rdd
         .map(_.getAs[Seq[String]](0).length)
         .histogram(20)
@@ -88,11 +105,16 @@ object WikiStats {
       .setVocabSize(vocabLength)
       .fit(withWords)
     val vectorized = tfIdf.transform(withWords)
-      .select("id", "vector").as[Page]
+      .select("id", "categories", "vector").as[Page]
       .filter(p => p.vector.numNonzeros > 0 && p.vector.numNonzeros >= minLength)
       .cache()
 
-    if (!opts.onlyDistances()) {
+    val numDocs = vectorized.count()
+    experiment.append("stats",
+      jMap("num documents" -> numDocs))
+
+
+    if (opts.docLength()) {
       val (docLenBuckets, docLenCounts) = vectorized.rdd
         .map(_.vector.numNonzeros)
         .histogram(20)
@@ -104,33 +126,62 @@ object WikiStats {
       }
     }
 
-    val numDocs = vectorized.count()
-    val sampleProb = math.min(1.0, opts.sampleSize() / numDocs.toDouble)
-    println(s"Sampling with probability $sampleProb (from $numDocs documents)")
-    val sample = vectorized
-      .sample(withReplacement = false, sampleProb)
-      .persist()
+    if (opts.distances()) {
+      val sampleProb = math.min(1.0, opts.sampleSize() / numDocs.toDouble)
+      println(s"Sampling with probability $sampleProb (from $numDocs documents)")
+      val sample = vectorized
+        .sample(withReplacement = false, sampleProb)
+        .persist()
 
-    // materialize the samples
-    val sampleCnt = sample.count()
-    println(s"Samples taken $sampleCnt")
-    require(sampleCnt > 0, "No samples taken!")
+      // materialize the samples
+      val sampleCnt = sample.count()
+      println(s"Samples taken $sampleCnt")
+      require(sampleCnt > 0, "No samples taken!")
 
-    val (distBuckets, distCounts) = sample.rdd.cartesian(sample.rdd)
-      .coalesce(spark.sparkContext.defaultParallelism)
-      .filter { case (a, b) => a.id != b.id }
-      .map { case (a, b) => cosineDistance(a.vector, b.vector) }
-      .histogram(100)
+      val (distBuckets, distCounts) = sample.rdd.cartesian(sample.rdd)
+        .coalesce(spark.sparkContext.defaultParallelism)
+        .filter { case (a, b) => a.id != b.id }
+        .map { case (a, b) => cosineDistance(a.vector, b.vector) }
+        .histogram(100)
 
-    for ((b, cnt) <- distBuckets.zip(distCounts)) {
-      experiment.append("distance distribution length",
-        jMap(
-          "distance" -> b,
-          "count" -> cnt))
+      for ((b, cnt) <- distBuckets.zip(distCounts)) {
+        experiment.append("distance distribution length",
+          jMap(
+            "distance" -> b,
+            "count" -> cnt))
+      }
     }
 
-    experiment.append("stats",
-      jMap("num documents" -> numDocs))
+    if (opts.sampleDiversity.supplied) {
+      require(opts.sampleSize.supplied)
+      require(opts.k.supplied)
+      val k = opts.k()
+      val categories = vectorized.rdd.flatMap(_.categories).distinct().collect()
+      val numCategories = categories.length
+      println(s"There are $numCategories categories")
+      require(numCategories > 0, "There are no categories!!!")
+      val matroid = new TransversalMatroid[Page, String](categories, _.categories)
+      val diversities = new ArrayBuffer[(Int, Double)]()
+      for (i <- 0 until opts.sampleDiversity()) {
+        val sampleProb = math.min(1.0, opts.sampleSize() / numDocs.toDouble)
+        println(s"Sampling with probability $sampleProb (from $numDocs documents)")
+        val sample: Array[Page] = vectorized
+          .sample(withReplacement = false, sampleProb)
+          .collect()
+        val is = matroid.independentSetOfSize(sample, k)
+        val div = diversity(is, cosineDistance)
+        diversities.append((i, div))
+      }
+      val numEdgesInSolution = k * (k - 1) / 2
+      println(s"The solution contains $numEdgesInSolution edges")
+      for ((i, d) <- diversities) {
+        experiment.append("diversity",
+          jMap(
+            "sample-idx" -> i,
+            "diversity" -> d,
+            "diversity normalized" -> d / numEdgesInSolution.toDouble))
+      }
+    }
 
     println(experiment.toSimpleString)
     experiment.saveAsJsonFile(true)
@@ -146,10 +197,19 @@ object WikiStats {
 
     val minLength = opt[Int]()
 
-    val onlyDistances = toggle(default = Some(false))
+    val distances = toggle(default = Some(false))
 
     val sampleSize = opt[Long](default = Some(1000L))
 
+    val categories = toggle(default = Some(false))
+
+    val docLength = toggle(default = Some(false))
+
+    val k = opt[Int]()
+
+    val sampleDiversity = opt[Int](
+      descr = "Compute the remote-clique diversity under transversal" +
+        " matroid constraints using the given number of samples.")
   }
 
 }

@@ -5,7 +5,7 @@ import it.unipd.dei.diversity.IndexedSubset
 import scala.collection.mutable
 import scala.reflect.ClassTag
 
-trait Matroid[T] {
+trait Matroid[T] extends Serializable {
 
   def isIndependent(elements: Seq[T]): Boolean
 
