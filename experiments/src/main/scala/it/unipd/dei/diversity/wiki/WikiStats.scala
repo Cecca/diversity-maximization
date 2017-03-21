@@ -5,14 +5,14 @@ import it.unipd.dei.diversity.IndexedSubset
 import it.unipd.dei.diversity.matroid.TransversalMatroid
 import it.unipd.dei.diversity.mllib.TfIdf
 import it.unipd.dei.experiment.Experiment
-import org.apache.spark.ml.feature.StopWordsRemover
+import org.apache.spark.ml.feature.{StopWordsRemover, Word2VecModel}
 import org.apache.spark.ml.linalg.{Vector, Vectors}
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{Dataset, SparkSession}
 import org.rogach.scallop.ScallopConf
 
 import scala.collection.mutable.ArrayBuffer
 
-case class Page(id: Long, categories: Array[String], vector: Vector)
+case class Page(id: Long, title: String, categories: Array[String], vector: Vector)
 
 /**
   * Computes statistics about wikipedia dumps
@@ -20,8 +20,9 @@ case class Page(id: Long, categories: Array[String], vector: Vector)
 object WikiStats {
 
   val TWO_OVER_PI: Double = 2.0 / math.Pi
+  val ONE_OVER_PI: Double = 1.0 / math.Pi
 
-  def cosineDistance(a: Vector, b: Vector): Double = {
+  def cosineDistance(a: Vector, b: Vector, normalization: Double): Double = {
     require(a.numNonzeros > 0, "First vector is zero-valued")
     require(b.numNonzeros > 0, "Second vector is zero-valued")
     require(a.size == b.size)
@@ -32,7 +33,7 @@ object WikiStats {
     val denomA = Vectors.norm(a, 2)
     val denomB = Vectors.norm(b, 2)
     val res = math.min(numerator / (denomA * denomB), 1.0)
-    val dist = TWO_OVER_PI * math.acos(res)
+    val dist = normalization * math.acos(res)
     require(dist != Double.NaN, "Distance NaN")
     require(dist < Double.PositiveInfinity,
       s"Points at infinite distance!! " +
@@ -43,7 +44,37 @@ object WikiStats {
     dist
   }
 
-  def cosineDistance(a: Page, b: Page): Double = cosineDistance(a.vector, b.vector)
+  def cosineDistanceOnlyPositive(a: Page, b: Page): Double = {
+    val d = cosineDistance(a.vector, b.vector, TWO_OVER_PI)
+    require(d <= 1.0, s"Cosine distance greater than one! a=`${a.title}`, b=`${b.title}`")
+    d
+  }
+
+  def cosineDistanceAlsoNegative(a: Page, b: Page): Double = {
+    val d = cosineDistance(a.vector, b.vector, ONE_OVER_PI)
+    require(d <= 1.0, s"Cosine distance greater than one ($d)! a=`${a.title}`, b=`${b.title}`")
+    d
+  }
+
+  def euclidean(a: Page, b: Page): Double = Vectors.sqdist(a.vector, b.vector)
+
+  def manhattan(a: Page, b: Page): Double = {
+    var i = 0
+    val size = a.vector.size
+    var sum = 0.0
+    while (i < size) {
+      sum += math.abs(a.vector(i) - b.vector(i))
+      i += 1
+    }
+    sum
+  }
+
+  val distanceFunctions: Map[String, (Page, Page) => Double] = Map(
+    "cosine-only-positive" -> cosineDistanceOnlyPositive,
+    "cosine-also-negative" -> cosineDistanceAlsoNegative,
+    "euclidean" -> euclidean,
+    "manhattan" -> manhattan
+  )
 
   def diversity(points: IndexedSubset[Page],
                 distance: (Page, Page) => Double): Double = {
@@ -56,42 +87,10 @@ object WikiStats {
     sum
   }
 
-  def main(args: Array[String]) {
-    val opts = new Opts(args)
-    opts.verify()
-
-    val path = opts.input()
-    val vocabLength = opts.vocabulary.get.getOrElse(Int.MaxValue)
-    val minLength = opts.minLength.get.getOrElse(0)
-
-    val experiment = new Experiment()
-    experiment
-      .tag("input", path)
-      .tag("minimum document length", minLength)
-      .tag("vocabulary size", opts.vocabulary.get.orNull)
-      .tag("sample size", opts.sampleSize())
-
-    val spark = SparkSession.builder()
-      .appName("WikiStats")
-      .getOrCreate()
+  def loadDataset(spark: SparkSession, opts: Opts): Dataset[Page] = {
     import spark.implicits._
-    spark.sparkContext.hadoopConfiguration.set("mapreduce.input.fileinputformat.input.dir.recursive", "true")
-
-    val dataset = spark.read.parquet(path)
-      .select("id", "lemmas", "categories").cache()
-
-    if (opts.categories()) {
-      val (catBuckets, catCnts) = dataset.select("categories").rdd
-        .map(_.getAs[Seq[String]](0).length)
-        .histogram(20)
-      for ((b, cnt) <- catBuckets.zip(catCnts)) {
-        experiment.append("categories per document",
-          jMap(
-            "num categories" -> b,
-            "count" -> cnt))
-      }
-    }
-
+    val dataset = spark.read.parquet(opts.input())
+      .select("id", "title", "lemmas", "categories").cache()
     val stopWordsRemover = new StopWordsRemover()
       .setInputCol("lemmas")
       .setOutputCol("words")
@@ -99,23 +98,82 @@ object WikiStats {
       .setStopWords(StopWordsRemover.loadDefaultStopWords("english"))
     val withWords = stopWordsRemover.transform(dataset).filter("size(words) > 0")
 
-    val tfIdf = new TfIdf()
-      .setInputCol("words")
-      .setOutputCol("vector")
-      .setVocabSize(vocabLength)
-      .fit(withWords)
-    val vectorized = tfIdf.transform(withWords)
-      .select("id", "categories", "vector").as[Page]
-      .filter(p => p.vector.numNonzeros > 0 && p.vector.numNonzeros >= minLength)
-      .cache()
+    if(opts.word2vecModel.isDefined) {
+      val model = Word2VecModel.load(opts.word2vecModel())
+      model
+        .setInputCol("words")
+        .setOutputCol("vector")
+        .transform(withWords)
+        .select("id", "title", "categories", "vector").as[Page]
+        .filter(p => p.vector.numNonzeros > 0)
+    } else {
+      val vocabLength = opts.vocabulary.get.getOrElse(Int.MaxValue)
+      val minLength = opts.minLength.get.getOrElse(0)
 
-    val numDocs = vectorized.count()
+      val tfIdf = new TfIdf()
+        .setInputCol("words")
+        .setOutputCol("vector")
+        .setVocabSize(vocabLength)
+        .fit(withWords)
+      tfIdf.transform(withWords)
+        .select("id", "title", "categories", "vector").as[Page]
+        .filter(p => p.vector.numNonzeros > 0 && p.vector.numNonzeros >= minLength)
+    }
+  }
+
+  def main(args: Array[String]) {
+    val opts = new Opts(args)
+    opts.verify()
+
+    val path = opts.input()
+    val vocabLength = opts.vocabulary.get.getOrElse(Int.MaxValue)
+    val minLength = opts.minLength.get.getOrElse(0)
+    val distanceFn: (Page, Page) => Double =
+      distanceFunctions(opts.distanceFunction.get.map{ desc =>
+        if ("cosine".equals(desc)) {
+          if (opts.word2vecModel.isDefined) "cosine-also-negative"
+          else "cosine-only-positive"
+        } else {
+          desc
+        }
+      }.get)
+
+    val experiment = new Experiment()
+    experiment
+      .tag("input", path)
+      .tag("minimum document length", minLength)
+      .tag("vocabulary size", opts.vocabulary.get.orNull)
+      .tag("word2vec model", opts.word2vecModel.get.orNull)
+      .tag("distance function", opts.distanceFunction())
+      .tag("sample size", opts.sampleSize())
+
+    val spark = SparkSession.builder()
+      .appName("WikiStats")
+      .getOrCreate()
+    spark.sparkContext.hadoopConfiguration.set("mapreduce.input.fileinputformat.input.dir.recursive", "true")
+
+    val dataset = loadDataset(spark, opts).cache()
+
+    val numDocs = dataset.count()
     experiment.append("stats",
       jMap("num documents" -> numDocs))
 
+    if (opts.categories()) {
+      val (catBuckets, catCnts) = dataset.select("categories").rdd
+        .map(_.getAs[Seq[String]](0).length)
+        .histogram(20)
+      for ((b, cnt) <- catBuckets.zip(catCnts)) {
+        experiment.append("categories per document",
+        jMap(
+        "num categories" -> b,
+        "count" -> cnt))
+      }
+    }
+
+
 
     if (opts.docLength()) {
-      val (docLenBuckets, docLenCounts) = vectorized.rdd
+      val (docLenBuckets, docLenCounts) = dataset.rdd
         .map(_.vector.numNonzeros)
         .histogram(20)
       for ((b, cnt) <- docLenBuckets.zip(docLenCounts)) {
@@ -129,7 +187,7 @@ object WikiStats {
     if (opts.distances()) {
       val sampleProb = math.min(1.0, opts.sampleSize() / numDocs.toDouble)
       println(s"Sampling with probability $sampleProb (from $numDocs documents)")
-      val sample = vectorized
+      val sample = dataset
         .sample(withReplacement = false, sampleProb)
         .persist()
 
@@ -141,7 +199,7 @@ object WikiStats {
       val (distBuckets, distCounts) = sample.rdd.cartesian(sample.rdd)
         .coalesce(spark.sparkContext.defaultParallelism)
         .filter { case (a, b) => a.id != b.id }
-        .map { case (a, b) => cosineDistance(a.vector, b.vector) }
+        .map { case (a, b) => distanceFn(a, b) }
         .histogram(100)
 
       for ((b, cnt) <- distBuckets.zip(distCounts)) {
@@ -156,7 +214,7 @@ object WikiStats {
       require(opts.sampleSize.supplied)
       require(opts.k.supplied)
       val k = opts.k()
-      val categories = vectorized.rdd.flatMap(_.categories).distinct().collect()
+      val categories = dataset.rdd.flatMap(_.categories).distinct().collect()
       val numCategories = categories.length
       println(s"There are $numCategories categories")
       require(numCategories > 0, "There are no categories!!!")
@@ -165,11 +223,11 @@ object WikiStats {
       for (i <- 0 until opts.sampleDiversity()) {
         val sampleProb = math.min(1.0, opts.sampleSize() / numDocs.toDouble)
         println(s"Sampling with probability $sampleProb (from $numDocs documents)")
-        val sample: Array[Page] = vectorized
+        val sample: Array[Page] = dataset
           .sample(withReplacement = false, sampleProb)
           .collect()
         val is = matroid.independentSetOfSize(sample, k)
-        val div = diversity(is, cosineDistance)
+        val div = diversity(is, distanceFn)
         diversities.append((i, div))
       }
       val numEdgesInSolution = k * (k - 1) / 2
@@ -199,6 +257,8 @@ object WikiStats {
 
     val distances = toggle(default = Some(false))
 
+    val distanceFunction = opt[String](default = Some("cosine"))
+
     val sampleSize = opt[Long](default = Some(1000L))
 
     val categories = toggle(default = Some(false))
@@ -206,6 +266,8 @@ object WikiStats {
     val docLength = toggle(default = Some(false))
 
     val k = opt[Int]()
+
+    val word2vecModel = opt[String]()
 
     val sampleDiversity = opt[Int](
       descr = "Compute the remote-clique diversity under transversal" +
