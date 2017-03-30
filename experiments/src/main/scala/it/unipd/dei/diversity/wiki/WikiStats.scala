@@ -12,7 +12,7 @@ import org.rogach.scallop.ScallopConf
 
 import scala.collection.mutable.ArrayBuffer
 
-case class Page(id: Long, title: String, categories: Array[String], vector: Vector)
+
 
 /**
   * Computes statistics about wikipedia dumps
@@ -44,21 +44,21 @@ object WikiStats {
     dist
   }
 
-  def cosineDistanceOnlyPositive(a: Page, b: Page): Double = {
+  def cosineDistanceOnlyPositive(a: WikiPage, b: WikiPage): Double = {
     val d = cosineDistance(a.vector, b.vector, TWO_OVER_PI)
     require(d <= 1.0, s"Cosine distance greater than one! a=`${a.title}`, b=`${b.title}`")
     d
   }
 
-  def cosineDistanceAlsoNegative(a: Page, b: Page): Double = {
+  def cosineDistanceAlsoNegative(a: WikiPage, b: WikiPage): Double = {
     val d = cosineDistance(a.vector, b.vector, ONE_OVER_PI)
     require(d <= 1.0, s"Cosine distance greater than one ($d)! a=`${a.title}`, b=`${b.title}`")
     d
   }
 
-  def euclidean(a: Page, b: Page): Double = Vectors.sqdist(a.vector, b.vector)
+  def euclidean(a: WikiPage, b: WikiPage): Double = Vectors.sqdist(a.vector, b.vector)
 
-  def manhattan(a: Page, b: Page): Double = {
+  def manhattan(a: WikiPage, b: WikiPage): Double = {
     var i = 0
     val size = a.vector.size
     var sum = 0.0
@@ -69,15 +69,15 @@ object WikiStats {
     sum
   }
 
-  val distanceFunctions: Map[String, (Page, Page) => Double] = Map(
+  val distanceFunctions: Map[String, (WikiPage, WikiPage) => Double] = Map(
     "cosine-only-positive" -> cosineDistanceOnlyPositive,
     "cosine-also-negative" -> cosineDistanceAlsoNegative,
     "euclidean" -> euclidean,
     "manhattan" -> manhattan
   )
 
-  def diversity(points: IndexedSubset[Page],
-                distance: (Page, Page) => Double): Double = {
+  def diversity(points: IndexedSubset[WikiPage],
+                distance: (WikiPage, WikiPage) => Double): Double = {
     var sum = 0.0
     for (i <- points.supersetIndices; j <- points.supersetIndices) {
       if (i < j) {
@@ -87,7 +87,7 @@ object WikiStats {
     sum
   }
 
-  def loadDataset(spark: SparkSession, opts: Opts): Dataset[Page] = {
+  def loadDataset(spark: SparkSession, opts: Opts): Dataset[WikiPage] = {
     import spark.implicits._
     val dataset = spark.read.parquet(opts.input())
       .select("id", "title", "lemmas", "categories").cache()
@@ -104,7 +104,7 @@ object WikiStats {
         .setInputCol("words")
         .setOutputCol("vector")
         .transform(withWords)
-        .select("id", "title", "categories", "vector").as[Page]
+        .select("id", "title", "categories", "vector").as[WikiPage]
         .filter(p => p.vector.numNonzeros > 0)
     } else {
       val vocabLength = opts.vocabulary.get.getOrElse(Int.MaxValue)
@@ -116,7 +116,7 @@ object WikiStats {
         .setVocabSize(vocabLength)
         .fit(withWords)
       tfIdf.transform(withWords)
-        .select("id", "title", "categories", "vector").as[Page]
+        .select("id", "title", "categories", "vector").as[WikiPage]
         .filter(p => p.vector.numNonzeros > 0 && p.vector.numNonzeros >= minLength)
     }
   }
@@ -128,7 +128,7 @@ object WikiStats {
     val path = opts.input()
     val vocabLength = opts.vocabulary.get.getOrElse(Int.MaxValue)
     val minLength = opts.minLength.get.getOrElse(0)
-    val distanceFn: (Page, Page) => Double =
+    val distanceFn: (WikiPage, WikiPage) => Double =
       distanceFunctions(opts.distanceFunction.get.map{ desc =>
         if ("cosine".equals(desc)) {
           if (opts.word2vecModel.isDefined) "cosine-also-negative"
@@ -218,12 +218,12 @@ object WikiStats {
       val numCategories = categories.length
       println(s"There are $numCategories categories")
       require(numCategories > 0, "There are no categories!!!")
-      val matroid = new TransversalMatroid[Page, String](categories, _.categories)
+      val matroid = new TransversalMatroid[WikiPage, String](categories, _.categories)
       val diversities = new ArrayBuffer[(Int, Double)]()
       for (i <- 0 until opts.sampleDiversity()) {
         val sampleProb = math.min(1.0, opts.sampleSize() / numDocs.toDouble)
         println(s"Sampling with probability $sampleProb (from $numDocs documents)")
-        val sample: Array[Page] = dataset
+        val sample: Array[WikiPage] = dataset
           .sample(withReplacement = false, sampleProb)
           .collect()
         val is = matroid.independentSetOfSize(sample, k)
