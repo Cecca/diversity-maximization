@@ -207,6 +207,95 @@ object LocalSearch {
     }
   }
 
+  private def cliqueDiversity[T](subset: IndexedSubset[T],
+                                 distance: (T, T) => Double): Double = {
+    val n = subset.superSet.length
+    var currentDiversity: Double = 0
+    var i = 0
+    while (i<n) {
+      if (subset.contains(i)) {
+        var j = i + 1
+        while (j < n) {
+          if (subset.contains(j)) {
+            currentDiversity += distance(subset.get(i).get, subset.get(j).get)
+          }
+          j += 1
+        }
+      }
+      i += 1
+    }
+    currentDiversity
+  }
+
+  private def sumDistances[T](from: T,
+                              to: IndexedSubset[T],
+                              distance: (T, T) => Double): Double = {
+    var sum: Double = 0
+    val n = 0
+    var i = 0
+    while (i<n) {
+      to.get(i) match {
+        case Some(e) => sum += distance(from, e)
+        case None => _
+      }
+      i += 1
+    }
+    sum
+  }
+
+  def remoteClique[T:ClassTag](input: IndexedSeq[T],
+                               k: Int,
+                               epsilon: Double,
+                               matroid: Matroid[T],
+                               distance: (T, T) => Double)
+  : IndexedSeq[T] = {
+    if (input.length <= k) {
+      input
+    } else {
+      val is = matroid.independentSetOfSize(input, k)
+      require(is.size == k, s"No idependent set of size $k in the input of LocalSearch")
+      var currentDiversity = cliqueDiversity(is, distance)
+
+      var foundImprovingSwap = true
+      while(foundImprovingSwap) {
+        // This will be reset to true if a swap is found
+        foundImprovingSwap = false
+        // Compute the threshold for this iteration
+        val threshold = (1+epsilon/k)*currentDiversity
+
+        // Try to find an improving swap
+        var i = 0
+        while (i < input.length && !foundImprovingSwap) {
+          if (is.contains(i)) { // If i is inside the partial solution
+            val insideContribution = sumDistances(input(i), is, distance)
+            var j = i + 1
+            while (j < input.length && !foundImprovingSwap) {
+              if (!is.contains(j)) { // If j is not inside the partial solution
+                // Try the swap
+                is.remove(i) // move i-th point outside the solution
+                is.add(j) // move j-th point inside the solution
+                val outsideContribution = sumDistances(input(j), is, distance)
+                val diversityWithSwap = currentDiversity - insideContribution + outsideContribution
+                if (matroid.isIndependent(is) && diversityWithSwap > threshold) {
+                  // Swap successful, set foundImprovingSwap to break the inner loops
+                  foundImprovingSwap = true
+                  currentDiversity = diversityWithSwap
+                } else {
+                  // Swap unsuccessful, reset to previous situation
+                  is.add(i) // move i-th point inside the solution again
+                  is.remove(j) // move j-th point outside the solution again
+                }
+              }
+              j += 1
+            }
+          }
+          i += 1
+        }
+      }
+      is.toVector
+    }
+  }
+
 
   def coreset[T:ClassTag](points: IndexedSeq[T],
                           k: Int,

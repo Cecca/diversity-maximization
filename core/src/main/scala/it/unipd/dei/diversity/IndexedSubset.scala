@@ -11,6 +11,13 @@ class IndexedSubset[T] private (val superSet: IndexedSeq[T], private val flags: 
 
   def contains(idx: Int): Boolean = flags(idx)
 
+  def get(idx: Int): Option[T] =
+    if(contains(idx)) {
+      Some(superSet(idx))
+    } else {
+      None
+    }
+
   private def traversableLike = superSet.zipWithIndex.filter({case (e, i) => flags(i)}).map(_._1)
 
   def supersetIndices: Iterator[Int] =
