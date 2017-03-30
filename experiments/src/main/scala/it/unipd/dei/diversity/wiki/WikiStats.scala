@@ -1,7 +1,7 @@
 package it.unipd.dei.diversity.wiki
 
 import it.unipd.dei.diversity.ExperimentUtil.jMap
-import it.unipd.dei.diversity.IndexedSubset
+import it.unipd.dei.diversity.{IndexedSubset, SerializationUtils}
 import it.unipd.dei.diversity.matroid.TransversalMatroid
 import it.unipd.dei.diversity.mllib.TfIdf
 import it.unipd.dei.experiment.Experiment
@@ -89,36 +89,8 @@ object WikiStats {
 
   def loadDataset(spark: SparkSession, opts: Opts): Dataset[WikiPage] = {
     import spark.implicits._
-    val dataset = spark.read.parquet(opts.input())
-      .select("id", "title", "lemmas", "categories").cache()
-    val stopWordsRemover = new StopWordsRemover()
-      .setInputCol("lemmas")
-      .setOutputCol("words")
-      .setCaseSensitive(false)
-      .setStopWords(StopWordsRemover.loadDefaultStopWords("english"))
-    val withWords = stopWordsRemover.transform(dataset).filter("size(words) > 0")
-
-    if(opts.word2vecModel.isDefined) {
-      val model = Word2VecModel.load(opts.word2vecModel())
-      model
-        .setInputCol("words")
-        .setOutputCol("vector")
-        .transform(withWords)
-        .select("id", "title", "categories", "vector").as[WikiPage]
-        .filter(p => p.vector.numNonzeros > 0)
-    } else {
-      val vocabLength = opts.vocabulary.get.getOrElse(Int.MaxValue)
-      val minLength = opts.minLength.get.getOrElse(0)
-
-      val tfIdf = new TfIdf()
-        .setInputCol("words")
-        .setOutputCol("vector")
-        .setVocabSize(vocabLength)
-        .fit(withWords)
-      tfIdf.transform(withWords)
-        .select("id", "title", "categories", "vector").as[WikiPage]
-        .filter(p => p.vector.numNonzeros > 0 && p.vector.numNonzeros >= minLength)
-    }
+    spark.read.parquet(opts.input())
+      .select("id", "title", "categories", "vector").as[WikiPage].cache()
   }
 
   def main(args: Array[String]) {
@@ -126,12 +98,10 @@ object WikiStats {
     opts.verify()
 
     val path = opts.input()
-    val vocabLength = opts.vocabulary.get.getOrElse(Int.MaxValue)
-    val minLength = opts.minLength.get.getOrElse(0)
     val distanceFn: (WikiPage, WikiPage) => Double =
       distanceFunctions(opts.distanceFunction.get.map{ desc =>
         if ("cosine".equals(desc)) {
-          if (opts.word2vecModel.isDefined) "cosine-also-negative"
+          if (SerializationUtils.metadata(opts.input()).get("representation").get.equals("word2vec")) "cosine-also-negative"
           else "cosine-only-positive"
         } else {
           desc
@@ -141,9 +111,6 @@ object WikiStats {
     val experiment = new Experiment()
     experiment
       .tag("input", path)
-      .tag("minimum document length", minLength)
-      .tag("vocabulary size", opts.vocabulary.get.orNull)
-      .tag("word2vec model", opts.word2vecModel.get.orNull)
       .tag("distance function", opts.distanceFunction())
       .tag("sample size", opts.sampleSize())
 
@@ -177,21 +144,7 @@ object WikiStats {
         ))
       }
     }
-
-
-
-    if (opts.docLength()) {
-      val (docLenBuckets, docLenCounts) = dataset.rdd
-        .map(_.vector.numNonzeros)
-        .histogram(20)
-      for ((b, cnt) <- docLenBuckets.zip(docLenCounts)) {
-        experiment.append("document length",
-          jMap(
-            "length" -> b,
-            "count" -> cnt))
-      }
-    }
-
+    
     if (opts.distances()) {
       val sampleProb = math.min(1.0, opts.sampleSize() / numDocs.toDouble)
       println(s"Sampling with probability $sampleProb (from $numDocs documents)")
@@ -259,10 +212,6 @@ object WikiStats {
 
     val input = trailArg[String](required = true)
 
-    val vocabulary = opt[Int]()
-
-    val minLength = opt[Int]()
-
     val distances = toggle(default = Some(false))
 
     val distanceFunction = opt[String](default = Some("cosine"))
@@ -271,11 +220,7 @@ object WikiStats {
 
     val categories = toggle(default = Some(false))
 
-    val docLength = toggle(default = Some(false))
-
     val k = opt[Int]()
-
-    val word2vecModel = opt[String]()
 
     val sampleDiversity = opt[Int](
       descr = "Compute the remote-clique diversity under transversal" +
