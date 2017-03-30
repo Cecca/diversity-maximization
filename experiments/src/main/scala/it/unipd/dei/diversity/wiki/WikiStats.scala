@@ -159,14 +159,22 @@ object WikiStats {
       jMap("num documents" -> numDocs))
 
     if (opts.categories()) {
-      val (catBuckets, catCnts) = dataset.select("categories").rdd
-        .map(_.getAs[Seq[String]](0).length)
-        .histogram(20)
-      for ((b, cnt) <- catBuckets.zip(catCnts)) {
-        experiment.append("categories per document",
-        jMap(
-        "num categories" -> b,
-        "count" -> cnt))
+      import spark.implicits._
+      val cats = dataset.select("categories")
+        .as[Seq[String]]
+        .rdd
+        .flatMap(cs => cs.map(c => (c, 1)))
+        .reduceByKey(_ + _)
+        .sortBy(_._2)
+        .cache()
+      val categoriesCount = cats.count()
+      println(s"There are $categoriesCount categories")
+
+      for ((c, cnt) <- cats.toLocalIterator) {
+        experiment.append("categories", jMap(
+          "category" -> c,
+          "count" -> cnt
+        ))
       }
     }
 
