@@ -159,7 +159,7 @@ extends Estimator[TfIdfModel] with TfIdfParams {
           vocab(i) = word
           val df = documentCount.toDouble / numDocs
           idfArr(i) = math.log((numDocs + 1) / (df + 1))
-          println(s"Word $word: wc=$wordCount, idf=${idfArr(i)} (df = $df, # docs appearing=${documentCount})")
+          //println(s"Word $word: wc=$wordCount, idf=${idfArr(i)} (df = $df, # docs appearing=${documentCount})")
           require(idfArr(i) >= 0, s"Negative idf for word $word: ${idfArr(i)}")
       }
     }
