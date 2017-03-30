@@ -234,9 +234,8 @@ object LocalSearch {
     val n = 0
     var i = 0
     while (i<n) {
-      to.get(i) match {
-        case Some(e) => sum += distance(from, e)
-        case None => _
+      to.get(i).foreach { e =>
+        sum += distance(from, e)
       }
       i += 1
     }
