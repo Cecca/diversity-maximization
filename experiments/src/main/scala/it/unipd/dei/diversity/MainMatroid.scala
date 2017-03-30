@@ -2,6 +2,7 @@ package it.unipd.dei.diversity
 
 import it.unipd.dei.diversity.matroid.TransversalMatroid
 import it.unipd.dei.diversity.wiki.WikiPage
+import it.unipd.dei.experiment.Experiment
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.{SparkConf, SparkContext}
 import org.rogach.scallop.ScallopConf
@@ -23,6 +24,12 @@ object MainMatroid {
     val opts = new Opts(args)
     opts.verify()
 
+    val experiment = new Experiment()
+      .tag("input", opts.input())
+    for ((k, v) <- SerializationUtils.metadata(opts.input())) {
+      experiment.tag("input." + k, v)
+    }
+
     val distance: (WikiPage, WikiPage) => Double = WikiPage.distanceArbitraryComponents
 
     import spark.implicits._
@@ -37,7 +44,7 @@ object MainMatroid {
         val solution = LocalSearch.remoteClique(
           localDataset, opts.k(), opts.gamma(), matroid, distance)
 
-        println(solution)
+        println(solution.mkString("\n"))
     }
 
   }

@@ -2,7 +2,9 @@ package it.unipd.dei.diversity.wiki
 
 import org.apache.spark.ml.linalg.{Vector, Vectors}
 
-case class WikiPage(id: Long, title: String, categories: Array[String], vector: Vector)
+case class WikiPage(id: Long, title: String, categories: Array[String], vector: Vector) {
+  override def toString: String = s"($id) `$title` ${categories.mkString("[", ", ", "]")}"
+}
 
 object WikiPage {
 
