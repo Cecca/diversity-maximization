@@ -188,7 +188,7 @@ object LocalSearch {
                 // Try the swap
                 is.remove(i) // move i-th point outside the solution
                 is.add(j) // move j-th point inside the solution
-                if (diversity(is, distance) > threshold) {
+                if (matroid.isIndependent(is) && diversity(is, distance) > threshold) {
                   // Swap successful, set foundImprovingSwap to break the inner loops
                   foundImprovingSwap = true
                 } else {
