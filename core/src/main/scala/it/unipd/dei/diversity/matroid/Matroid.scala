@@ -82,6 +82,22 @@ class TransversalMatroid[T:ClassTag, S](val sets: Array[S],
     maximumMatching(elements.toVector)._1 == elements.length
   }
 
+
+  override def isIndependent(elements: IndexedSubset[T]): Boolean = {
+    val arr = Array.ofDim[T](elements.size)
+    var i = 0
+    var j = 0
+    val n = elements.superSet.size
+    while (i<n) {
+      if (elements.contains(i)) {
+        arr(j) = elements.superSet(i)
+        j += 1
+      }
+      i+=1
+    }
+    isIndependent(arr)
+  }
+
   override def coreSetPoints(elements: Seq[T], k: Int): Seq[T] = {
     val elementsArr = elements.toArray // FIXME: Get rid of this
     // First, get an independent set of size k
