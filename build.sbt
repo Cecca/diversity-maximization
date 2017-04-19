@@ -41,7 +41,8 @@ lazy val core = (project in file("core")).
     libraryDependencies ++= Seq(
       "com.storm-enroute" %% "scalameter" % "0.7" % "bench",
       "io.dropwizard.metrics" % "metrics-core" % "3.1.2",
-      "it.unimi.dsi" % "dsiutils" % "2.3.2" exclude("ch.qos.logback", "logback-classic")
+      "it.unimi.dsi" % "dsiutils" % "2.3.2" exclude("ch.qos.logback", "logback-classic"),
+      "it.unimi.dsi" % "fastutil" % "7.1.0" exclude("ch.qos.logback", "logback-classic")
     ),
     testFrameworks in Benchmark += new TestFramework("org.scalameter.ScalaMeterFramework"),
     parallelExecution in Benchmark := false,

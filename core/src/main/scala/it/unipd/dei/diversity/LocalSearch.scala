@@ -16,6 +16,7 @@
 
 package it.unipd.dei.diversity
 
+import it.unimi.dsi.fastutil.ints.Int2DoubleOpenHashMap
 import it.unipd.dei.diversity.matroid.Matroid
 
 import scala.reflect.ClassTag
@@ -232,11 +233,11 @@ object LocalSearch {
                               to: IndexedSubset[T],
                               distance: (T, T) => Double): Double = {
     var sum: Double = 0
-    val n = 0
+    val n = to.superSet.size
     var i = 0
     while (i<n) {
-      to.get(i).foreach { e =>
-        sum += distance(from, e)
+      if (to.contains(i)) {
+        sum += distance(from, to.superSet(i))
       }
       i += 1
     }
@@ -255,7 +256,17 @@ object LocalSearch {
     } else {
       val is = matroid.independentSetOfSize(input, k)
       require(is.size == k, s"No idependent set of size $k in the input of LocalSearch")
-      var currentDiversity = cliqueDiversity(is, distance)
+
+      // initialize contribution map
+      val contribs = new Int2DoubleOpenHashMap(k)
+      var ci = 0
+      while (ci < input.size) {
+        if (is.contains(ci)) {
+          contribs.put(ci, sumDistances(input(ci), is, distance))
+        }
+        ci += 1
+      }
+      var currentDiversity = contribs.values().toDoubleArray.sum / 2.0
       println(s"Diversity of the initial solution: $currentDiversity")
 
       var foundImprovingSwap = true
@@ -265,12 +276,16 @@ object LocalSearch {
         // Compute the threshold for this iteration
         val threshold = (1+epsilon/k)*currentDiversity
         println(s"Diversity: $currentDiversity")
+        require(Math.abs(contribs.values().toDoubleArray.sum / 2.0 - cliqueDiversity(is, distance)) <= 0.00000001,
+          s"Diversities differ! ${contribs.values().toDoubleArray.sum / 2.0} != $currentDiversity\n" +
+            s"Difference: ${Math.abs(contribs.values().toDoubleArray.sum / 2.0 - currentDiversity)}\n" +
+            s"$contribs")
 
         // Try to find an improving swap
         var i = 0
         while (i < input.length && !foundImprovingSwap) {
           if (is.contains(i)) { // If i is inside the partial solution
-            val insideContribution = sumDistances(input(i), is, distance)
+            val insideContribution = contribs.get(i)
             var j = i + 1
             while (j < input.length && !foundImprovingSwap) {
               if (!is.contains(j)) { // If j is not inside the partial solution
@@ -283,6 +298,14 @@ object LocalSearch {
                   // Swap successful, set foundImprovingSwap to break the inner loops
                   foundImprovingSwap = true
                   currentDiversity = diversityWithSwap
+                  // Update the contribution map. Should recompute from scratch because of all the new edges.
+                  contribs.remove(i)
+                  val keys = contribs.keySet().iterator()
+                  while(keys.hasNext) {
+                    val k = keys.nextInt()
+                    contribs.addTo(k, distance(input(k), input(j)) - distance(input(k), input(i)))
+                  }
+                  contribs.put(j, outsideContribution)
                 } else {
                   // Swap unsuccessful, reset to previous situation
                   is.add(i) // move i-th point inside the solution again

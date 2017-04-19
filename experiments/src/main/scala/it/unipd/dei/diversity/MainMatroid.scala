@@ -1,5 +1,7 @@
 package it.unipd.dei.diversity
 
+import java.util.concurrent.TimeUnit
+
 import it.unipd.dei.diversity.ExperimentUtil.{jMap, timed}
 import it.unipd.dei.diversity.matroid.TransversalMatroid
 import it.unipd.dei.diversity.wiki.WikiPage
@@ -104,12 +106,14 @@ object MainMatroid {
         println("Collected dataset locally")
         dataset.unpersist(blocking = true)
         val (solution, t) = timed {
-          LocalSearch.runMatroid[WikiPage](
-            localDataset, opts.k(), opts.gamma(), matroid, distance, cliqueDiversity)
+          LocalSearch.remoteClique[WikiPage](
+            localDataset, opts.k(), opts.gamma(), matroid, distance)
+//          LocalSearch.runMatroid[WikiPage](
+//            localDataset, opts.k(), opts.gamma(), matroid, distance, cliqueDiversity)
         }
 
         experiment.append("performance",
-          jMap("time" -> t))
+          jMap("time" -> ExperimentUtil.convertDuration(t, TimeUnit.MILLISECONDS)))
 
         for (wp <- solution) {
           experiment.append("solution",

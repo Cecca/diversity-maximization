@@ -23,7 +23,8 @@ object WikiPage {
     }
     val denomA = Vectors.norm(a, 2)
     val denomB = Vectors.norm(b, 2)
-    numerator / (denomA * denomB)
+    val res = numerator / (denomA * denomB)
+    math.min(res, 1.0)
   }
 
   def distanceOnlyPositiveComponents(aPage: WikiPage, bPage: WikiPage): Double = {
