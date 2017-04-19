@@ -23,6 +23,26 @@ object MainMatroid {
     _s
   }
 
+  def cliqueDiversity[T](subset: IndexedSubset[T],
+                         distance: (T, T) => Double): Double = {
+    val n = subset.superSet.length
+    var currentDiversity: Double = 0
+    var i = 0
+    while (i<n) {
+      if (subset.contains(i)) {
+        var j = i + 1
+        while (j < n) {
+          if (subset.contains(j)) {
+            currentDiversity += distance(subset.get(i).get, subset.get(j).get)
+          }
+          j += 1
+        }
+      }
+      i += 1
+    }
+    currentDiversity
+  }
+
   def main(args: Array[String]) {
     val opts = new Opts(args)
     opts.verify()
@@ -69,12 +89,13 @@ object MainMatroid {
     val numElements = filteredDataset.count()
     println(s"The filtered dataset has $numElements elements")
     dataset.unpersist(blocking = true)
+    experiment.tag("filtered dataset size", numElements)
 
 
     opts.algorithm() match {
       case "local-search" =>
         val dataIt = filteredDataset.toLocalIterator()
-        val localDataset = Array.ofDim[WikiPage](numElements.toInt)
+        val localDataset: Array[WikiPage] = Array.ofDim[WikiPage](numElements.toInt)
         var i = 0
         while (dataIt.hasNext) {
           localDataset(i) = dataIt.next()
@@ -83,8 +104,8 @@ object MainMatroid {
         println("Collected dataset locally")
         dataset.unpersist(blocking = true)
         val (solution, t) = timed {
-          LocalSearch.remoteClique(
-            localDataset, opts.k(), opts.gamma(), matroid, distance)
+          LocalSearch.runMatroid[WikiPage](
+            localDataset, opts.k(), opts.gamma(), matroid, distance, cliqueDiversity)
         }
 
         experiment.append("performance",

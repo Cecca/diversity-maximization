@@ -158,12 +158,12 @@ object LocalSearch {
     }
   }
 
-  def run[T:ClassTag](input: IndexedSeq[T],
-                      k: Int,
-                      epsilon: Double,
-                      matroid: Matroid[T],
-                      distance: (T, T) => Double,
-                      diversity: (IndexedSubset[T], (T, T) => Double) => Double)
+  def runMatroid[T:ClassTag](input: Array[T],
+                             k: Int,
+                             epsilon: Double,
+                             matroid: Matroid[T],
+                             distance: (T, T) => Double,
+                             diversity: (IndexedSubset[T], (T, T) => Double) => Double)
   : IndexedSeq[T] = {
     if (input.length <= k) {
       input
@@ -177,6 +177,7 @@ object LocalSearch {
         foundImprovingSwap = false
         // Compute the threshold for this iteration
         val threshold = (1+epsilon/k)*diversity(is, distance)
+        println(s"Threshold: $threshold")
 
         // Try to find an improving swap
         var i = 0
