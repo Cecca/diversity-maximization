@@ -113,7 +113,9 @@ object MainMatroid {
         }
 
         experiment.append("performance",
-          jMap("time" -> ExperimentUtil.convertDuration(t, TimeUnit.MILLISECONDS)))
+          jMap(
+            "diversity" -> Diversity.clique(solution, distance),
+            "time" -> ExperimentUtil.convertDuration(t, TimeUnit.MILLISECONDS)))
 
         for (wp <- solution) {
           experiment.append("solution",
