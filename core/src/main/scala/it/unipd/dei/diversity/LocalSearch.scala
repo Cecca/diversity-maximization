@@ -17,7 +17,9 @@
 package it.unipd.dei.diversity
 
 import it.unimi.dsi.fastutil.ints.Int2DoubleOpenHashMap
+import it.unimi.dsi.logging.ProgressLogger
 import it.unipd.dei.diversity.matroid.Matroid
+import org.slf4j.LoggerFactory
 
 import scala.reflect.ClassTag
 
@@ -254,6 +256,7 @@ object LocalSearch {
     if (input.length <= k) {
       input
     } else {
+      val pl = new ProgressLogger(LoggerFactory.getLogger("progress"), "swaps")
       val is = matroid.independentSetOfSize(input, k)
       require(is.size == k, s"No idependent set of size $k in the input of LocalSearch")
 
@@ -269,6 +272,7 @@ object LocalSearch {
       var currentDiversity = contribs.values().toDoubleArray.sum / 2.0
       println(s"Diversity of the initial solution: $currentDiversity")
 
+      pl.start("Start looking for improving swaps")
       var foundImprovingSwap = true
       while(foundImprovingSwap) {
         // This will be reset to true if a swap is found
@@ -288,6 +292,7 @@ object LocalSearch {
             val insideContribution = contribs.get(i)
             var j = i + 1
             while (j < input.length && !foundImprovingSwap) {
+              pl.update()
               if (!is.contains(j)) { // If j is not inside the partial solution
                 // Try the swap
                 is.remove(i) // move i-th point outside the solution
@@ -321,6 +326,7 @@ object LocalSearch {
           i += 1
         }
       }
+      pl.stop()
       is.toVector
     }
   }

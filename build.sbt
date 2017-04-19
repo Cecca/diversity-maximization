@@ -24,6 +24,14 @@ lazy val commonSettings = baseSettings ++ Seq(
 
 lazy val deploy = inputKey[Unit]("Deploy the jar to the given ssh host (using rsync)")
 
+def filterDeps(deps: Seq[ModuleID]): Seq[ModuleID] = {
+  deps.map({ d =>
+    d.exclude("org.slf4j", "slf4j-jdk14")
+      .exclude("commons-logging", "commons-logging")
+      .exclude("org.slf4j", "slf4j-log4j12")
+  })
+}
+
 ////////////////////////////////////////////////////////////
 // Projects
 
@@ -38,12 +46,13 @@ lazy val core = (project in file("core")).
   settings(commonSettings: _*).
   settings(
     name := "diversity-maximization-core",
-    libraryDependencies ++= Seq(
+    libraryDependencies ++= filterDeps(Seq(
       "com.storm-enroute" %% "scalameter" % "0.7" % "bench",
       "io.dropwizard.metrics" % "metrics-core" % "3.1.2",
-      "it.unimi.dsi" % "dsiutils" % "2.3.2" exclude("ch.qos.logback", "logback-classic"),
-      "it.unimi.dsi" % "fastutil" % "7.1.0" exclude("ch.qos.logback", "logback-classic")
-    ),
+      "it.unimi.dsi" % "dsiutils" % "2.3.2",
+      "it.unimi.dsi" % "fastutil" % "7.1.0",
+      "ch.qos.logback" % "logback-classic" % "1.1.7"
+    )),
     testFrameworks in Benchmark += new TestFramework("org.scalameter.ScalaMeterFramework"),
     parallelExecution in Benchmark := false,
     logBuffered in Benchmark := false
@@ -56,12 +65,12 @@ lazy val mllib = (project in file("mllib")).
   settings(commonSettings: _*).
   settings(
     name := "diversity-maximization-mllib",
-    libraryDependencies ++= Seq(
+    libraryDependencies ++= filterDeps(Seq(
       "org.apache.spark" %% "spark-mllib" % "2.1.0" % "provided",
       "edu.stanford.nlp" % "stanford-corenlp" % "3.6.0",
       "edu.stanford.nlp" % "stanford-corenlp" % "3.6.0" classifier "models",
       "com.google.protobuf" % "protobuf-java" % "3.2.0"
-    )
+    ))
   )
 
 lazy val experiments = (project in file("experiments")).
@@ -69,13 +78,13 @@ lazy val experiments = (project in file("experiments")).
   settings(commonSettings :_*).
   settings(
     name := "diversity-maximization-experiments",
-    libraryDependencies ++= Seq(
+    libraryDependencies ++= filterDeps(Seq(
       "it.unipd.dei" % "experiment-reporter" % "0.3.0",
       "org.rogach" %% "scallop" % "1.0.1",
       "org.apache.spark" %% "spark-core" % "2.1.0" % "provided",
       "org.apache.spark" %% "spark-mllib" % "2.1.0" % "provided",
       "com.storm-enroute" %% "scalameter" % "0.7" % "bench"
-    )
+    ))
   ).
   enablePlugins(BuildInfoPlugin).
   settings(
