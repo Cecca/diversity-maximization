@@ -11,6 +11,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.rogach.scallop.ScallopConf
 
 import scala.io.Source
+import scala.util.Random
 
 object MainMatroid {
 
@@ -87,7 +88,7 @@ object MainMatroid {
       } else {
         Iterator.empty
       }
-    }.cache()
+    }.mapPartitions(Random.shuffle(_)).cache()
     val numElements = filteredDataset.count()
     println(s"The filtered dataset has $numElements elements")
     dataset.unpersist(blocking = true)
