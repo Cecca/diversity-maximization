@@ -276,7 +276,7 @@ object LocalSearch {
         // Compute the threshold for this iteration
         val threshold = (1+epsilon/k)*currentDiversity
         println(s"Diversity: $currentDiversity")
-        require(Math.abs(contribs.values().toDoubleArray.sum / 2.0 - cliqueDiversity(is, distance)) <= 0.00000001,
+        assert(Math.abs(contribs.values().toDoubleArray.sum / 2.0 - cliqueDiversity(is, distance)) <= 0.00000001,
           s"Diversities differ! ${contribs.values().toDoubleArray.sum / 2.0} != $currentDiversity\n" +
             s"Difference: ${Math.abs(contribs.values().toDoubleArray.sum / 2.0 - currentDiversity)}\n" +
             s"$contribs")
@@ -292,21 +292,24 @@ object LocalSearch {
                 // Try the swap
                 is.remove(i) // move i-th point outside the solution
                 is.add(j) // move j-th point inside the solution
-                val outsideContribution = sumDistances(input(j), is, distance)
-                val diversityWithSwap = currentDiversity - insideContribution + outsideContribution
-                if (matroid.isIndependent(is) && diversityWithSwap > threshold) {
-                  // Swap successful, set foundImprovingSwap to break the inner loops
-                  foundImprovingSwap = true
-                  currentDiversity = diversityWithSwap
-                  // Update the contribution map. Should recompute from scratch because of all the new edges.
-                  contribs.remove(i)
-                  val keys = contribs.keySet().iterator()
-                  while(keys.hasNext) {
-                    val k = keys.nextInt()
-                    contribs.addTo(k, distance(input(k), input(j)) - distance(input(k), input(i)))
+                if (matroid.isIndependent(is)) {
+                  val outsideContribution = sumDistances(input(j), is, distance)
+                  val diversityWithSwap = currentDiversity - insideContribution + outsideContribution
+                  if (diversityWithSwap > threshold) {
+                    // Swap successful, set foundImprovingSwap to break the inner loops
+                    foundImprovingSwap = true
+                    currentDiversity = diversityWithSwap
+                    // Update the contribution map. Should recompute from scratch because of all the new edges.
+                    contribs.remove(i)
+                    val keys = contribs.keySet().iterator()
+                    while (keys.hasNext) {
+                      val k = keys.nextInt()
+                      contribs.addTo(k, distance(input(k), input(j)) - distance(input(k), input(i)))
+                    }
+                    contribs.put(j, outsideContribution)
                   }
-                  contribs.put(j, outsideContribution)
-                } else {
+                }
+                if (!foundImprovingSwap) {
                   // Swap unsuccessful, reset to previous situation
                   is.add(i) // move i-th point inside the solution again
                   is.remove(j) // move j-th point outside the solution again
