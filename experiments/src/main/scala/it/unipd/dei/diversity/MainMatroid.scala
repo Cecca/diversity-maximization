@@ -30,6 +30,7 @@ object MainMatroid {
     val experiment = new Experiment()
       .tag("input", opts.input())
       .tag("k", opts.k())
+      .tag("gamma", opts.gamma())
       .tag("algorithm", opts.algorithm())
       .tag("version", BuildInfo.version)
       .tag("git-revision", BuildInfo.gitRevision)
@@ -97,6 +98,9 @@ object MainMatroid {
         }
 
     }
+
+    println(experiment.toSimpleString)
+    experiment.saveAsJsonFile(true)
 
   }
 
