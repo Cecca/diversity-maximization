@@ -6,7 +6,7 @@ import it.unipd.dei.diversity.ExperimentUtil.{jMap, timed}
 import it.unipd.dei.diversity.matroid.TransversalMatroid
 import it.unipd.dei.diversity.wiki.WikiPage
 import it.unipd.dei.experiment.Experiment
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{Dataset, SparkSession}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.rogach.scallop.ScallopConf
 
@@ -44,6 +44,19 @@ object MainMatroid {
       i += 1
     }
     currentDiversity
+  }
+
+  private def collectLocally(data: Dataset[WikiPage], numElements: Long): Array[WikiPage] = {
+    val dataIt = data.toLocalIterator()
+    val localDataset: Array[WikiPage] = Array.ofDim[WikiPage](numElements.toInt)
+    var i = 0
+    while (dataIt.hasNext) {
+      localDataset(i) = dataIt.next()
+      i += 1
+    }
+    println("Collected dataset locally")
+    data.unpersist(blocking = true)
+    localDataset
   }
 
   def main(args: Array[String]) {
@@ -97,20 +110,10 @@ object MainMatroid {
 
     opts.algorithm() match {
       case "local-search" =>
-        val dataIt = filteredDataset.toLocalIterator()
-        val localDataset: Array[WikiPage] = Array.ofDim[WikiPage](numElements.toInt)
-        var i = 0
-        while (dataIt.hasNext) {
-          localDataset(i) = dataIt.next()
-          i += 1
-        }
-        println("Collected dataset locally")
-        dataset.unpersist(blocking = true)
+        val localDataset: Array[WikiPage] = collectLocally(filteredDataset, numElements)
         val (solution, t) = timed {
           LocalSearch.remoteClique[WikiPage](
             localDataset, opts.k(), opts.gamma(), matroid, distance)
-//          LocalSearch.runMatroid[WikiPage](
-//            localDataset, opts.k(), opts.gamma(), matroid, distance, cliqueDiversity)
         }
 
         experiment.append("performance",
@@ -124,6 +127,8 @@ object MainMatroid {
               "title" -> wp.title,
               "categories" -> wp.categories))
         }
+
+      case "sequential-coreset" =>
 
     }
 
