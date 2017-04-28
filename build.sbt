@@ -68,8 +68,7 @@ lazy val mllib = (project in file("mllib")).
     libraryDependencies ++= filterDeps(Seq(
       "org.apache.spark" %% "spark-mllib" % "2.1.0" % "provided",
       "edu.stanford.nlp" % "stanford-corenlp" % "3.6.0",
-      "edu.stanford.nlp" % "stanford-corenlp" % "3.6.0" classifier "models",
-      "com.google.protobuf" % "protobuf-java" % "3.2.0"
+      "edu.stanford.nlp" % "stanford-corenlp" % "3.6.0" classifier "models"
     ))
   )
 
