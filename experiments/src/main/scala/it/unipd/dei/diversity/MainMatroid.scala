@@ -66,7 +66,6 @@ object MainMatroid {
     val experiment = new Experiment()
       .tag("input", opts.input())
       .tag("k", opts.k())
-      .tag("gamma", opts.gamma())
       .tag("algorithm", opts.algorithm())
       .tag("version", BuildInfo.version)
       .tag("git-revision", BuildInfo.gitRevision)
@@ -110,6 +109,8 @@ object MainMatroid {
 
     opts.algorithm() match {
       case "local-search" =>
+        experiment.tag("gamma", opts.gamma())
+
         val localDataset: Array[WikiPage] = collectLocally(filteredDataset, numElements)
         val (solution, t) = timed {
           LocalSearch.remoteClique[WikiPage](
@@ -129,6 +130,27 @@ object MainMatroid {
         }
 
       case "sequential-coreset" =>
+        require(opts.kernelSize.isDefined,
+          "You have to specify a kernel size when running the sequential coreset")
+        experiment.tag("k'", opts.kernelSize())
+        val localDataset: Array[WikiPage] = collectLocally(filteredDataset, numElements)
+        val ((solution, div), time) = timed {
+          val coreset = MapReduceCoreset.run(
+            localDataset, opts.kernelSize(), opts.k(), matroid, distance)
+          Diversity.cliqueSol(coreset.points, opts.k(), distance)
+        }
+
+        experiment.append("performance",
+          jMap(
+            "diversity" -> div,
+            "time" -> ExperimentUtil.convertDuration(time, TimeUnit.MILLISECONDS)))
+
+        for (wp <- solution) {
+          experiment.append("solution",
+            jMap(
+              "title" -> wp.title,
+              "categories" -> wp.categories))
+        }
 
     }
 
@@ -141,11 +163,11 @@ object MainMatroid {
 
     lazy val algorithm = opt[String](default = Some("local-search"))
 
-    lazy val k = opt[Int](required = true)
-
-    lazy val kernelSize = opt[String](required = false)
+    lazy val k = opt[Int](name="target", short='k', required = true)
 
     lazy val gamma = opt[Double](default = Some(0.0))
+
+    lazy val kernelSize = opt[Int](short='s')
 
     // TODO Use this option
     lazy val approxRuns = opt[Int](default = Some(1))

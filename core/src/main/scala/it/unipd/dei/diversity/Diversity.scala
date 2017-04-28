@@ -54,6 +54,14 @@ object Diversity {
     clique(kSubset, distance)
   }
 
+  def cliqueSol[T: ClassTag](points: IndexedSeq[T],
+                             k: Int,
+                             distance: (T, T) => Double): (IndexedSeq[T], Double) = {
+    val kSubset = MatchingHeuristic.run(points, k, distance)
+    val div = clique(kSubset, distance)
+    (kSubset, div)
+  }
+
   def tree[T: ClassTag](points: IndexedSeq[T],
                         distance: (T, T) => Double): Double = {
     // Find a minimum spanning tree

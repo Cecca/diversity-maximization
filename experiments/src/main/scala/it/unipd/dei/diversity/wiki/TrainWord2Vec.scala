@@ -30,7 +30,9 @@ object TrainWord2Vec {
     // Find synonyms of a word to force the evaluation of the
     // word vectors, otherwise the save operation crashes with
     // a "task too big" exception
-    word2VecModel.findSynonyms("rome", 10).show()
+    import spark.implicits._
+    val sampleWord = word2VecModel.getVectors.select("word").as[String].head()
+    word2VecModel.findSynonyms(sampleWord, 10).show()
     word2VecModel.save(opts.output())
   }
 
