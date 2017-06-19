@@ -1,6 +1,6 @@
 package it.unipd.dei.diversity.matroid
 
-import it.unipd.dei.diversity.IndexedSubset
+import it.unipd.dei.diversity._
 
 import scala.collection.mutable
 import scala.reflect.ClassTag
@@ -54,6 +54,7 @@ class PartitionMatroid[T](val categories: Map[Int, Int],
                           val getCategory: T => Int) extends Matroid[T] {
 
   override def isIndependent(elements: Seq[T]): Boolean = {
+    PerformanceMetrics.matroidOracleCounterInc()
     val counts = mutable.Map[Int, Int]()
     for (e <- elements) {
       val c = getCategory(e)
@@ -75,6 +76,7 @@ class TransversalMatroid[T:ClassTag, S](val sets: Array[S],
                                         val getSets: T => Seq[S]) extends Matroid[T] {
 
   override def isIndependent(elements: Seq[T]): Boolean = {
+    PerformanceMetrics.matroidOracleCounterInc()
     if (elements.length > sets.length) {
       return false
     }
@@ -84,6 +86,7 @@ class TransversalMatroid[T:ClassTag, S](val sets: Array[S],
 
 
   override def isIndependent(elements: IndexedSubset[T]): Boolean = {
+    PerformanceMetrics.matroidOracleCounterInc()
     val arr = Array.ofDim[T](elements.size)
     var i = 0
     var j = 0

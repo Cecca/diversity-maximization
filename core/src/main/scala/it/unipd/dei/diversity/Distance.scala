@@ -16,9 +16,13 @@
 
 package it.unipd.dei.diversity
 
+import com.codahale.metrics.MetricRegistry
+import it.unipd.dei.diversity.performanceMetrics
+
 object Distance {
 
   def euclidean(a: Point, b: Point): Double = {
+    performanceMetrics.counter("distance-computation")
     require(a.dimension == b.dimension)
     var sum: Double = 0.0
     var i = 0
@@ -32,22 +36,26 @@ object Distance {
     res
   }
 
-  def euclidean[T](bagA: BagOfWords[T], bagB: BagOfWords[T]): Double = (bagA, bagB) match {
-    case (a: ArrayBagOfWords, b: ArrayBagOfWords) =>
-      ArrayBagOfWords.euclidean(a, b)
-    case (a, b) =>
-      val keys = a.wordUnion(b)
-      var sum: Double = 0.0
-      for (k <- keys) {
-        val diff = a(k) - b(k)
-        sum += diff*diff
-      }
-      val res = math.sqrt(sum)
-      assert(res < Double.PositiveInfinity, "The distance cannot be infinite! Check your inputs.")
-      res
+  def euclidean[T](bagA: BagOfWords[T], bagB: BagOfWords[T]): Double = {
+    performanceMetrics.counter("distance-computation")
+    (bagA, bagB) match {
+      case (a: ArrayBagOfWords, b: ArrayBagOfWords) =>
+        ArrayBagOfWords.euclidean(a, b)
+      case (a, b) =>
+        val keys = a.wordUnion(b)
+        var sum: Double = 0.0
+        for (k <- keys) {
+          val diff = a(k) - b(k)
+          sum += diff*diff
+        }
+        val res = math.sqrt(sum)
+        assert(res < Double.PositiveInfinity, "The distance cannot be infinite! Check your inputs.")
+        res
+    }
   }
   
   def jaccard[T](a: BagOfWords[T], b: BagOfWords[T]): Double = {
+    performanceMetrics.counter("distance-computation")
     val numerator: Double = a.wordUnion(b).map { w =>
       math.min(a(w), b(w))
     }.sum
@@ -80,6 +88,7 @@ object Distance {
   }
 
   def cosineDistance[T](a: BagOfWords[T], b: BagOfWords[T]): Double = {
+    PerformanceMetrics.distanceFnCounterInc()
     2*math.acos(cosineSimilarity(a,b)) / math.Pi
   }
 

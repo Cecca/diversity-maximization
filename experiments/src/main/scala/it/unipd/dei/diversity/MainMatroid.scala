@@ -2,6 +2,7 @@ package it.unipd.dei.diversity
 
 import java.util.concurrent.TimeUnit
 
+import com.codahale.metrics.Counter
 import it.unipd.dei.diversity.ExperimentUtil.{jMap, timed}
 import it.unipd.dei.diversity.matroid.TransversalMatroid
 import it.unipd.dei.diversity.wiki.WikiPage
@@ -9,6 +10,7 @@ import it.unipd.dei.experiment.Experiment
 import org.apache.spark.sql.{Dataset, SparkSession}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.rogach.scallop.ScallopConf
+import it.unipd.dei.diversity.performanceMetrics
 
 import scala.io.Source
 import scala.util.Random
@@ -152,6 +154,13 @@ object MainMatroid {
               "categories" -> wp.categories))
         }
 
+    }
+
+    val counters = PerformanceMetrics.registry.getCounters.entrySet().iterator()
+    while(counters.hasNext) {
+      val c = counters.next()
+      experiment.append("counters",
+        jMap("name" -> c.getKey, "count" -> c.getValue.getCount))
     }
 
     println(experiment.toSimpleString)

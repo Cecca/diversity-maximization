@@ -1,5 +1,6 @@
 package it.unipd.dei.diversity.wiki
 
+import it.unipd.dei.diversity._
 import org.apache.spark.ml.linalg.{Vector, Vectors}
 
 case class WikiPage(id: Long, title: String, categories: Array[String], vector: Vector) {
@@ -28,6 +29,7 @@ object WikiPage {
   }
 
   def distanceOnlyPositiveComponents(aPage: WikiPage, bPage: WikiPage): Double = {
+    PerformanceMetrics.distanceFnCounterInc()
     val cos = cosine(aPage, bPage)
     require(0.0 <= cos && cos <= 1.0, s"Cosine out of range: $cos")
     val dist = TWO_OVER_PI * math.acos(cos)
@@ -38,6 +40,7 @@ object WikiPage {
   }
 
   def distanceArbitraryComponents(aPage: WikiPage, bPage: WikiPage): Double = {
+    PerformanceMetrics.distanceFnCounterInc()
     val cos = cosine(aPage, bPage)
     require(-1.0 <= cos && cos <= 1.0, s"Cosine out of range: $cos")
     val dist = ONE_OVER_PI * math.acos(cos)
