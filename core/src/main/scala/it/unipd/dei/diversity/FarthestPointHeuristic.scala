@@ -90,33 +90,36 @@ object FarthestPointHeuristic {
     centers.add(startIdx)
     var i = 0
     var radius: Double = 0d
-    var farthest = 0
+    var nextCenter = 0
     while (i < n) {
       val d = distance(points(startIdx), points(i))
       minDist(i) = d
       if (d > radius) {
         radius = d
-        farthest = i
+        nextCenter = i
       }
       i += 1
     }
 
+    println(s"Radius: $radius (epsilon: $epsilon)")
     while (radius > epsilon && centers.size != n) {
-      centers.add(farthest)
-      radius = 0d
+      val center = nextCenter
+      centers.add(center)
+      radius = 0.0
       i = 0
       // Re-compute the radius and find the farthest node
       while (i < n) {
-        val d = distance(points(startIdx), points(i))
+        val d = distance(points(center), points(i))
         if (d < minDist(i)) {
           minDist(i) = d
         }
         if (minDist(i) > radius) {
           radius = minDist(i)
-          farthest = i
+          nextCenter = i
         }
         i += 1
       }
+      println(s"Radius: $radius, nextCenter $nextCenter, ${centers.size}/$n (epsilon: $epsilon)")
     }
     centers.toVector
   }

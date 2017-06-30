@@ -132,16 +132,31 @@ object MainMatroid {
         }
 
       case "sequential-coreset" =>
-        require(opts.kernelSize.isDefined,
-          "You have to specify a kernel size when running the sequential coreset")
-        experiment.tag("k'", opts.kernelSize())
-        val localDataset: Array[WikiPage] = collectLocally(filteredDataset, numElements)
-        val (solution, time) = timed {
-          val coreset = MapReduceCoreset.run(
-            localDataset, opts.kernelSize(), opts.k(), matroid, distance)
-          LocalSearch.remoteClique[WikiPage](
-            localDataset, opts.k(), 0.0, matroid, distance)
-        }
+        val (solution, time) =
+          if (opts.kernelSize.isDefined) {
+            experiment.tag("coreset-type", "with-cardinality")
+            experiment.tag("k'", opts.kernelSize())
+            val localDataset: Array[WikiPage] = collectLocally(filteredDataset, numElements)
+            timed {
+              val coreset = MapReduceCoreset.run(
+                localDataset, opts.kernelSize(), opts.k(), matroid, distance)
+              LocalSearch.remoteClique[WikiPage](
+                localDataset, opts.k(), 0.0, matroid, distance)
+            }
+          } else if(opts.epsilon.isDefined) {
+            experiment.tag("coreset-type", "with-radius")
+            experiment.tag("epsilon", opts.epsilon())
+            val localDataset: Array[WikiPage] = collectLocally(filteredDataset, numElements)
+            timed {
+              val coreset = MapReduceCoreset.withRadius(
+                localDataset, opts.epsilon(), opts.k(), matroid, distance)
+              LocalSearch.remoteClique[WikiPage](
+                localDataset, opts.k(), 0.0, matroid, distance)
+            }
+          } else {
+            throw new IllegalArgumentException(
+              "You have to specify either the kernel size or epsilon when running the sequential coreset")
+          }
 
         experiment.append("performance",
           jMap(
@@ -178,6 +193,8 @@ object MainMatroid {
     lazy val gamma = opt[Double](default = Some(0.0))
 
     lazy val kernelSize = opt[Int](short='s')
+
+    lazy val epsilon = opt[Double]()
 
     // TODO Use this option
     lazy val approxRuns = opt[Int](default = Some(1))
