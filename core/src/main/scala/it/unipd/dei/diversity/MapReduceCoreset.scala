@@ -50,7 +50,6 @@ object MapReduceCoreset {
                       k: Int,
                       matroid: Matroid[T],
                       distance: (T, T) => Double): MapReduceCoreset[T] = {
-    val resultSize = kernelSize * k
     if (points.length < kernelSize) {
       new MapReduceCoreset(points.toVector, Vector.empty[T])
     } else {
@@ -67,6 +66,24 @@ object MapReduceCoreset {
 
       new MapReduceCoreset[T](coreset.toVector, Vector.empty)
     }
+  }
+
+  def withRadius[T:ClassTag](points: Array[T],
+                             epsilon: Double,
+                             k: Int,
+                             matroid: Matroid[T],
+                             distance: (T, T) => Double): MapReduceCoreset[T] = {
+      val kernel = FarthestPointHeuristic.withRadius(points, epsilon, distance)
+      val clusters: Map[T, Seq[T]] = points.map { p =>
+        val c = kernel.minBy(x => distance(x, p))
+        (c, p)
+      }.groupBy(_._1).mapValues(_.map(_._2))
+
+      val coreset = clusters.values.flatMap { cluster =>
+        matroid.coreSetPoints(cluster, k)
+      }
+
+      new MapReduceCoreset[T](coreset.toVector, Vector.empty)
   }
 
 

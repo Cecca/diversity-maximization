@@ -73,6 +73,54 @@ object FarthestPointHeuristic {
     }
   }
 
+  def withRadius[T: ClassTag](points: IndexedSeq[T],
+                              epsilon: Double,
+                              distance: (T, T) => Double): IndexedSeq[T] =
+    withRadius(points, epsilon, Random.nextInt(points.length), distance)
+
+
+  def withRadius[T: ClassTag](points: IndexedSeq[T],
+                              epsilon: Double,
+                              startIdx: Int,
+                              distance: (T, T) => Double): IndexedSeq[T] = {
+    val n = points.size
+    val minDist = Array.fill(n)(Double.PositiveInfinity)
+    val centers = IndexedSubset.apply(points)
+    // Init the result with an arbitrary point
+    centers.add(startIdx)
+    var i = 0
+    var radius: Double = 0d
+    var farthest = 0
+    while (i < n) {
+      val d = distance(points(startIdx), points(i))
+      minDist(i) = d
+      if (d > radius) {
+        radius = d
+        farthest = i
+      }
+      i += 1
+    }
+
+    while (radius > epsilon && centers.size != n) {
+      centers.add(farthest)
+      radius = 0d
+      i = 0
+      // Re-compute the radius and find the farthest node
+      while (i < n) {
+        val d = distance(points(startIdx), points(i))
+        if (d < minDist(i)) {
+          minDist(i) = d
+        }
+        if (minDist(i) > radius) {
+          radius = minDist(i)
+          farthest = i
+        }
+        i += 1
+      }
+    }
+    centers.toVector
+  }
+
   /* Just for benchmarking purposes: this is a more idiomatic,
    * albeit slower, implementation of the algorithm
    */
