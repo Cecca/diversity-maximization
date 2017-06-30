@@ -136,15 +136,16 @@ object MainMatroid {
           "You have to specify a kernel size when running the sequential coreset")
         experiment.tag("k'", opts.kernelSize())
         val localDataset: Array[WikiPage] = collectLocally(filteredDataset, numElements)
-        val ((solution, div), time) = timed {
+        val (solution, time) = timed {
           val coreset = MapReduceCoreset.run(
             localDataset, opts.kernelSize(), opts.k(), matroid, distance)
-          Diversity.cliqueSol(coreset.points, opts.k(), distance)
+          LocalSearch.remoteClique[WikiPage](
+            localDataset, opts.k(), 0.0, matroid, distance)
         }
 
         experiment.append("performance",
           jMap(
-            "diversity" -> div,
+            "diversity" -> Diversity.clique(solution, distance),
             "time" -> ExperimentUtil.convertDuration(time, TimeUnit.MILLISECONDS)))
 
         for (wp <- solution) {
