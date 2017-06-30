@@ -13,6 +13,7 @@ import org.rogach.scallop.ScallopConf
 import it.unipd.dei.diversity.performanceMetrics
 
 import scala.io.Source
+import scala.reflect.ClassTag
 import scala.util.Random
 
 object MainMatroid {
@@ -170,6 +171,14 @@ object MainMatroid {
               "categories" -> wp.categories))
         }
 
+      case "clustering-radius" =>
+        require(opts.epsilon.isDefined)
+        experiment.tag("epsilon", opts.epsilon())
+        val localDataset: Array[WikiPage] = collectLocally(filteredDataset, numElements)
+        val coreset = withRadiusExp[WikiPage](
+                localDataset, opts.epsilon(), Random.nextInt(localDataset.length), distance, experiment)
+
+
     }
 
     val counters = PerformanceMetrics.registry.getCounters.entrySet().iterator()
@@ -204,5 +213,63 @@ object MainMatroid {
     lazy val categories = opt[String](required = false, argName = "FILE")
 
   }
+
+  // Quick and dirty experiment to check how the radius decreases when doing a clustering
+  def withRadiusExp[T: ClassTag](points: IndexedSeq[T],
+                                 epsilon: Double,
+                                 startIdx: Int,
+                                 distance: (T, T) => Double,
+                                 experiment: Experiment): IndexedSeq[T] = {
+    val n = points.size
+    val minDist = Array.fill(n)(Double.PositiveInfinity)
+    val centers = IndexedSubset.apply(points)
+    // Init the result with an arbitrary point
+    centers.add(startIdx)
+    var i = 0
+    var radius: Double = 0d
+    var nextCenter = 0
+    while (i < n) {
+      val d = distance(points(startIdx), points(i))
+      minDist(i) = d
+      if (d > radius) {
+        radius = d
+        nextCenter = i
+      }
+      i += 1
+    }
+
+    experiment.append("clustering-radius",
+      jMap(
+        "iteration" -> 0,
+        "radius" -> radius))
+
+    var iteration = 1
+    while (radius > epsilon && centers.size != n) {
+      val center = nextCenter
+      centers.add(center)
+      radius = 0.0
+      i = 0
+      // Re-compute the radius and find the farthest node
+      while (i < n) {
+        val d = distance(points(center), points(i))
+        if (d < minDist(i)) {
+          minDist(i) = d
+        }
+        if (minDist(i) > radius) {
+          radius = minDist(i)
+          nextCenter = i
+        }
+        i += 1
+      }
+      println(s"[$iteration] r=$radius")
+      experiment.append("clustering-radius",
+        jMap(
+          "iteration" -> iteration,
+          "radius" -> radius))
+      iteration += 1
+    }
+    centers.toVector
+  }
+
 
 }
