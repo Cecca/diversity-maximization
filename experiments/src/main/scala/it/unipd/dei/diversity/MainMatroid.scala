@@ -84,8 +84,8 @@ object MainMatroid {
     currentDiversity
   }
 
-  private def collectLocally(data: Dataset[WikiPage], numElements: Long): Array[WikiPage] = {
-    val dataIt = data.toLocalIterator()
+  private def collectLocally(data: RDD[WikiPage], numElements: Long): Array[WikiPage] = {
+    val dataIt = data.toLocalIterator
     val localDataset: Array[WikiPage] = Array.ofDim[WikiPage](numElements.toInt)
     var i = 0
     while (dataIt.hasNext) {
@@ -138,7 +138,7 @@ object MainMatroid {
       } else {
         Iterator.empty
       }
-    }.mapPartitions(Random.shuffle(_)).cache()
+    }.mapPartitions(Random.shuffle(_)).rdd.cache()
     val numElements = filteredDataset.count()
     println(s"The filtered dataset has $numElements elements")
     dataset.unpersist(blocking = true)
@@ -186,7 +186,7 @@ object MainMatroid {
             experiment.tag("epsilon", opts.epsilon())
             val localDataset: Array[WikiPage] = collectLocally(filteredDataset, numElements)
             implicit val ord: Ordering[WikiPage] = Ordering.by(page => page.id)
-            val delta = diameterLowerBound[WikiPage](filteredDataset.rdd, matroid, distance)
+            val delta = diameterLowerBound[WikiPage](filteredDataset, matroid, distance)
             val radius = (opts.epsilon() / 2) * (delta / (2*opts.k()))
             println(s"Building coreset with radius $radius (delta=$delta, epsilon=${opts.epsilon()}, k=${opts.k()})")
             PerformanceMetrics.reset()
