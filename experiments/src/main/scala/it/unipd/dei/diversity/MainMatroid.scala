@@ -168,6 +168,7 @@ object MainMatroid {
         }
 
       case "sequential-coreset" =>
+        var coresetSize: Option[Long] = None
         val (solution, time) =
           if (opts.kernelSize.isDefined) {
             experiment.tag("coreset-type", "with-cardinality")
@@ -176,6 +177,7 @@ object MainMatroid {
             timed {
               val coreset = MapReduceCoreset.run(
                 localDataset, opts.kernelSize(), opts.k(), matroid, distance)
+              coresetSize = Some(coreset.length)
               LocalSearch.remoteClique[WikiPage](
                 localDataset, opts.k(), 0.0, matroid, distance)
             }
@@ -183,11 +185,18 @@ object MainMatroid {
             experiment.tag("coreset-type", "with-radius")
             experiment.tag("epsilon", opts.epsilon())
             val localDataset: Array[WikiPage] = collectLocally(filteredDataset, numElements)
+            implicit val ord: Ordering[WikiPage] = Ordering.by(page => page.id)
+            val delta = diameterLowerBound[WikiPage](filteredDataset.rdd, matroid, distance)
+            val radius = (opts.epsilon() / 2) * (delta / (2*opts.k()))
+            println(s"Building coreset with radius $radius (delta=$delta, epsilon=${opts.epsilon()}, k=${opts.k()})")
+            PerformanceMetrics.reset()
             timed {
               val coreset = MapReduceCoreset.withRadius(
-                localDataset, opts.epsilon(), opts.k(), matroid, distance)
+                localDataset, radius, opts.k(), matroid, distance)
+              println(s"Built coreset with ${coreset.points.size} over ${localDataset.length} points")
+              coresetSize = Some(coreset.length)
               LocalSearch.remoteClique[WikiPage](
-                localDataset, opts.k(), 0.0, matroid, distance)
+                coreset.points, opts.k(), 0.0, matroid, distance)
             }
           } else {
             throw new IllegalArgumentException(
@@ -197,6 +206,7 @@ object MainMatroid {
         experiment.append("performance",
           jMap(
             "diversity" -> Diversity.clique(solution, distance),
+            "coreset-size" -> coresetSize.get,
             "time" -> ExperimentUtil.convertDuration(time, TimeUnit.MILLISECONDS)))
 
         for (wp <- solution) {

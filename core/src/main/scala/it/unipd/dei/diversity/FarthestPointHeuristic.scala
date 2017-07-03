@@ -80,7 +80,7 @@ object FarthestPointHeuristic {
 
 
   def withRadius[T: ClassTag](points: IndexedSeq[T],
-                              radius: Double,
+                              targetRadius: Double,
                               startIdx: Int,
                               distance: (T, T) => Double): IndexedSeq[T] = {
     val n = points.size
@@ -101,8 +101,8 @@ object FarthestPointHeuristic {
       i += 1
     }
 
-    println(s"Radius: $radius (target: $radius)")
-    while (radius > radius && centers.size != n) {
+    println(s"Radius: $radius (epsilon: $targetRadius)")
+    while (radius > targetRadius && centers.size != n) {
       val center = nextCenter
       centers.add(center)
       radius = 0.0
@@ -119,7 +119,7 @@ object FarthestPointHeuristic {
         }
         i += 1
       }
-      println(s"Radius: $radius, nextCenter $nextCenter, ${centers.size}/$n (epsilon: $radius)")
+      println(s"Radius: $radius, nextCenter $nextCenter, ${centers.size}/$n (epsilon: $targetRadius)")
     }
     centers.toVector
   }
