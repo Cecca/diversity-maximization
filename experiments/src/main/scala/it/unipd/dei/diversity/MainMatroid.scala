@@ -31,40 +31,6 @@ object MainMatroid {
     _s
   }
 
-  private def farthestFrom[T:ClassTag](points: RDD[T],
-                                       x: T,
-                                       threshold: Double,
-                                       matroid: Matroid[T],
-                                       distance: (T, T) => Double): Double = {
-    points.flatMap({y =>
-      val d = distance(x, y)
-      if (d >= threshold && matroid.isIndependent(Seq(x, y))) {
-        Iterator(d)
-      } else {
-        Iterator.empty
-      }
-    }).max()
-  }
-
-  def diameterLowerBound[T:ClassTag](points: RDD[T],
-                                     matroid: Matroid[T],
-                                     distance: (T, T) => Double)(implicit ordering: Ordering[T]): Double = {
-    val combinations = points
-      .cartesian(points)
-      .filter({case (x, y) => ordering.compare(x, y) < 0})
-      .map({case k@(x, y) => (distance(x, y), k)})
-    val (d, (x1, x2)) = combinations.max()(Ordering.by(_._1))
-    if (matroid.isIndependent(Array(x1, x2))) {
-      println("The farthest points form an independent set")
-      return d
-    }
-    println("We have to seek another point for the diameter estimate")
-    val threshold = d/2
-    val dFromX1 = farthestFrom(points, x1, threshold, matroid, distance)
-    val dFromX2 = farthestFrom(points, x2, threshold, matroid, distance)
-    math.max(dFromX1, dFromX2)
-  }
-
   def cliqueDiversity[T](subset: IndexedSubset[T],
                          distance: (T, T) => Double): Double = {
     val n = subset.superSet.length
@@ -186,7 +152,7 @@ object MainMatroid {
             experiment.tag("epsilon", opts.epsilon())
             val localDataset: Array[WikiPage] = collectLocally(filteredDataset, numElements)
             implicit val ord: Ordering[WikiPage] = Ordering.by(page => page.id)
-            val delta = diameterLowerBound[WikiPage](filteredDataset, matroid, distance)
+            val delta = opts.diameter()
             val radius = (opts.epsilon() / 2) * (delta / (2*opts.k()))
             println(s"Building coreset with radius $radius (delta=$delta, epsilon=${opts.epsilon()}, k=${opts.k()})")
             PerformanceMetrics.reset()
@@ -256,6 +222,8 @@ object MainMatroid {
     lazy val input = opt[String](required = true)
 
     lazy val categories = opt[String](required = false, argName = "FILE")
+
+    lazy val diameter = opt[Double](required = true, argName = "DELTA")
 
   }
 
