@@ -246,7 +246,6 @@ object LocalSearch {
     sum
   }
 
-  // TODO Add metrics, like invocations to the oracle, invocations to the distance function, etc
   def remoteClique[T:ClassTag](input: IndexedSeq[T],
                                k: Int,
                                epsilon: Double,
@@ -256,6 +255,7 @@ object LocalSearch {
     if (input.length <= k) {
       input
     } else {
+      val n = input.size
       val pl = new ProgressLogger(LoggerFactory.getLogger("progress"), "swaps")
       val is = matroid.independentSetOfSize(input, k)
       require(is.size == k, s"No idependent set of size $k in the input of LocalSearch")
@@ -278,7 +278,7 @@ object LocalSearch {
         // This will be reset to true if a swap is found
         foundImprovingSwap = false
         // Compute the threshold for this iteration
-        val threshold = (1+epsilon/k)*currentDiversity
+        val threshold = (1+epsilon/n)*currentDiversity
         println(s"Diversity: $currentDiversity")
         assert(Math.abs(contribs.values().toDoubleArray.sum / 2.0 - cliqueDiversity(is, distance)) <= 0.00000001,
           s"Diversities differ! ${contribs.values().toDoubleArray.sum / 2.0} != $currentDiversity\n" +
