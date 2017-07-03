@@ -69,11 +69,11 @@ object MapReduceCoreset {
   }
 
   def withRadius[T:ClassTag](points: Array[T],
-                             epsilon: Double,
+                             radius: Double,
                              k: Int,
                              matroid: Matroid[T],
                              distance: (T, T) => Double): MapReduceCoreset[T] = {
-      val kernel = FarthestPointHeuristic.withRadius(points, epsilon, distance)
+      val kernel = FarthestPointHeuristic.withRadius(points, radius, distance)
       val clusters: Map[T, Seq[T]] = points.map { p =>
         val c = kernel.minBy(x => distance(x, p))
         (c, p)

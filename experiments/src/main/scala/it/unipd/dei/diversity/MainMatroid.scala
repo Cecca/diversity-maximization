@@ -4,13 +4,14 @@ import java.util.concurrent.TimeUnit
 
 import com.codahale.metrics.Counter
 import it.unipd.dei.diversity.ExperimentUtil.{jMap, timed}
-import it.unipd.dei.diversity.matroid.TransversalMatroid
+import it.unipd.dei.diversity.matroid.{Matroid, TransversalMatroid}
 import it.unipd.dei.diversity.wiki.WikiPage
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.sql.{Dataset, SparkSession}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.rogach.scallop.ScallopConf
 import it.unipd.dei.diversity.performanceMetrics
+import org.apache.spark.rdd.RDD
 
 import scala.io.Source
 import scala.reflect.ClassTag
@@ -27,6 +28,40 @@ object MainMatroid {
       .getOrCreate()
     _s.sparkContext.hadoopConfiguration.set("mapreduce.input.fileinputformat.input.dir.recursive", "true")
     _s
+  }
+
+  private def farthestFrom[T:ClassTag](points: RDD[T],
+                                       x: T,
+                                       threshold: Double,
+                                       matroid: Matroid[T],
+                                       distance: (T, T) => Double): Double = {
+    points.flatMap({y =>
+      val d = distance(x, y)
+      if (d >= threshold && matroid.isIndependent(Seq(x, y))) {
+        Iterator(d)
+      } else {
+        Iterator.empty
+      }
+    }).max()
+  }
+
+  def diameterLowerBound[T:ClassTag](points: RDD[T],
+                                     matroid: Matroid[T],
+                                     distance: (T, T) => Double)(implicit ordering: Ordering[T]): Double = {
+    val combinations = points
+      .cartesian(points)
+      .filter({case (x, y) => ordering.compare(x, y) < 0})
+      .map({case k@(x, y) => (distance(x, y), k)})
+    val (d, (x1, x2)) = combinations.max()(Ordering.by(_._1))
+    if (matroid.isIndependent(Array(x1, x2))) {
+      println("The farthest points form an independent set")
+      return d
+    }
+    println("We have to seek another point for the diameter estimate")
+    val threshold = d/2
+    val dFromX1 = farthestFrom(points, x1, threshold, matroid, distance)
+    val dFromX2 = farthestFrom(points, x2, threshold, matroid, distance)
+    math.max(dFromX1, dFromX2)
   }
 
   def cliqueDiversity[T](subset: IndexedSubset[T],
