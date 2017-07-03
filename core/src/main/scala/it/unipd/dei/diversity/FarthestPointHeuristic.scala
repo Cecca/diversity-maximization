@@ -101,7 +101,6 @@ object FarthestPointHeuristic {
       i += 1
     }
 
-    println(s"Radius: $radius (epsilon: $targetRadius)")
     while (radius > targetRadius && centers.size != n) {
       val center = nextCenter
       centers.add(center)
@@ -119,7 +118,6 @@ object FarthestPointHeuristic {
         }
         i += 1
       }
-      println(s"Radius: $radius, nextCenter $nextCenter, ${centers.size}/$n (epsilon: $targetRadius)")
     }
     centers.toVector
   }

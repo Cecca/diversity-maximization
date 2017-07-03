@@ -12,6 +12,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.rogach.scallop.ScallopConf
 import it.unipd.dei.diversity.performanceMetrics
 import org.apache.spark.rdd.RDD
+import org.apache.spark.storage.StorageLevel
 
 import scala.io.Source
 import scala.reflect.ClassTag
@@ -93,7 +94,6 @@ object MainMatroid {
       i += 1
     }
     println("Collected dataset locally")
-    data.unpersist(blocking = true)
     localDataset
   }
 
@@ -138,7 +138,7 @@ object MainMatroid {
       } else {
         Iterator.empty
       }
-    }.mapPartitions(Random.shuffle(_)).rdd.cache()
+    }.mapPartitions(Random.shuffle(_)).rdd.persist(StorageLevel.MEMORY_ONLY)
     val numElements = filteredDataset.count()
     println(s"The filtered dataset has $numElements elements")
     dataset.unpersist(blocking = true)
