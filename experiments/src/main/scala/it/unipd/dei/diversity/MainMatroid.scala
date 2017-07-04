@@ -144,8 +144,9 @@ object MainMatroid {
               val coreset = MapReduceCoreset.run(
                 localDataset, opts.kernelSize(), opts.k(), matroid, distance)
               coresetSize = Some(coreset.length)
+              println(s"Built coreset with ${coreset.length} over ${localDataset.length} points")
               LocalSearch.remoteClique[WikiPage](
-                localDataset, opts.k(), 0.0, matroid, distance)
+                coreset.points, opts.k(), 0.0, matroid, distance)
             }
           } else if(opts.epsilon.isDefined) {
             experiment.tag("coreset-type", "with-radius")
