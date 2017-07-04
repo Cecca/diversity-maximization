@@ -152,6 +152,7 @@ object MainMatroid {
             experiment.tag("epsilon", opts.epsilon())
             val localDataset: Array[WikiPage] = collectLocally(filteredDataset, numElements)
             implicit val ord: Ordering[WikiPage] = Ordering.by(page => page.id)
+            require(opts.diameter.isDefined, "You should specify the diameter on the command line")
             val delta = opts.diameter()
             val radius = (opts.epsilon() / 2) * (delta / (2*opts.k()))
             println(s"Building coreset with radius $radius (delta=$delta, epsilon=${opts.epsilon()}, k=${opts.k()})")
@@ -223,7 +224,7 @@ object MainMatroid {
 
     lazy val categories = opt[String](required = false, argName = "FILE")
 
-    lazy val diameter = opt[Double](required = true, argName = "DELTA")
+    lazy val diameter = opt[Double](required = false, argName = "DELTA")
 
   }
 

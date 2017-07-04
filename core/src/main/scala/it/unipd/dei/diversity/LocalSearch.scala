@@ -248,7 +248,7 @@ object LocalSearch {
 
   def remoteClique[T:ClassTag](input: IndexedSeq[T],
                                k: Int,
-                               epsilon: Double,
+                               tolerance: Double,
                                matroid: Matroid[T],
                                distance: (T, T) => Double)
   : IndexedSeq[T] = {
@@ -278,7 +278,7 @@ object LocalSearch {
         // This will be reset to true if a swap is found
         foundImprovingSwap = false
         // Compute the threshold for this iteration
-        val threshold = (1+epsilon/n)*currentDiversity
+        val threshold = (1+tolerance)*currentDiversity
         println(s"Diversity: $currentDiversity")
         assert(Math.abs(contribs.values().toDoubleArray.sum / 2.0 - cliqueDiversity(is, distance)) <= 0.00000001,
           s"Diversities differ! ${contribs.values().toDoubleArray.sum / 2.0} != $currentDiversity\n" +
