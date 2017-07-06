@@ -98,7 +98,7 @@ object Song {
 
 }
 
-class LyricsExperiment(override val spark: SparkSession,
+class SongExperiment(override val spark: SparkSession,
                        val dataPath: String,
                        val genresPath: String) extends ExperimentalSetup[Song] {
   import spark.implicits._

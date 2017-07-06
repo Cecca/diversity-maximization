@@ -1,5 +1,7 @@
 package it.unipd.dei.diversity.matroid
 
+import java.util.NoSuchElementException
+
 import it.unipd.dei.diversity._
 
 import scala.collection.mutable
@@ -56,6 +58,9 @@ class PartitionMatroid[T](val categories: Map[String, Int],
   override def isIndependent(elements: Seq[T]): Boolean = {
     PerformanceMetrics.matroidOracleCounterInc()
     val counts = mutable.Map[String, Int]()
+    for (k <- categories.keys) {
+      counts.put(k, 0)
+    }
     for (e <- elements) {
       val c = getCategory(e)
       counts(c) += 1
