@@ -1,7 +1,6 @@
 package it.unipd.dei.diversity.wiki
 
 import it.unipd.dei.diversity.mllib.Lemmatizer
-import org.apache.spark.ml.feature.StopWordsRemover
 import org.apache.spark.sql.SparkSession
 import org.rogach.scallop.ScallopConf
 
@@ -26,7 +25,7 @@ object Lemmatize {
     val raw = spark.read.json(jsonRdd)
 
     val lemmatizer = new Lemmatizer()
-      .setInputCol("text")
+      .setInputCol(opts.textColumn())
       .setOutputCol("lemmas")
     val withLemmas = lemmatizer.transform(raw)
 
@@ -38,6 +37,8 @@ object Lemmatize {
     val input = opt[String](required=true)
 
     val output = opt[String](required=true)
+
+    val textColumn = opt[String](default = Some("text"))
 
   }
 
