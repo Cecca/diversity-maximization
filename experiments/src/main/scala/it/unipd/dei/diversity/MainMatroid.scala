@@ -3,7 +3,7 @@ package it.unipd.dei.diversity
 import java.util.concurrent.TimeUnit
 
 import it.unipd.dei.diversity.ExperimentUtil.{jMap, timed}
-import it.unipd.dei.diversity.matroid.{WikiPage, WikipediaExperiment}
+import it.unipd.dei.diversity.matroid.{ExperimentalSetup, WikiPage, WikipediaExperiment}
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
@@ -63,88 +63,7 @@ object MainMatroid {
 
     val setup = new WikipediaExperiment(spark, opts.input(), opts.categories.get)
 
-    opts.algorithm() match {
-      case "local-search" =>
-        experiment.tag("gamma", opts.gamma())
-
-        val localDataset: Array[WikiPage] = setup.loadLocally()
-        val (solution, t) = timed {
-          LocalSearch.remoteClique[WikiPage](
-            localDataset, opts.k(), opts.gamma(), setup.matroid, setup.distance)
-        }
-
-        experiment.append("performance",
-          jMap(
-            "diversity" -> Diversity.clique(solution, setup.distance),
-            "time" -> ExperimentUtil.convertDuration(t, TimeUnit.MILLISECONDS)))
-
-        for (wp <- solution) {
-          experiment.append("solution",
-            jMap(
-              "title" -> wp.title,
-              "categories" -> wp.categories))
-        }
-
-      case "sequential-coreset" =>
-        var coresetSize: Option[Long] = None
-        val (solution, time) =
-          if (opts.kernelSize.isDefined) {
-            experiment.tag("coreset-type", "with-cardinality")
-            experiment.tag("k'", opts.kernelSize())
-            val localDataset: Array[WikiPage] = setup.loadLocally()
-            timed {
-              val coreset = MapReduceCoreset.run(
-                localDataset, opts.kernelSize(), opts.k(), setup.matroid, setup.distance)
-              coresetSize = Some(coreset.length)
-              println(s"Built coreset with ${coreset.length} over ${localDataset.length} points")
-              LocalSearch.remoteClique[WikiPage](
-                coreset.points, opts.k(), 0.0, setup.matroid, setup.distance)
-            }
-          } else if(opts.epsilon.isDefined) {
-            experiment.tag("coreset-type", "with-radius")
-            experiment.tag("epsilon", opts.epsilon())
-            val localDataset: Array[WikiPage] = setup.loadLocally()
-            implicit val ord: Ordering[WikiPage] = Ordering.by(page => page.id)
-            require(opts.diameter.isDefined, "You should specify the diameter on the command line")
-            val delta = opts.diameter()
-            val radius = (opts.epsilon() / 2) * (delta / (2*opts.k()))
-            println(s"Building coreset with radius $radius (delta=$delta, epsilon=${opts.epsilon()}, k=${opts.k()})")
-            PerformanceMetrics.reset()
-            timed {
-              val coreset = MapReduceCoreset.withRadius(
-                localDataset, radius, opts.k(), setup.matroid, setup.distance)
-              println(s"Built coreset with ${coreset.points.size} over ${localDataset.length} points")
-              coresetSize = Some(coreset.length)
-              LocalSearch.remoteClique[WikiPage](
-                coreset.points, opts.k(), 0.0, setup.matroid, setup.distance)
-            }
-          } else {
-            throw new IllegalArgumentException(
-              "You have to specify either the kernel size or epsilon when running the sequential coreset")
-          }
-
-        experiment.append("performance",
-          jMap(
-            "diversity" -> Diversity.clique(solution, setup.distance),
-            "coreset-size" -> coresetSize.get,
-            "time" -> ExperimentUtil.convertDuration(time, TimeUnit.MILLISECONDS)))
-
-        for (wp <- solution) {
-          experiment.append("solution",
-            jMap(
-              "title" -> wp.title,
-              "categories" -> wp.categories))
-        }
-
-      case "clustering-radius" =>
-        require(opts.epsilon.isDefined)
-        experiment.tag("epsilon", opts.epsilon())
-        val localDataset: Array[WikiPage] = setup.loadLocally()
-        val coreset = withRadiusExp[WikiPage](
-                localDataset, opts.epsilon(), Random.nextInt(localDataset.length), setup.distance, experiment)
-
-
-    }
+    run(opts, setup, experiment)
 
     val counters = PerformanceMetrics.registry.getCounters.entrySet().iterator()
     while(counters.hasNext) {
@@ -156,6 +75,63 @@ object MainMatroid {
     println(experiment.toSimpleString)
     experiment.saveAsJsonFile(true)
 
+  }
+
+  private def run[T:ClassTag](opts: Opts, setup: ExperimentalSetup[T], experiment: Experiment): Any = {
+    opts.algorithm() match {
+      case "local-search" =>
+        experiment.tag("gamma", opts.gamma())
+
+        val localDataset: Array[T] = setup.loadLocally()
+        val (solution, t) = timed {
+          LocalSearch.remoteClique[T](
+            localDataset, opts.k(), opts.gamma(), setup.matroid, setup.distance)
+        }
+
+        experiment.append("performance",
+          jMap(
+            "diversity" -> Diversity.clique(solution, setup.distance),
+            "time" -> ExperimentUtil.convertDuration(t, TimeUnit.MILLISECONDS)))
+
+        for (wp <- solution) {
+          experiment.append("solution",
+            jMap(setup.pointToMap(wp).toSeq: _*))
+        }
+
+      case "sequential-coreset" =>
+        experiment.tag("k'", opts.kernelSize())
+        var coresetSize: Option[Long] = None
+        val localDataset: Array[T] = setup.loadLocally()
+        val (solution, time) =
+          timed {
+            val coreset = MapReduceCoreset.run(
+              localDataset, opts.kernelSize(), opts.k(), setup.matroid, setup.distance)
+            coresetSize = Some(coreset.length)
+            println(s"Built coreset with ${coreset.length} over ${localDataset.length} points")
+            LocalSearch.remoteClique[T](
+              coreset.points, opts.k(), 0.0, setup.matroid, setup.distance)
+          }
+
+        experiment.append("performance",
+          jMap(
+            "diversity" -> Diversity.clique(solution, setup.distance),
+            "coreset-size" -> coresetSize.get,
+            "time" -> ExperimentUtil.convertDuration(time, TimeUnit.MILLISECONDS)))
+
+        for (wp <- solution) {
+          experiment.append("solution",
+            jMap(setup.pointToMap(wp).toSeq: _*))
+        }
+
+      case "clustering-radius" =>
+        require(opts.epsilon.isDefined)
+        experiment.tag("epsilon", opts.epsilon())
+        val localDataset: Array[T] = setup.loadLocally()
+        val coreset = withRadiusExp[T](
+          localDataset, opts.epsilon(), Random.nextInt(localDataset.length), setup.distance, experiment)
+
+
+    }
   }
 
   class Opts(args: Array[String]) extends ScallopConf(args) {

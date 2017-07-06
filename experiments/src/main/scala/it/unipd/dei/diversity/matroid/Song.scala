@@ -105,6 +105,12 @@ class LyricsExperiment(override val spark: SparkSession,
 
   override val distance: (Song, Song) => Double = Song.distance
 
+  override def pointToMap(point: Song): Map[String, Any] = Map(
+    "song" -> point.song,
+    "index" -> point.index,
+    "genre" -> point.genre
+  )
+
   lazy val genresCounts =
     Source.fromFile(genresPath).getLines().map(s => {
       val Array(g, c) = s.split("\\s+")

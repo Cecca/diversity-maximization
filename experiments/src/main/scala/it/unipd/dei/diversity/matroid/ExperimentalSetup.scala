@@ -9,6 +9,8 @@ abstract class ExperimentalSetup[T:ClassTag] {
   val distance: (T, T) => Double
   val matroid: Matroid[T]
 
+  def pointToMap(point: T): Map[String, Any]
+
   def loadDataset(): Dataset[T]
 
   def loadLocally(): Array[T] = {

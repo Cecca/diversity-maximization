@@ -64,6 +64,12 @@ class WikipediaExperiment(override val spark: SparkSession,
 
   override val distance: (WikiPage, WikiPage) => Double = WikiPage.distanceArbitraryComponents
 
+  override def pointToMap(point: WikiPage): Map[String, Any] = Map(
+    "id" -> point.id,
+    "title" -> point.title,
+    "categories" -> point.categories
+  )
+
   private lazy val rawData: Dataset[WikiPage] = spark.read.parquet(dataPath).as[WikiPage].cache()
 
   lazy val categories: Array[String] = categoriesPath match {
