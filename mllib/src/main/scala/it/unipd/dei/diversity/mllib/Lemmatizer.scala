@@ -15,7 +15,7 @@ import scala.collection.JavaConversions._
 class Lemmatizer(override val uid: String)
   extends UnaryTransformer[String, Seq[String], Lemmatizer] with DefaultParamsWritable {
 
-  val symbols = "^[',\\.`/-_]+$".r
+  val symbols = "^[',\\.`/-_\\+]+$".r
 
   val specialTokens = Set(
     "-lsb-", "-rsb-", "-lrb-", "-rrb-", "'s", "--"
