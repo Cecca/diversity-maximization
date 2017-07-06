@@ -1,7 +1,6 @@
-package it.unipd.dei.diversity.wiki
+package it.unipd.dei.diversity.matroid
 
 import it.unipd.dei.diversity._
-import it.unipd.dei.diversity.matroid.{Matroid, TransversalMatroid}
 import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.sql.{Dataset, SparkSession}
 import org.apache.spark.storage.StorageLevel

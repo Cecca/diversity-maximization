@@ -2,19 +2,13 @@ package it.unipd.dei.diversity
 
 import java.util.concurrent.TimeUnit
 
-import com.codahale.metrics.Counter
 import it.unipd.dei.diversity.ExperimentUtil.{jMap, timed}
-import it.unipd.dei.diversity.matroid.{Matroid, TransversalMatroid}
-import it.unipd.dei.diversity.wiki.{WikiPage, WikipediaExperiment}
+import it.unipd.dei.diversity.matroid.{WikiPage, WikipediaExperiment}
 import it.unipd.dei.experiment.Experiment
-import org.apache.spark.sql.{Dataset, SparkSession}
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.SparkConf
+import org.apache.spark.sql.SparkSession
 import org.rogach.scallop.ScallopConf
-import it.unipd.dei.diversity.performanceMetrics
-import org.apache.spark.rdd.RDD
-import org.apache.spark.storage.StorageLevel
 
-import scala.io.Source
 import scala.reflect.ClassTag
 import scala.util.Random
 

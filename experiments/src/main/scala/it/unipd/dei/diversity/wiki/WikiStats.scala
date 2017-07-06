@@ -1,11 +1,9 @@
 package it.unipd.dei.diversity.wiki
 
 import it.unipd.dei.diversity.ExperimentUtil.jMap
+import it.unipd.dei.diversity.matroid.{TransversalMatroid, WikiPage}
 import it.unipd.dei.diversity.{IndexedSubset, SerializationUtils}
-import it.unipd.dei.diversity.matroid.TransversalMatroid
-import it.unipd.dei.diversity.mllib.TfIdf
 import it.unipd.dei.experiment.Experiment
-import org.apache.spark.ml.feature.{StopWordsRemover, Word2VecModel}
 import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.sql.{Dataset, SparkSession}
 import org.rogach.scallop.ScallopConf

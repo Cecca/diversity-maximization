@@ -1,6 +1,5 @@
-package it.unipd.dei.diversity.wiki
+package it.unipd.dei.diversity.matroid
 
-import it.unipd.dei.diversity.matroid.Matroid
 import org.apache.spark.sql.{Dataset, SparkSession}
 
 import scala.reflect.ClassTag

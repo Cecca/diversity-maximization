@@ -1,4 +1,4 @@
-package it.unipd.dei.diversity.wiki
+package it.unipd.dei.diversity.matroid
 
 import org.apache.spark.ml.feature.Word2Vec
 import org.apache.spark.sql.SparkSession

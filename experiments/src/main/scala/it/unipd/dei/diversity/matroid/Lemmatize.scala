@@ -1,4 +1,4 @@
-package it.unipd.dei.diversity.wiki
+package it.unipd.dei.diversity.matroid
 
 import it.unipd.dei.diversity.mllib.Lemmatizer
 import org.apache.spark.sql.SparkSession

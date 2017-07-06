@@ -1,7 +1,6 @@
 package it.unipd.dei.diversity
 
-import it.unipd.dei.diversity.matroid.{Matroid, TransversalMatroid}
-import it.unipd.dei.diversity.wiki.WikiPage
+import it.unipd.dei.diversity.matroid.{Matroid, TransversalMatroid, WikiPage}
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
