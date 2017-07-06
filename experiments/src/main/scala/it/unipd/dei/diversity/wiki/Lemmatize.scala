@@ -22,7 +22,7 @@ object Lemmatize {
     val jsonRdd = spark.sparkContext
       .wholeTextFiles(opts.input(), spark.sparkContext.defaultParallelism)
       .flatMap { case (_, text) => text.split("\n") }
-    val raw = spark.read.json(jsonRdd)
+    val raw = spark.read.json(jsonRdd).repartition(spark.sparkContext.defaultParallelism)
 
     val lemmatizer = new Lemmatizer()
       .setInputCol(opts.textColumn())
