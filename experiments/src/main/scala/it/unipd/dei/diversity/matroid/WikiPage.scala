@@ -68,7 +68,7 @@ class WikipediaExperiment(override val spark: SparkSession,
 
   lazy val categories: Array[String] = categoriesPath match {
     case Some(path) =>
-      Source.fromFile (path).getLines ().toArray
+      Source.fromFile(path).getLines().toArray
     case None =>
       rawData.select("categories").as[Seq[String]].flatMap(identity).distinct().collect()
   }

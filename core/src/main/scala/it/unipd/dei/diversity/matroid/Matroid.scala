@@ -50,12 +50,12 @@ trait Matroid[T] extends Serializable {
   * categories and number of elements allowed for each category.
   * If a category is not in the mapping, then its allowed count is 0.
   */
-class PartitionMatroid[T](val categories: Map[Int, Int],
-                          val getCategory: T => Int) extends Matroid[T] {
+class PartitionMatroid[T](val categories: Map[String, Int],
+                          val getCategory: T => String) extends Matroid[T] {
 
   override def isIndependent(elements: Seq[T]): Boolean = {
     PerformanceMetrics.matroidOracleCounterInc()
-    val counts = mutable.Map[Int, Int]()
+    val counts = mutable.Map[String, Int]()
     for (e <- elements) {
       val c = getCategory(e)
       counts(c) += 1
@@ -68,7 +68,7 @@ class PartitionMatroid[T](val categories: Map[Int, Int],
     true
   }
 
-  override def coreSetPoints(elements: Seq[T], k: Int): Seq[T] = ???
+  override def coreSetPoints(elements: Seq[T], k: Int): Seq[T] = independentSetOfSize(elements, k)
 
 }
 
