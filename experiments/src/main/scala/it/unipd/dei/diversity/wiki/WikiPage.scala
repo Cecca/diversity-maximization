@@ -1,7 +1,13 @@
 package it.unipd.dei.diversity.wiki
 
 import it.unipd.dei.diversity._
+import it.unipd.dei.diversity.matroid.{Matroid, TransversalMatroid}
 import org.apache.spark.ml.linalg.{Vector, Vectors}
+import org.apache.spark.sql.{Dataset, SparkSession}
+import org.apache.spark.storage.StorageLevel
+
+import scala.io.Source
+import scala.util.Random
 
 case class WikiPage(id: Long, title: String, categories: Array[String], vector: Vector) {
   override def toString: String = s"($id) `$title` ${categories.mkString("[", ", ", "]")}"
@@ -49,5 +55,40 @@ object WikiPage {
     require(dist > Double.NegativeInfinity, "Points at negative infinite distance!!")
     dist
   }
+
+}
+
+class WikipediaExperiment(override val spark: SparkSession,
+                          val dataPath: String,
+                          val categoriesPath: Option[String]) extends ExperimentalSetup[WikiPage] {
+  import spark.implicits._
+
+  override val distance: (WikiPage, WikiPage) => Double = WikiPage.distanceArbitraryComponents
+
+  private lazy val rawData: Dataset[WikiPage] = spark.read.parquet(dataPath).as[WikiPage].cache()
+
+  lazy val categories: Array[String] = categoriesPath match {
+    case Some(path) =>
+      Source.fromFile (path).getLines ().toArray
+    case None =>
+      rawData.select("categories").as[Seq[String]].flatMap(identity).distinct().collect()
+  }
+
+  override def loadDataset(): Dataset[WikiPage] = {
+    val brCategories = spark.sparkContext.broadcast(categories.toSet)
+    rawData.flatMap { wp =>
+      val cs = brCategories.value
+      val cats = wp.categories.filter(cs.contains)
+      if (cats.nonEmpty) {
+        Iterator( wp.copy(categories = cats) )
+      } else {
+        Iterator.empty
+      }
+    }.mapPartitions(Random.shuffle(_))
+      .persist(StorageLevel.MEMORY_ONLY)
+  }
+
+  override lazy val matroid: Matroid[WikiPage] =
+    new TransversalMatroid[WikiPage, String](categories, _.categories)
 
 }

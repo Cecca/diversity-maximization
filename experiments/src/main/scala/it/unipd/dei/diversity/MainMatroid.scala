@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import com.codahale.metrics.Counter
 import it.unipd.dei.diversity.ExperimentUtil.{jMap, timed}
 import it.unipd.dei.diversity.matroid.{Matroid, TransversalMatroid}
-import it.unipd.dei.diversity.wiki.WikiPage
+import it.unipd.dei.diversity.wiki.{WikiPage, WikipediaExperiment}
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.sql.{Dataset, SparkSession}
 import org.apache.spark.{SparkConf, SparkContext}
@@ -50,19 +50,7 @@ object MainMatroid {
     }
     currentDiversity
   }
-
-  private def collectLocally(data: RDD[WikiPage], numElements: Long): Array[WikiPage] = {
-    val dataIt = data.toLocalIterator
-    val localDataset: Array[WikiPage] = Array.ofDim[WikiPage](numElements.toInt)
-    var i = 0
-    while (dataIt.hasNext) {
-      localDataset(i) = dataIt.next()
-      i += 1
-    }
-    println("Collected dataset locally")
-    localDataset
-  }
-
+  
   def main(args: Array[String]) {
     val opts = new Opts(args)
     opts.verify()
@@ -79,51 +67,21 @@ object MainMatroid {
       experiment.tag("input." + k, v)
     }
 
-    val distance: (WikiPage, WikiPage) => Double = WikiPage.distanceArbitraryComponents
-
-    import spark.implicits._
-    val dataset = spark.read.parquet(opts.input()).as[WikiPage].cache()
-    val categories =
-      if (opts.categories.isDefined) {
-        val _cats = Source.fromFile(opts.categories()).getLines().toArray
-        experiment.tag("query-categories", _cats)
-        _cats
-      } else {
-        val _cats = dataset.select("categories").as[Seq[String]].flatMap(identity).distinct().collect()
-        experiment.tag("query-categories", "*all*")
-        _cats
-      }
-    val matroid = new TransversalMatroid[WikiPage, String](categories, _.categories)
-
-    val brCategories = spark.sparkContext.broadcast(categories.toSet)
-    val filteredDataset = dataset.flatMap { wp =>
-      val cs = brCategories.value
-      val cats = wp.categories.filter(cs.contains)
-      if (cats.nonEmpty) {
-        Iterator( wp.copy(categories = cats) )
-      } else {
-        Iterator.empty
-      }
-    }.mapPartitions(Random.shuffle(_)).rdd.persist(StorageLevel.MEMORY_ONLY)
-    val numElements = filteredDataset.count()
-    println(s"The filtered dataset has $numElements elements")
-    dataset.unpersist(blocking = true)
-    experiment.tag("filtered dataset size", numElements)
-
+    val setup = new WikipediaExperiment(spark, opts.input(), opts.categories.get)
 
     opts.algorithm() match {
       case "local-search" =>
         experiment.tag("gamma", opts.gamma())
 
-        val localDataset: Array[WikiPage] = collectLocally(filteredDataset, numElements)
+        val localDataset: Array[WikiPage] = setup.loadLocally()
         val (solution, t) = timed {
           LocalSearch.remoteClique[WikiPage](
-            localDataset, opts.k(), opts.gamma(), matroid, distance)
+            localDataset, opts.k(), opts.gamma(), setup.matroid, setup.distance)
         }
 
         experiment.append("performance",
           jMap(
-            "diversity" -> Diversity.clique(solution, distance),
+            "diversity" -> Diversity.clique(solution, setup.distance),
             "time" -> ExperimentUtil.convertDuration(t, TimeUnit.MILLISECONDS)))
 
         for (wp <- solution) {
@@ -139,19 +97,19 @@ object MainMatroid {
           if (opts.kernelSize.isDefined) {
             experiment.tag("coreset-type", "with-cardinality")
             experiment.tag("k'", opts.kernelSize())
-            val localDataset: Array[WikiPage] = collectLocally(filteredDataset, numElements)
+            val localDataset: Array[WikiPage] = setup.loadLocally()
             timed {
               val coreset = MapReduceCoreset.run(
-                localDataset, opts.kernelSize(), opts.k(), matroid, distance)
+                localDataset, opts.kernelSize(), opts.k(), setup.matroid, setup.distance)
               coresetSize = Some(coreset.length)
               println(s"Built coreset with ${coreset.length} over ${localDataset.length} points")
               LocalSearch.remoteClique[WikiPage](
-                coreset.points, opts.k(), 0.0, matroid, distance)
+                coreset.points, opts.k(), 0.0, setup.matroid, setup.distance)
             }
           } else if(opts.epsilon.isDefined) {
             experiment.tag("coreset-type", "with-radius")
             experiment.tag("epsilon", opts.epsilon())
-            val localDataset: Array[WikiPage] = collectLocally(filteredDataset, numElements)
+            val localDataset: Array[WikiPage] = setup.loadLocally()
             implicit val ord: Ordering[WikiPage] = Ordering.by(page => page.id)
             require(opts.diameter.isDefined, "You should specify the diameter on the command line")
             val delta = opts.diameter()
@@ -160,11 +118,11 @@ object MainMatroid {
             PerformanceMetrics.reset()
             timed {
               val coreset = MapReduceCoreset.withRadius(
-                localDataset, radius, opts.k(), matroid, distance)
+                localDataset, radius, opts.k(), setup.matroid, setup.distance)
               println(s"Built coreset with ${coreset.points.size} over ${localDataset.length} points")
               coresetSize = Some(coreset.length)
               LocalSearch.remoteClique[WikiPage](
-                coreset.points, opts.k(), 0.0, matroid, distance)
+                coreset.points, opts.k(), 0.0, setup.matroid, setup.distance)
             }
           } else {
             throw new IllegalArgumentException(
@@ -173,7 +131,7 @@ object MainMatroid {
 
         experiment.append("performance",
           jMap(
-            "diversity" -> Diversity.clique(solution, distance),
+            "diversity" -> Diversity.clique(solution, setup.distance),
             "coreset-size" -> coresetSize.get,
             "time" -> ExperimentUtil.convertDuration(time, TimeUnit.MILLISECONDS)))
 
@@ -187,9 +145,9 @@ object MainMatroid {
       case "clustering-radius" =>
         require(opts.epsilon.isDefined)
         experiment.tag("epsilon", opts.epsilon())
-        val localDataset: Array[WikiPage] = collectLocally(filteredDataset, numElements)
+        val localDataset: Array[WikiPage] = setup.loadLocally()
         val coreset = withRadiusExp[WikiPage](
-                localDataset, opts.epsilon(), Random.nextInt(localDataset.length), distance, experiment)
+                localDataset, opts.epsilon(), Random.nextInt(localDataset.length), setup.distance, experiment)
 
 
     }
