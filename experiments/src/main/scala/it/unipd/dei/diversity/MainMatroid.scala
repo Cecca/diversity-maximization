@@ -111,21 +111,28 @@ object MainMatroid {
         experiment.tag("k'", opts.kernelSize())
         var coresetSize: Option[Long] = None
         val localDataset: Array[T] = setup.loadLocally()
-        val (solution, time) =
+        val ((solution, coresetTime, localSearchTime), totalTime) =
           timed {
-            val coreset = MapReduceCoreset.run(
-              localDataset, opts.kernelSize(), opts.k(), setup.matroid, setup.distance)
+            val (coreset, _coresetTime) = timed  {
+              MapReduceCoreset.run(
+                localDataset, opts.kernelSize(), opts.k(), setup.matroid, setup.distance)
+            }
             coresetSize = Some(coreset.length)
             println(s"Built coreset with ${coreset.length} over ${localDataset.length} points")
-            LocalSearch.remoteClique[T](
-              coreset.points, opts.k(), 0.0, setup.matroid, setup.distance)
+            val (sol, _lsTime) = timed {
+              LocalSearch.remoteClique[T](
+                coreset.points, opts.k(), 0.0, setup.matroid, setup.distance)
+            }
+            (sol, _coresetTime, _lsTime)
           }
 
         experiment.append("performance",
           jMap(
             "diversity" -> Diversity.clique(solution, setup.distance),
             "coreset-size" -> coresetSize.get,
-            "time" -> ExperimentUtil.convertDuration(time, TimeUnit.MILLISECONDS)))
+            "total-time" -> ExperimentUtil.convertDuration(totalTime, TimeUnit.MILLISECONDS),
+            "coreset-time" -> ExperimentUtil.convertDuration(coresetTime, TimeUnit.MILLISECONDS),
+            "local-search-time" -> ExperimentUtil.convertDuration(localSearchTime, TimeUnit.MILLISECONDS)))
 
         for (wp <- solution) {
           experiment.append("solution",
