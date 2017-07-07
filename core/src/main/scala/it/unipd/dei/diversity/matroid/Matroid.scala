@@ -2,6 +2,7 @@ package it.unipd.dei.diversity.matroid
 
 import java.util.NoSuchElementException
 
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
 import it.unipd.dei.diversity._
 
 import scala.collection.mutable
@@ -54,6 +55,25 @@ trait Matroid[T] extends Serializable {
   */
 class PartitionMatroid[T](val categories: Map[String, Int],
                           val getCategory: T => String) extends Matroid[T] {
+
+  override def isIndependent(elements: IndexedSubset[T]): Boolean = {
+    PerformanceMetrics.matroidOracleCounterInc()
+    val cs = new Object2IntOpenHashMap[String](categories.size)
+    cs.defaultReturnValue(0)
+    for (i <- elements.supersetIndices) {
+      val e = elements.superSet(i)
+      val c = getCategory(e)
+      cs.addTo(c, 1)
+    }
+    val it = cs.object2IntEntrySet().fastIterator()
+    while(it.hasNext) {
+      val kv = it.next()
+      if (kv.getIntValue > categories.getOrElse(kv.getKey, 0)) {
+        return false
+      }
+    }
+    true
+  }
 
   override def isIndependent(elements: Seq[T]): Boolean = {
     PerformanceMetrics.matroidOracleCounterInc()
