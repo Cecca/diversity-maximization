@@ -103,6 +103,7 @@ object MainMatroid {
           }
           (sample, numSamples)
         }
+        require(solution.size == opts.k(), "Solution of wrong size")
 
         experiment.append("performance",
           jMap(
@@ -124,6 +125,7 @@ object MainMatroid {
           LocalSearch.remoteClique[T](
             localDataset, opts.k(), opts.gamma(), setup.matroid, setup.distance)
         }
+        require(solution.size == opts.k(), "Solution of wrong size")
 
         experiment.append("performance",
           jMap(
@@ -154,6 +156,7 @@ object MainMatroid {
             (sol, _coresetTime, _lsTime)
           }
 
+        require(solution.size == opts.k(), "Solution of wrong size")
         experiment.append("performance",
           jMap(
             "diversity" -> Diversity.clique(solution, setup.distance),
