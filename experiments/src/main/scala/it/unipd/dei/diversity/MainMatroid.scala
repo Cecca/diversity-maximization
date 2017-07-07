@@ -49,7 +49,8 @@ object MainMatroid {
     val opts = new Opts(args)
     opts.verify()
 
-    require(opts.categories.isDefined ^ opts.genres.isDefined, "only one between categories and genres can be defined")
+    require(opts.categories.isDefined ^ opts.genres.isDefined,
+      "exactly one between categories and genres can be defined")
 
     val experiment = new Experiment()
       .tag("input", opts.input())
@@ -88,6 +89,33 @@ object MainMatroid {
 
   private def run[T:ClassTag](opts: Opts, setup: ExperimentalSetup[T], experiment: Experiment): Any = {
     opts.algorithm() match {
+      case "random" =>
+        val dataset = setup.loadDataset().rdd.cache()
+        val k = opts.k()
+        val ((solution, numberOfSamples), time) = timed {
+          println("Taking first sample")
+          var sample = dataset.takeSample(withReplacement = false, k)
+          var numSamples = 1
+          while (!setup.matroid.isIndependent(sample)) {
+            println(s"Taking sample $numSamples")
+            sample = dataset.takeSample(withReplacement = false, k)
+            numSamples += 1
+          }
+          (sample, numSamples)
+        }
+
+        experiment.append("performance",
+          jMap(
+            "diversity" -> Diversity.clique(solution, setup.distance),
+            "number-of-samples" -> numberOfSamples,
+            "total-time" -> ExperimentUtil.convertDuration(time, TimeUnit.MILLISECONDS)))
+
+        for (wp <- solution) {
+          experiment.append("solution",
+            jMap(setup.pointToMap(wp).toSeq: _*))
+        }
+
+
       case "local-search" =>
         experiment.tag("gamma", opts.gamma())
 
