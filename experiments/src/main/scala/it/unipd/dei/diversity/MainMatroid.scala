@@ -91,6 +91,8 @@ object MainMatroid {
     opts.algorithm() match {
       case "random" =>
         val dataset = setup.loadDataset().rdd.cache()
+        // Force loading of dataset, so not to measure the loading time too.
+        dataset.count()
         val k = opts.k()
         val ((solution, numberOfSamples), time) = timed {
           println("Taking first sample")
