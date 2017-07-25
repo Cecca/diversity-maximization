@@ -142,7 +142,7 @@ object MainMatroid {
       case "mapreduce" =>
         experiment.tag("k'", opts.kernelSize())
         experiment.tag("num-partitions", spark.sparkContext.defaultParallelism)
-        experiment.tag("sparify", opts.sparsify.isDefined)
+        experiment.tag("sparsify", opts.sparsify.isDefined)
         var coresetSize: Option[Long] = None
         val dataset = setup.loadDataset().rdd.repartition(spark.sparkContext.defaultParallelism).glom()
         val mrCoreset = Algorithm.mapReduce(
