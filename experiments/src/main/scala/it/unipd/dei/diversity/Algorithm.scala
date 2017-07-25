@@ -130,11 +130,10 @@ object Algorithm {
                             matroid: Matroid[T],
                             distance: (T, T) => Double,
                             experiment: Experiment): MapReduceCoreset[T] = {
-    require(kernelSize >= k)
     experiment.tag("algorithm", "MapReduce")
 
     val parallelism = points.sparkContext.defaultParallelism
-    require(points.partitions.length == parallelism)
+    require(points.partitions.length == parallelism, "Wrong number of partitions")
 
     println("Run MapReduce algorithm!")
     val partitionCnt = points.sparkContext.longAccumulator("partition counter")
@@ -159,7 +158,7 @@ object Algorithm {
 
     experiment.append("times",
       jMap(
-        "component" -> "algorithm",
+        "component" -> "coreset",
         "time"      -> convertDuration(mrTime, reportTimeUnit)
       ))
 

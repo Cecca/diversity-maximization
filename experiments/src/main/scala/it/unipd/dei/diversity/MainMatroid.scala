@@ -139,6 +139,46 @@ object MainMatroid {
             jMap(setup.pointToMap(wp).toSeq: _*))
         }
 
+      case "mapreduce" =>
+        experiment.tag("k'", opts.kernelSize())
+        experiment.tag("num-partitions", spark.sparkContext.defaultParallelism)
+        experiment.tag("sparify", opts.sparsify.isDefined)
+        var coresetSize: Option[Long] = None
+        val dataset = setup.loadDataset().rdd.repartition(spark.sparkContext.defaultParallelism).glom()
+        val mrCoreset = Algorithm.mapReduce(
+          dataset, opts.kernelSize(), opts.k(), setup.matroid, setup.distance, experiment)
+        println(s"Computed coreset with ${mrCoreset.length} points and radius ${mrCoreset.radius}")
+        val coreset =
+          if (opts.sparsify.isDefined) {
+            val (_c, _t) = timed {
+              MapReduceCoreset.withRadius(
+                mrCoreset.points.toArray, mrCoreset.radius, opts.k(), setup.matroid, setup.distance)
+            }
+            experiment.append("times",
+              jMap(
+                "component" -> "sparsification",
+                "time"      -> ExperimentUtil.convertDuration(_t, TimeUnit.MILLISECONDS)))
+            println(s"Sparsified coreset has ${_c.length} points")
+            _c
+          } else {
+            mrCoreset
+          }
+        val (solution, lsTime) = timed {
+          LocalSearch.remoteClique[T](
+            coreset.points, opts.k(), 0.0, setup.matroid, setup.distance)
+        }
+        require(solution.size == opts.k(), "Solution of wrong size")
+        require(setup.matroid.isIndependent(solution), "The solution is not an independent set!")
+        experiment.append("times",
+          jMap(
+            "component" -> "local-search",
+            "time"      -> ExperimentUtil.convertDuration(lsTime, TimeUnit.MILLISECONDS)))
+        experiment.append("performance",
+          jMap(
+            "diversity" -> Diversity.clique(solution, setup.distance),
+            "coreset-size" -> coreset.length))
+
+
       case "sequential-coreset" =>
         experiment.tag("k'", opts.kernelSize())
         var coresetSize: Option[Long] = None
@@ -195,8 +235,7 @@ object MainMatroid {
 
     lazy val epsilon = opt[Double]()
 
-    // TODO Use this option
-    lazy val approxRuns = opt[Int](default = Some(1))
+    lazy val sparsify = toggle(descrYes = "whether to sparsify the coreset resulting from the MapReduce algorithm")
 
     lazy val input = opt[String](required = true)
 

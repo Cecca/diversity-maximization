@@ -340,6 +340,7 @@ object LocalSearch {
   : MapReduceCoreset[T] =
     new MapReduceCoreset(
       run(points, k, epsilon, distance, diversity).toVector,
-      Vector.empty[T])
+      Vector.empty[T],
+      Double.NaN)
 
 }

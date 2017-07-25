@@ -22,7 +22,8 @@ import scala.collection.mutable.ArrayBuffer
 import scala.reflect.ClassTag
 
 class MapReduceCoreset[T:ClassTag](val kernel: Vector[T],
-                                   val delegates: Vector[T])
+                                   val delegates: Vector[T],
+                                   val radius: Double)
 extends Coreset[T] with Serializable {
 
   def length: Int = kernel.length + delegates.length
@@ -37,12 +38,14 @@ object MapReduceCoreset {
   def composeDistinct[T:ClassTag](a: MapReduceCoreset[T], b: MapReduceCoreset[T]): MapReduceCoreset[T] =
     new MapReduceCoreset(
       (a.kernel ++ b.kernel).distinct,
-      (a.delegates ++ b.delegates).distinct)
+      (a.delegates ++ b.delegates).distinct,
+      math.max(a.radius, b.radius))
 
   def compose[T:ClassTag](a: MapReduceCoreset[T], b: MapReduceCoreset[T]): MapReduceCoreset[T] =
     new MapReduceCoreset(
       a.kernel ++ b.kernel,
-      a.delegates ++ b.delegates)
+      a.delegates ++ b.delegates,
+      math.max(a.radius, b.radius))
 
 
   def run[T:ClassTag](points: Array[T],
@@ -51,20 +54,31 @@ object MapReduceCoreset {
                       matroid: Matroid[T],
                       distance: (T, T) => Double): MapReduceCoreset[T] = {
     if (points.length < kernelSize) {
-      new MapReduceCoreset(points.toVector, Vector.empty[T])
+      new MapReduceCoreset(points.toVector, Vector.empty[T], 0.0)
     } else {
       // FIXME Optimize
       val kernel = FarthestPointHeuristic.run(points, kernelSize, distance)
+      var r = 0.0
       val clusters: Map[T, Seq[T]] = points.map { p =>
-        val c = kernel.minBy(x => distance(x, p))
-        (c, p)
+        var distanceToClosest = Double.PositiveInfinity
+        var closest = kernel(0)
+        for (x <- kernel) {
+          val d = distance(x, p)
+          if (d < distanceToClosest) {
+            distanceToClosest = d
+            closest = kernel(0)
+          }
+        }
+//        val c = kernel.minBy(x => distance(x, p))
+        r = math.max(r, distanceToClosest)
+        (closest, p)
       }.groupBy(_._1).mapValues(_.map(_._2))
 
       val coreset = clusters.values.flatMap { cluster =>
         matroid.coreSetPoints(cluster, k)
       }
 
-      new MapReduceCoreset[T](coreset.toVector, Vector.empty)
+      new MapReduceCoreset[T](coreset.toVector, Vector.empty, r)
     }
   }
 
@@ -83,7 +97,7 @@ object MapReduceCoreset {
         matroid.coreSetPoints(cluster, k)
       }
 
-      new MapReduceCoreset[T](coreset.toVector, Vector.empty)
+      new MapReduceCoreset[T](coreset.toVector, Vector.empty, radius)
   }
 
 
@@ -93,13 +107,14 @@ object MapReduceCoreset {
                       distance: (T, T) => Double): MapReduceCoreset[T] = {
     val resultSize = kernelSize * numDelegates
     if (points.length < kernelSize) {
-      new MapReduceCoreset(points.toVector, Vector.empty[T])
+      new MapReduceCoreset(points.toVector, Vector.empty[T], 0.0)
     } else {
       val kernel = FarthestPointHeuristic.run(points, kernelSize, distance)
       val delegates = ArrayBuffer[T]()
 
       // Init to 1 the number of delegates because we already count the centers
       val counters = Array.fill[Int](kernel.length)(1)
+      var radius = 0.0
 
       var pointIdx = 0
       while (pointIdx < points.length) {
@@ -115,6 +130,7 @@ object MapReduceCoreset {
           }
           centerIdx += 1
         }
+        radius = math.max(radius, minDist)
         assert(minDist <= Utils.minDistance(kernel, distance),
           s"Distance: $minDist, farness: ${Utils.minDistance(kernel, distance)}")
         // Add the point to the solution if there is space in the delegate count.
@@ -128,7 +144,7 @@ object MapReduceCoreset {
       }
       assert(Utils.maxMinDistance(delegates, kernel, distance) <= Utils.minDistance(kernel, distance),
         "Anticover property failing")
-      new MapReduceCoreset(kernel.toVector, delegates.toVector)
+      new MapReduceCoreset(kernel.toVector, delegates.toVector, radius)
     }
   }
 
