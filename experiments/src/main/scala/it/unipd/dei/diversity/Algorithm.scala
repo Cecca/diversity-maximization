@@ -17,6 +17,7 @@
 package it.unipd.dei.diversity
 
 import it.unipd.dei.diversity.ExperimentUtil._
+import it.unipd.dei.diversity.matroid.Matroid
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.rdd.RDD
 
@@ -113,6 +114,48 @@ object Algorithm {
     require(coreset.kernel.size + coreset.delegates.size <= parallelism*kernelSize*k,
       "Unexpected coreset size " +
         s"${coreset.kernel.size} + ${coreset.delegates.size} > ${parallelism*kernelSize*k}")
+
+    experiment.append("times",
+      jMap(
+        "component" -> "algorithm",
+        "time"      -> convertDuration(mrTime, reportTimeUnit)
+      ))
+
+    coreset
+  }
+
+  def mapReduce[T:ClassTag](points: RDD[Array[T]],
+                            kernelSize: Int,
+                            k: Int,
+                            matroid: Matroid[T],
+                            distance: (T, T) => Double,
+                            experiment: Experiment): MapReduceCoreset[T] = {
+    require(kernelSize >= k)
+    experiment.tag("algorithm", "MapReduce")
+
+    val parallelism = points.sparkContext.defaultParallelism
+    require(points.partitions.length == parallelism)
+
+    println("Run MapReduce algorithm!")
+    val partitionCnt = points.sparkContext.longAccumulator("partition counter")
+    val pointsCnt = points.sparkContext.longAccumulator("points counter")
+    val bMatroid = points.sparkContext.broadcast(matroid)
+    val (coreset, mrTime) = timed {
+      points.map { pointsArr =>
+        require(pointsArr.length > 0, "Cannot work on empty partitions!")
+        partitionCnt.add(1)
+        pointsCnt.add(pointsArr.length)
+        MapReduceCoreset.run(
+          pointsArr,
+          kernelSize,
+          k,
+          bMatroid.value,
+          distance)
+      }.reduce { (a, b) =>
+        MapReduceCoreset.compose(a, b)
+      }
+    }
+    println(s"Processed ${pointsCnt.value} points")
 
     experiment.append("times",
       jMap(

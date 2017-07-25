@@ -3,7 +3,7 @@ package it.unipd.dei.diversity
 import java.util.concurrent.TimeUnit
 
 import it.unipd.dei.diversity.ExperimentUtil.{jMap, timed}
-import it.unipd.dei.diversity.matroid.{ExperimentalSetup, SongExperiment, WikiPage, WikipediaExperiment}
+import it.unipd.dei.diversity.matroid.{ExperimentalSetup, SongExperiment, WikipediaExperiment}
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
