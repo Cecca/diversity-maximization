@@ -1,13 +1,13 @@
-package it.unipd.dei.diversity
+package it.unipd.dei.diversity.matroid
 
 import org.apache.spark.SparkConf
 import org.apache.spark.ml.clustering.LDA
 import org.apache.spark.ml.feature.{CountVectorizer, StopWordsRemover}
 import org.apache.spark.sql.SparkSession
-import org.rogach.scallop.ScallopConf
 import org.apache.spark.sql.functions._
+import org.rogach.scallop.ScallopConf
 
-object MainLDA {
+object TrainLDA {
 
   def main(args: Array[String]) {
     val opts = new Opts(args)
@@ -40,9 +40,9 @@ object MainLDA {
       .setFeaturesCol("counts")
       .fit(counts)
 
-    val vocab = vectorizer.vocabulary
+    model.save(opts.output())
 
-//    model.write.overwrite().save(opts.output())
+    val vocab = vectorizer.vocabulary
 
     val topics = model.describeTopics(3)
     val topicsWithTerms = topics
@@ -50,13 +50,17 @@ object MainLDA {
     println("Topics")
     topicsWithTerms.select("topic", "terms").show(false)
 
+    val threshold = opts.threshold()
+
     val transformed = model.transform(counts)
-    transformed.select("title", "topicDistribution").show(false)
     val bestTopic = udf({ topics: org.apache.spark.ml.linalg.Vector =>
-      topics.argmax
+      topics.toArray
+        .zipWithIndex
+        .filter {case (score, idx) => score > threshold }
+        .map { _._2 }
     }).apply(transformed.col("topicDistribution"))
-    val withTopic = transformed.withColumn("topic", bestTopic)//.drop("topicDistribution")
-    withTopic.select("title", "topic", "topicDistribution")//.show(false)
+    val withTopic = transformed.withColumn("topic", bestTopic).drop("topicDistribution")
+    withTopic.select("title", "topic").show(false)
   }
 
   private class Opts(args: Array[String]) extends ScallopConf(args) {
@@ -70,6 +74,8 @@ object MainLDA {
     lazy val numIterations = opt[Int](default=Some(10))
 
     lazy val vocabularySize = opt[Int](default=Some(5000))
+
+    lazy val threshold = opt[Double](default=Some(0.1))
 
   }
 
