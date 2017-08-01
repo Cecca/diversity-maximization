@@ -1,5 +1,6 @@
 package it.unipd.dei.diversity.matroid
 
+import java.io.{FileOutputStream, PrintWriter}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.SparkConf
 import org.apache.spark.ml.clustering.{LDA, LDAModel, LocalLDAModel}
@@ -11,6 +12,10 @@ import org.apache.spark.sql.functions._
 import org.rogach.scallop.ScallopConf
 
 object TrainLDA {
+
+  val stopWords: Array[String] = StopWordsRemover.loadDefaultStopWords("english") ++ Seq(
+    "-", "$", "%", "°", "<br>", "also", "|", "!", "?"
+  )
 
   def main(args: Array[String]) {
     val opts = new Opts(args)
@@ -26,6 +31,10 @@ object TrainLDA {
     } else if (opts.describe.isDefined) {
       println(s"Print information on topic ${opts.describe()}")
       describe(opts, spark)
+    } else if (opts.dump.isDefined) {
+      dump(opts, spark)
+    } else if (opts.output.isDefined) {
+      transform(opts, spark)
     }
 
   }
@@ -45,7 +54,7 @@ object TrainLDA {
     val cleaned = new StopWordsRemover()
       .setInputCol("lemmas")
       .setOutputCol("tokens")
-      .setStopWords(StopWordsRemover.loadDefaultStopWords("english"))
+      .setStopWords(stopWords)
       .transform(data)
 
     val vectorizer = new CountVectorizer()
@@ -114,6 +123,24 @@ object TrainLDA {
     describeWithTerms(topics.filter(s"topic == ${opts.describe()}"), vocabulary)
   }
 
+  def dump(opts: Opts, spark: SparkSession): Unit = {
+    val model = LocalLDAModel.load(opts.model())
+    val vocabulary = CountVectorizerModel.load(vocabname(opts.model())).vocabulary
+    val topics = model.describeTopics
+    val topicsWithTerms = topics
+      .withColumn(
+        "terms",
+        udf({ indices: Seq[Int] => indices.map({ i => vocabulary(i) }) }).apply(topics.col("termIndices")))
+    val tops = topicsWithTerms.select("topic", "terms").collect()
+    val out = new PrintWriter(new FileOutputStream(opts.dump()))
+    for (t <- tops) {
+      val id = t.getAs[Int]("topic")
+      val words = t.getAs[Seq[String]]("terms").mkString(" ")
+      out.println(s"$id  $words")
+    }
+    out.close()
+  }
+
   def transform(opts: Opts, spark: SparkSession): Unit = {
     require(opts.output.isDefined)
     val model = LocalLDAModel.load(opts.model())
@@ -139,6 +166,8 @@ object TrainLDA {
     lazy val threshold = opt[Double](default=Some(0.1))
 
     lazy val describe = opt[Int](descr = "describe the given topic")
+
+    lazy val dump = opt[String](descr = "dump the topics to the given text file")
 
   }
 
