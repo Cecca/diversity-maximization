@@ -147,7 +147,9 @@ object TrainLDA {
     require(opts.output.isDefined)
     val model = LocalLDAModel.load(opts.model())
     val (counts, _) = loadData(opts, spark)
+    counts.printSchema()
     val transformed = transform(counts, model, opts.threshold()).cache()
+    transformed.printSchema()
     println(s"Transformed dataset of ${transformed.count()} elements")
     transformed.write.parquet(opts.output())
     val meta = SerializationUtils.metadata(opts.input()) ++ Map(

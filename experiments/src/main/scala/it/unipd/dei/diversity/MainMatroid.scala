@@ -3,7 +3,7 @@ package it.unipd.dei.diversity
 import java.util.concurrent.TimeUnit
 
 import it.unipd.dei.diversity.ExperimentUtil.{jMap, timed}
-import it.unipd.dei.diversity.matroid.{ExperimentalSetup, SongExperiment, WikipediaExperiment}
+import it.unipd.dei.diversity.matroid.{ExperimentalSetup, SongExperiment, WikipediaExperiment, WikipediaLDAExperiment}
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
@@ -49,8 +49,8 @@ object MainMatroid {
     val opts = new Opts(args)
     opts.verify()
 
-    require(opts.categories.isDefined ^ opts.genres.isDefined,
-      "exactly one between categories and genres can be defined")
+    require(opts.categories.isDefined ^ opts.genres.isDefined ^ opts.topics.isDefined,
+      "exactly one between categories, genres, and topics can be defined")
 
     val experiment = new Experiment()
       .tag("input", opts.input())
@@ -69,8 +69,10 @@ object MainMatroid {
         new WikipediaExperiment(spark, opts.input(), opts.categories.get)
       } else if (opts.genres.isDefined) {
         new SongExperiment(spark, opts.input(), opts.genres())
+      } else if (opts.topics.isDefined) {
+        new WikipediaLDAExperiment(spark, opts.input())
       } else {
-        throw new IllegalArgumentException("Must provide at least one between categories and genres")
+        throw new IllegalArgumentException("Must provide at least one between categories, genres, or topics")
       }
 
     run(opts, setup, experiment)
@@ -242,6 +244,8 @@ object MainMatroid {
     lazy val categories = opt[String](required = false, argName = "FILE")
 
     lazy val genres = opt[String](required = false, argName = "FILE")
+
+    lazy val topics = toggle()
 
     lazy val diameter = opt[Double](required = false, argName = "DELTA")
 

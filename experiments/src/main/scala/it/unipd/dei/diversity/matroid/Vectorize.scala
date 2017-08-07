@@ -72,6 +72,7 @@ object Vectorize {
             .filter(row => row.getAs[org.apache.spark.ml.linalg.Vector]("vector").numNonzeros > 0)
             .drop("words")
           transformed.write.parquet(cmd.output())
+          transformed.printSchema()
           (cmd.output(), Map(
             "representation" -> "word2vec",
             "model" -> cmd.word2vecModel()
