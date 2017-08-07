@@ -60,19 +60,12 @@ object MapReduceCoreset {
       val kernel = FarthestPointHeuristic.run(points, kernelSize, distance)
       var r = 0.0
       val clusters: Map[T, Seq[T]] = points.map { p =>
-        var distanceToClosest = Double.PositiveInfinity
-        var closest = kernel(0)
-        for (x <- kernel) {
-          val d = distance(x, p)
-          if (d < distanceToClosest) {
-            distanceToClosest = d
-            closest = kernel(0)
-          }
-        }
-//        val c = kernel.minBy(x => distance(x, p))
-        r = math.max(r, distanceToClosest)
-        (closest, p)
+        val c = kernel.minBy(x => distance(x, p))
+        r = math.max(r, distance(c, p))
+        (c, p)
       }.groupBy(_._1).mapValues(_.map(_._2))
+
+      require(clusters.size == kernel.size, "The number of clusters should be equal to the number of kernel points")
 
       val coreset = clusters.values.flatMap { cluster =>
         matroid.coreSetPoints(cluster, k)
