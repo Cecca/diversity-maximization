@@ -1,6 +1,8 @@
 package it.unipd.dei.diversity.matroid
 
 import java.io.{FileOutputStream, PrintWriter}
+
+import it.unipd.dei.diversity.SerializationUtils
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.SparkConf
 import org.apache.spark.ml.clustering.{LDA, LDAModel, LocalLDAModel}
@@ -144,9 +146,14 @@ object TrainLDA {
   def transform(opts: Opts, spark: SparkSession): Unit = {
     require(opts.output.isDefined)
     val model = LocalLDAModel.load(opts.model())
-    val (counts, vectorizer) = loadData(opts, spark)
-    val transformed = transform(counts, model, opts.threshold())
+    val (counts, _) = loadData(opts, spark)
+    val transformed = transform(counts, model, opts.threshold()).cache()
+    println(s"Transformed dataset of ${transformed.count()} elements")
     transformed.write.parquet(opts.output())
+    val meta = SerializationUtils.metadata(opts.input()) ++ Map(
+      "transformed-with" -> "LDA"
+    )
+    SerializationUtils.writeMetadata(opts.output(), meta)
   }
 
   private class Opts(args: Array[String]) extends ScallopConf(args) {
