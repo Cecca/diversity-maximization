@@ -180,6 +180,12 @@ object MainMatroid {
             "diversity" -> Diversity.clique(solution, setup.distance),
             "coreset-size" -> coreset.length))
 
+        for (wp <- solution) {
+          experiment.append("solution",
+            jMap(setup.pointToMap(wp).toSeq: _*))
+        }
+
+
 
       case "sequential-coreset" =>
         experiment.tag("k'", opts.kernelSize())
