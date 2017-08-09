@@ -132,8 +132,8 @@ object Algorithm {
                             experiment: Experiment): MapReduceCoreset[T] = {
     experiment.tag("algorithm", "MapReduce")
 
-    val parallelism = points.sparkContext.defaultParallelism
-    require(points.partitions.length == parallelism, "Wrong number of partitions")
+//    val parallelism = points.sparkContext.defaultParallelism
+//    require(points.partitions.length == parallelism, "Wrong number of partitions")
 
     println("Run MapReduce algorithm!")
     val partitionCnt = points.sparkContext.longAccumulator("partition counter")

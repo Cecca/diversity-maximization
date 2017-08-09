@@ -142,19 +142,23 @@ object MainMatroid {
         }
 
       case "mapreduce" =>
-        experiment.tag("k'", opts.kernelSize())
-        experiment.tag("num-partitions", spark.sparkContext.defaultParallelism)
+        require(opts.tau.isDefined)
+        val tau = opts.tau()
+        val tauParallel = opts.tau.get.getOrElse(tau)
+        val parallelism = opts.parallelism.get.getOrElse(spark.sparkContext.defaultParallelism)
+        experiment.tag("tau", opts.tau())
+        experiment.tag("tau-parallel", opts.tau())
+        experiment.tag("num-partitions", parallelism)
         experiment.tag("sparsify", opts.sparsify.isDefined)
         var coresetSize: Option[Long] = None
-        val dataset = setup.loadDataset().rdd.repartition(spark.sparkContext.defaultParallelism).glom()
+        val dataset = setup.loadDataset().rdd.repartition(parallelism).glom()
         val mrCoreset = Algorithm.mapReduce(
-          dataset, opts.kernelSize(), opts.k(), setup.matroid, setup.distance, experiment)
+          dataset, tauParallel, opts.k(), setup.matroid, setup.distance, experiment)
         println(s"Computed coreset with ${mrCoreset.length} points and radius ${mrCoreset.radius}")
         val coreset =
           if (opts.sparsify.isDefined) {
             val (_c, _t) = timed {
-              MapReduceCoreset.withRadius(
-                mrCoreset.points.toArray, mrCoreset.radius, opts.k(), setup.matroid, setup.distance)
+              MapReduceCoreset.run(mrCoreset.points.toArray, tau, opts.k(), setup.matroid, setup.distance)
             }
             experiment.append("times",
               jMap(
@@ -178,7 +182,8 @@ object MainMatroid {
         experiment.append("performance",
           jMap(
             "diversity" -> Diversity.clique(solution, setup.distance),
-            "coreset-size" -> coreset.length))
+            "large-coreset-size" -> mrCoreset.length,
+            "small-coreset-size" -> coreset.length))
 
         for (wp <- solution) {
           experiment.append("solution",
@@ -188,14 +193,14 @@ object MainMatroid {
 
 
       case "sequential-coreset" =>
-        experiment.tag("k'", opts.kernelSize())
+        experiment.tag("k'", opts.tau())
         var coresetSize: Option[Long] = None
         val localDataset: Array[T] = setup.loadLocally()
         val ((solution, coresetTime, localSearchTime), totalTime) =
           timed {
             val (coreset, _coresetTime) = timed  {
               MapReduceCoreset.run(
-                localDataset, opts.kernelSize(), opts.k(), setup.matroid, setup.distance)
+                localDataset, opts.tau(), opts.k(), setup.matroid, setup.distance)
             }
             coresetSize = Some(coreset.length)
             println(s"Built coreset with ${coreset.length} over ${localDataset.length} points")
@@ -239,11 +244,17 @@ object MainMatroid {
 
     lazy val gamma = opt[Double](default = Some(0.0))
 
-    lazy val kernelSize = opt[Int](short='s')
+    lazy val tau = opt[Int]()
+
+    lazy val tauP = opt[Int]()
+
+    lazy val parallelism = opt[Int]()
 
     lazy val epsilon = opt[Double]()
 
-    lazy val sparsify = toggle(descrYes = "whether to sparsify the coreset resulting from the MapReduce algorithm")
+    lazy val sparsify = toggle(
+      default=Some(true),
+      descrYes = "whether to sparsify the coreset resulting from the MapReduce algorithm")
 
     lazy val input = opt[String](required = true)
 
