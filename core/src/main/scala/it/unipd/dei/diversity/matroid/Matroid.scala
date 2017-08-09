@@ -130,19 +130,23 @@ class TransversalMatroid[T:ClassTag, S](val sets: Array[S],
     val elementsArr = elements.toArray // FIXME: Get rid of this
     // First, get an independent set of size k
     val is = independentSetOfSize(elementsArr, k)
-    val numAdditionalPoints = is.size
-    // Then, compute the set of delegates. For each set represented by
-    // elements, we add at most numAdditionalPoints to the output.
-    val output = IndexedSubset(elementsArr)
-    val matchedSets = is.toSet.flatMap(x => getSets(x))
-    val matchedSetsCounts = mutable.HashMap[S, Int]()
-    for (eIdx <- is.supersetIndices; set <- getSets(elements(eIdx))) {
-      if (matchedSets.contains(set) && matchedSetsCounts.getOrElse(set, 0) < numAdditionalPoints) {
-        output.add(eIdx)
-        matchedSetsCounts.update(set, matchedSetsCounts.getOrElse(set, 0) + 1)
+    if (is.size == k) {
+      println("Independent set of size k!")
+      is.toVector
+    } else {
+      println("Coreset smaller than k!")
+      val numAdditionalPoints = k
+      val output = IndexedSubset(elementsArr)
+      val matchedSets: Set[S] = is.toSet.flatMap(x => getSets(x))
+      val matchedSetsCounts = mutable.HashMap[S, Int]()
+      for (eIdx <- is.supersetIndices; set <- getSets(elements(eIdx))) {
+        if (matchedSets.contains(set) && matchedSetsCounts.getOrElse(set, 0) < numAdditionalPoints) {
+          output.add(eIdx)
+          matchedSetsCounts.update(set, matchedSetsCounts.getOrElse(set, 0) + 1)
+        }
       }
+      output.toVector
     }
-    output.toVector
   }
 
 
