@@ -67,7 +67,8 @@ object MapReduceCoreset {
 
       require(clusters.size == kernel.size, "The number of clusters should be equal to the number of kernel points")
 
-      val coreset = clusters.values.flatMap { cluster =>
+      println("Found clustering, building coreset")
+      val coreset = clusters.values.par.flatMap { cluster =>
         matroid.coreSetPoints(cluster, k)
       }
 
