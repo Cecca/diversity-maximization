@@ -127,15 +127,14 @@ class TransversalMatroid[T:ClassTag, S](val sets: Array[S],
   }
 
   override def coreSetPoints(elements: Seq[T], k: Int): Seq[T] = {
-    val elementsArr = elements.toArray // FIXME: Get rid of this
+    val elementsArr = elements.toArray.sortBy(e => -getSets(e).size)
     // First, get an independent set of size k
     val is = independentSetOfSize(elementsArr, k)
     if (is.size == k) {
       println("Independent set of size k!")
       is.toVector
     } else {
-      println("Coreset smaller than k!")
-      val numAdditionalPoints = k
+      val numAdditionalPoints = is.size
       val output = IndexedSubset(elementsArr)
       val matchedSets: Set[S] = is.toSet.flatMap(x => getSets(x))
       val matchedSetsCounts = mutable.HashMap[S, Int]()
@@ -145,7 +144,9 @@ class TransversalMatroid[T:ClassTag, S](val sets: Array[S],
           matchedSetsCounts.update(set, matchedSetsCounts.getOrElse(set, 0) + 1)
         }
       }
-      output.toVector
+      val outVec = output.toVector
+      println(s"Independent set smaller than k! Selected ${outVec.size} points")
+      outVec
     }
   }
 
