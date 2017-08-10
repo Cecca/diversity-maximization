@@ -44,7 +44,10 @@ class WikipediaLDAExperiment(override val spark: SparkSession,
 
   override val distance: (WikiPageLDA, WikiPageLDA) => Double = WikiPageLDA.distanceArbitraryComponents
 
-  private lazy val rawData: Dataset[WikiPageLDA] = spark.read.parquet(dataPath).as[WikiPageLDA].cache()
+  private lazy val rawData: Dataset[WikiPageLDA] =
+    spark.read.parquet(dataPath)
+      .select("id", "title", "topic", "vector")
+      .as[WikiPageLDA].cache()
 
   lazy val topics: Array[Int] = rawData.select("topic").as[Seq[Int]].flatMap(identity).distinct().collect()
 
