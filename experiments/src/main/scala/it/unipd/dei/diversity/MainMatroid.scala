@@ -144,7 +144,7 @@ object MainMatroid {
       case "mapreduce" =>
         require(opts.tau.isDefined)
         val tau = opts.tau()
-        val tauParallel = opts.tau.get.getOrElse(tau)
+        val tauParallel = opts.tauP.get.getOrElse(tau)
         val parallelism = opts.parallelism.get.getOrElse(spark.sparkContext.defaultParallelism)
         experiment.tag("tau", tau)
         experiment.tag("tau-parallel", tauParallel)
