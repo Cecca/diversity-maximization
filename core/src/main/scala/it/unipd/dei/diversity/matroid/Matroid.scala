@@ -145,7 +145,7 @@ class TransversalMatroid[T:ClassTag, S](val sets: Array[S],
         }
       }
       val outVec = output.toVector
-      println(s"Independent set smaller than k! Selected ${outVec.size} points")
+      println(s"Independent set smaller than k (cluster of ${elements.size} points)! Selected ${outVec.size} points")
       outVec
     }
   }

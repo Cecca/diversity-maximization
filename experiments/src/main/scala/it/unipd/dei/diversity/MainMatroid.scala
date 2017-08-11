@@ -156,7 +156,7 @@ object MainMatroid {
           dataset, tauParallel, opts.k(), setup.matroid, setup.distance, experiment)
         println(s"Computed coreset with ${mrCoreset.length} points and radius ${mrCoreset.radius}")
         val coreset =
-          if (opts.sparsify.isDefined) {
+          if (opts.sparsify()) {
             val (_c, _t) = timed {
               MapReduceCoreset.run(mrCoreset.points.toArray, tau, opts.k(), setup.matroid, setup.distance)
             }
@@ -193,7 +193,9 @@ object MainMatroid {
 
 
       case "sequential-coreset" =>
+        val gamma = opts.gamma.get.getOrElse(0.0)
         experiment.tag("k'", opts.tau())
+        experiment.tag("ls-subroutine-gamma", gamma)
         var coresetSize: Option[Long] = None
         val localDataset: Array[T] = setup.loadLocally()
         val ((solution, coresetTime, localSearchTime), totalTime) =
@@ -206,7 +208,7 @@ object MainMatroid {
             println(s"Built coreset with ${coreset.length} over ${localDataset.length} points")
             val (sol, _lsTime) = timed {
               LocalSearch.remoteClique[T](
-                coreset.points, opts.k(), 0.0, setup.matroid, setup.distance)
+                coreset.points, opts.k(), gamma, setup.matroid, setup.distance)
             }
             (sol, _coresetTime, _lsTime)
           }
