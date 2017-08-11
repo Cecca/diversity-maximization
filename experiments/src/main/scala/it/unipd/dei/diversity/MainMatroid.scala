@@ -146,8 +146,8 @@ object MainMatroid {
         val tau = opts.tau()
         val tauParallel = opts.tau.get.getOrElse(tau)
         val parallelism = opts.parallelism.get.getOrElse(spark.sparkContext.defaultParallelism)
-        experiment.tag("tau", opts.tau())
-        experiment.tag("tau-parallel", opts.tau())
+        experiment.tag("tau", tau)
+        experiment.tag("tau-parallel", tauParallel)
         experiment.tag("num-partitions", parallelism)
         experiment.tag("sparsify", opts.sparsify.isDefined)
         var coresetSize: Option[Long] = None
