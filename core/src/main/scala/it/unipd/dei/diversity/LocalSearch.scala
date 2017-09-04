@@ -297,10 +297,10 @@ object LocalSearch {
                 // Try the swap
                 is.remove(i) // move i-th point outside the solution
                 is.add(j) // move j-th point inside the solution
-                if (matroid.isIndependent(is)) {
-                  val outsideContribution = sumDistances(input(j), is, distance)
-                  val diversityWithSwap = currentDiversity - insideContribution + outsideContribution
-                  if (diversityWithSwap > threshold) {
+                val outsideContribution = sumDistances(input(j), is, distance)
+                val diversityWithSwap = currentDiversity - insideContribution + outsideContribution
+                if (diversityWithSwap > threshold) {
+                  if (matroid.isIndependent(is)) {
                     // Swap successful, set foundImprovingSwap to break the inner loops
                     foundImprovingSwap = true
                     currentDiversity = diversityWithSwap
