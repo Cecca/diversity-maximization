@@ -246,6 +246,8 @@ object LocalSearch {
     sum
   }
 
+  // TODO: Add a map of size k holding arrays of size n for each point of the tentative solution.
+  // Each array will be initialized to -1, and will be used as a memoization table for the distance computation.
   def remoteClique[T:ClassTag](input: IndexedSeq[T],
                                k: Int,
                                tolerance: Double,
