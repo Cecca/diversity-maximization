@@ -16,8 +16,9 @@
 
 package it.unipd.dei.diversity
 
-import scala.util.Random
+import java.io.PrintWriter
 
+import scala.util.Random
 import it.unipd.dei.diversity.source.PointSource
 import org.apache.spark.{SparkConf, SparkContext}
 import org.rogach.scallop.ScallopConf
@@ -48,10 +49,23 @@ object DatasetGenerator {
     } {
       val source = PointSource(sourceName, dim, n, k, Distance.euclidean, randomGen)
 
-      val sconf = new SparkConf(true).setAppName("Generator")
-      val sc = new SparkContext(sconf)
-
-      val numGenerated = SerializationUtils.saveAsSequenceFile(sc, source, outputDir)
+      val numGenerated = opts.format() match {
+        case "text" =>
+          val pw = new PrintWriter(filename(outputDir, sourceName, dim, n.toInt, k))
+          var cnt = 0l
+          for (point <- source.iterator) {
+            val s = point.data.mkString(",")
+            pw.write(s)
+            pw.write('\n')
+            cnt += 1
+          }
+          pw.close()
+          cnt
+        case "sequence" =>
+          val sconf = new SparkConf(true).setAppName("Generator")
+          val sc = new SparkContext(sconf)
+          SerializationUtils.saveAsSequenceFile(sc, source, outputDir)
+      }
       require(numGenerated >= n,
         s"Not enough points have been generated! $numGenerated < $n")
       println(s"Generated $numGenerated points")
@@ -71,6 +85,8 @@ object DatasetGenerator {
     lazy val numPoints = opt[String](required = true)
 
     lazy val directory = opt[String](required = true)
+
+    lazy val format = opt[String](default = Some("sequence"))
 
   }
 
