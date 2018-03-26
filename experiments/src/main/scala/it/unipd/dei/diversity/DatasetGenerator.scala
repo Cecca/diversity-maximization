@@ -25,8 +25,8 @@ import org.rogach.scallop.ScallopConf
 
 object DatasetGenerator {
 
-  def filename(dir: String, sourceName: String, dim: Int, n: Int, k: Int) =
-    s"$dir/$sourceName-$dim-$n-$k.points"
+  def filename(dir: String, sourceName: String, dim: Int, n: Int, k: Int, ext: String) =
+    s"$dir/$sourceName-$dim-$n-$k.$ext"
 
   def main(args: Array[String]) = {
 
@@ -51,8 +51,9 @@ object DatasetGenerator {
 
       val numGenerated = opts.format() match {
         case "text" =>
-          val pw = new PrintWriter(filename(outputDir, sourceName, dim, n.toInt, k))
+          val pw = new PrintWriter(filename(outputDir, sourceName, dim, n.toInt, k, "csv"))
           var cnt = 0l
+          println(s"Source has ${source.certificate.length} certificate points")
           for (point <- source.iterator) {
             val s = point.data.mkString(",")
             pw.write(s)
