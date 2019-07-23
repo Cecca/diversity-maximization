@@ -135,6 +135,10 @@ object MainMatroid {
         }
         require(solution.size == opts.k(), "Solution of wrong size")
 
+        experiment.append("times",
+          jMap(
+            "component" -> "local-search",
+            "time"      -> ExperimentUtil.convertDuration(t, TimeUnit.MILLISECONDS)))
         experiment.append("performance",
           jMap(
             "diversity" -> Diversity.clique(solution, setup.distance),
@@ -218,6 +222,14 @@ object MainMatroid {
           }
 
         require(solution.size == opts.k(), "Solution of wrong size")
+        experiment.append("times",
+          jMap(
+            "component" -> "local-search",
+            "time"      -> ExperimentUtil.convertDuration(localSearchTime, TimeUnit.MILLISECONDS)))
+        experiment.append("times",
+          jMap(
+            "component" -> "coreset",
+            "time"      -> ExperimentUtil.convertDuration(coresetTime, TimeUnit.MILLISECONDS)))
         experiment.append("performance",
           jMap(
             "diversity" -> Diversity.clique(solution, setup.distance),
