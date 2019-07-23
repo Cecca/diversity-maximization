@@ -1,10 +1,11 @@
 package it.unipd.dei.diversity.matroid
 import org.apache.spark.SparkConf
-import org.apache.spark.ml.linalg.DenseVector
+import org.apache.spark.ml.linalg.Vector
+import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.sql.{Dataset, SparkSession}
 import org.rogach.scallop.ScallopConf
 
-case class GloVePoint(word: String, vector: DenseVector) {
+case class GloVePoint(word: String, vector: Vector) {
   override def toString: String = word
 }
 
@@ -26,7 +27,7 @@ object GloVePoint {
         .map({line =>
           val tokens = line.split(" ")
           val word = tokens(0)
-          val vector = new DenseVector(tokens.tail.map(_.toDouble))
+          val vector = Vectors.dense(tokens.tail.map(_.toDouble))
           GloVePoint(word, vector)
         })
       spark.createDataset(data).write.parquet(opts.output())
