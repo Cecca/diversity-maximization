@@ -49,8 +49,8 @@ object MainMatroid {
     val opts = new Opts(args)
     opts.verify()
 
-    require(opts.categories.isDefined ^ opts.genres.isDefined ^ opts.topics.isDefined,
-      "exactly one between categories, genres, and topics can be defined")
+    require(opts.categories.isDefined ^ opts.genres.isDefined ^ opts.topics.isDefined ^ opts.cardinality.isDefined,
+      "exactly one between categories, genres, cardinalit, and topics can be defined")
 
     val experiment = new Experiment()
       .tag("input", opts.input())
