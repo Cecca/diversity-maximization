@@ -48,6 +48,14 @@ trait Matroid[T] extends Serializable {
 
 }
 
+class CardinalityMatroid[T](val cardinality: Int) extends Matroid[T]{
+  override def isIndependent(elements: Seq[T]): Boolean = elements.size <= cardinality
+
+  override def isIndependent(elements: IndexedSubset[T]): Boolean = elements.size <= cardinality
+
+  override def coreSetPoints(elements: Seq[T], k: Int): Seq[T] = independentSetOfSize(elements, k)
+}
+
 /**
   * Encodes a partition matroid with a mapping between
   * categories and number of elements allowed for each category.
