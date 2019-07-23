@@ -6,6 +6,10 @@ import org.rogach.scallop.ScallopConf
 
 case class GloVePoint(word: String, vector: DenseVector) {
   override def toString: String = word
+}
+
+object GloVePoint {
+  def distance(a: GloVePoint, b: GloVePoint): Double = MlLibDistances.cosineDistanceFull(a. vector, b.vector)
 
   def main(args: Array[String]): Unit = {
     val opts = new Opts(args)
@@ -36,10 +40,6 @@ case class GloVePoint(word: String, vector: DenseVector) {
     val input = opt[String](required=true)
     val output = opt[String](required=false)
   }
-}
-
-object GloVePoint {
-  def distance(a: GloVePoint, b: GloVePoint): Double = MlLibDistances.cosineDistanceFull(a. vector, b.vector)
 }
 
 class GloVeExperiment(override val spark: SparkSession,
