@@ -3,7 +3,7 @@ package it.unipd.dei.diversity
 import java.util.concurrent.TimeUnit
 
 import it.unipd.dei.diversity.ExperimentUtil.{jMap, timed}
-import it.unipd.dei.diversity.matroid.{ExperimentalSetup, SongExperiment, WikipediaExperiment, WikipediaLDAExperiment}
+import it.unipd.dei.diversity.matroid._
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
@@ -71,6 +71,10 @@ object MainMatroid {
         new SongExperiment(spark, opts.input(), opts.genres())
       } else if (opts.topics.isDefined) {
         new WikipediaLDAExperiment(spark, opts.input())
+      } else if (opts.cardinality.isDefined) {
+        opts.cardinality() match {
+          case "glove" => new GloVeExperiment(spark, opts.input(), opts.k())
+        }
       } else {
         throw new IllegalArgumentException("Must provide at least one between categories, genres, or topics")
       }
@@ -265,6 +269,9 @@ object MainMatroid {
     lazy val genres = opt[String](required = false, argName = "FILE")
 
     lazy val topics = toggle()
+
+    lazy val cardinality = opt[String](argName = "DATA TYPE", validate = Set("glove").contains,
+                                       descr = "Use a cardinality matroid, and specify the data type")
 
     lazy val diameter = opt[Double](required = false, argName = "DELTA")
 
