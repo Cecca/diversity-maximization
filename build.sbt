@@ -1,4 +1,4 @@
-
+import scala.sys.process._
 
 lazy val baseSettings = Seq(
   organization := "it.unipd.dei",
