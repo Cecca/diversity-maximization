@@ -6,6 +6,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
 import it.unipd.dei.diversity._
 
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 import scala.reflect.ClassTag
 
 trait Matroid[T] extends Serializable {
@@ -45,6 +46,7 @@ trait Matroid[T] extends Serializable {
     is
   }
 
+  def incrementalSubset(k: Int): IncrementalSubset[T]
 
 }
 
@@ -54,6 +56,8 @@ class CardinalityMatroid[T](val cardinality: Int) extends Matroid[T]{
   override def isIndependent(elements: IndexedSubset[T]): Boolean = elements.size <= cardinality
 
   override def coreSetPoints(elements: Seq[T], k: Int): Seq[T] = independentSetOfSize(elements, k)
+
+  override def incrementalSubset(k: Int): IncrementalSubset[T] = new UniformIncrementalSubset[T](cardinality, new ArrayBuffer())
 }
 
 /**
@@ -103,6 +107,13 @@ class PartitionMatroid[T](val categories: Map[String, Int],
 
   override def coreSetPoints(elements: Seq[T], k: Int): Seq[T] = independentSetOfSize(elements, k)
 
+  override def incrementalSubset(k: Int): IncrementalSubset[T] = {
+    val inner = new mutable.HashMap[String, ArrayBuffer[T]]()
+    for (c <- categories.keysIterator) {
+      inner(c) = new ArrayBuffer[T]()
+    }
+    new PartitionIncrementalSubset[T](k, this, inner)
+  }
 }
 
 class TransversalMatroid[T:ClassTag, S](val sets: Array[S],
@@ -156,6 +167,14 @@ class TransversalMatroid[T:ClassTag, S](val sets: Array[S],
       println(s"Independent set smaller than k (cluster of ${elements.size} points)! Selected ${outVec.size} points")
       outVec
     }
+  }
+
+  override def incrementalSubset(k: Int): IncrementalSubset[T] = {
+    val inner = new mutable.HashMap[S, ArrayBuffer[T]]()
+    for (c <- sets) {
+      inner(c) = new ArrayBuffer[T]()
+    }
+    new TransversalIncrementalSubset[T, S](k, this, inner)
   }
 
 
