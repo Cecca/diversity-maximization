@@ -276,6 +276,6 @@ extends Coreset[T] {
 
   override def kernel: Vector[T] = kernelPointsIterator.toVector
 
-  override def delegates: Vector[T] = throw new RuntimeException("Operation not supported")
+  override def delegates: Vector[T] = _incrementalSubsets.iterator.take(_insertionIdx).flatMap(_.toSeq).toVector
 
 }

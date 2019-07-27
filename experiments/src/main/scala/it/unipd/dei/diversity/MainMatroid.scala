@@ -113,7 +113,7 @@ object MainMatroid {
         }
         require(solution.size == opts.k(), "Solution of wrong size")
 
-        experiment.append("performance",
+        experiment.append("result",
           jMap(
             "diversity" -> Diversity.clique(solution, setup.distance),
             "number-of-samples" -> numberOfSamples,
@@ -139,10 +139,40 @@ object MainMatroid {
           jMap(
             "component" -> "local-search",
             "time"      -> ExperimentUtil.convertDuration(t, TimeUnit.MILLISECONDS)))
-        experiment.append("performance",
+        experiment.append("result",
           jMap(
             "diversity" -> Diversity.clique(solution, setup.distance),
             "total-time" -> ExperimentUtil.convertDuration(t, TimeUnit.MILLISECONDS)))
+
+        for (wp <- solution) {
+          experiment.append("solution",
+            jMap(setup.pointToMap(wp).toSeq: _*))
+        }
+
+      case "streaming" =>
+        require(opts.tau.isDefined)
+        val tau = opts.tau()
+        val parallelism = opts.parallelism.get.getOrElse(spark.sparkContext.defaultParallelism)
+        experiment.tag("tau", tau)
+        var coresetSize: Option[Long] = None
+        val dataset = setup.loadDataset().collect()
+        val coreset = Algorithm.streaming(
+          dataset.iterator, opts.k(), tau, setup.matroid, setup.distance, experiment)
+
+        val (solution, lsTime) = timed {
+          LocalSearch.remoteClique[T](
+            coreset.delegates, // We consider just delegates because they already contain the kernel points
+            opts.k(), 0.0, setup.matroid, setup.distance)
+        }
+        require(solution.size == opts.k(), "Solution of wrong size")
+        require(setup.matroid.isIndependent(solution), "The solution is not an independent set!")
+        experiment.append("times",
+          jMap(
+            "component" -> "local-search",
+            "time"      -> ExperimentUtil.convertDuration(lsTime, TimeUnit.MILLISECONDS)))
+        experiment.append("result",
+          jMap(
+            "diversity" -> Diversity.clique(solution, setup.distance)))
 
         for (wp <- solution) {
           experiment.append("solution",
@@ -187,7 +217,7 @@ object MainMatroid {
           jMap(
             "component" -> "local-search",
             "time"      -> ExperimentUtil.convertDuration(lsTime, TimeUnit.MILLISECONDS)))
-        experiment.append("performance",
+        experiment.append("result",
           jMap(
             "diversity" -> Diversity.clique(solution, setup.distance),
             "large-coreset-size" -> mrCoreset.length,
@@ -230,7 +260,7 @@ object MainMatroid {
           jMap(
             "component" -> "coreset",
             "time"      -> ExperimentUtil.convertDuration(coresetTime, TimeUnit.MILLISECONDS)))
-        experiment.append("performance",
+        experiment.append("result",
           jMap(
             "diversity" -> Diversity.clique(solution, setup.distance),
             "coreset-size" -> coresetSize.get,
