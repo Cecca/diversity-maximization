@@ -7,13 +7,13 @@ import scala.collection.mutable.ArrayBuffer
   * Allows to incrementally accumulate the points that are in each cluster
   * while building the coreset. Needed mainly by the streaming algorithm
   */
-trait IncrementalSubset[T] { self =>
+trait DelegateSet[T] { self =>
   def add(point: T): Boolean
-  def merge(other: IncrementalSubset[T]): IncrementalSubset[T]
+  def merge(other: DelegateSet[T]): DelegateSet[T]
   def toSeq: Seq[T]
 }
 
-class UniformIncrementalSubset[T](val k: Int, val inner: ArrayBuffer[T]) extends IncrementalSubset[T] {
+class UniformDelegateSet[T](val k: Int, val inner: ArrayBuffer[T]) extends DelegateSet[T] {
   inner.sizeHint(k)
 
   override def add(point: T): Boolean = {
@@ -22,17 +22,17 @@ class UniformIncrementalSubset[T](val k: Int, val inner: ArrayBuffer[T]) extends
     true
   }
 
-  override def merge(other: IncrementalSubset[T]): IncrementalSubset[T] = other match {
-    case other: UniformIncrementalSubset[T] => new UniformIncrementalSubset[T](this.k, (this.inner ++ other.inner).take(k))
+  override def merge(other: DelegateSet[T]): DelegateSet[T] = other match {
+    case other: UniformDelegateSet[T] => new UniformDelegateSet[T](this.k, (this.inner ++ other.inner).take(k))
     case _ => throw new RuntimeException("Unsupported merge")
   }
 
   override def toSeq: Seq[T] = inner.toVector
 }
 
-class PartitionIncrementalSubset[T](val k: Int,
-                                    matroid: PartitionMatroid[T],
-                                    val inner: mutable.HashMap[String, ArrayBuffer[T]]) extends IncrementalSubset[T] {
+class PartitionDelegateSet[T](val k: Int,
+                              matroid: PartitionMatroid[T],
+                              val inner: mutable.HashMap[String, ArrayBuffer[T]]) extends DelegateSet[T] {
   override def add(point: T): Boolean = {
     val cat = matroid.getCategory(point)
     val set = inner(cat)
@@ -44,8 +44,8 @@ class PartitionIncrementalSubset[T](val k: Int,
     }
   }
 
-  override def merge(other: IncrementalSubset[T]): IncrementalSubset[T] = other match {
-    case other: PartitionIncrementalSubset[T] =>
+  override def merge(other: DelegateSet[T]): DelegateSet[T] = other match {
+    case other: PartitionDelegateSet[T] =>
       val inner = new mutable.HashMap[String, ArrayBuffer[T]]()
       for (cat <- this.matroid.categories.keys) {
         val set = new ArrayBuffer[T]()
@@ -55,16 +55,16 @@ class PartitionIncrementalSubset[T](val k: Int,
         )
         inner(cat) = set
       }
-      new PartitionIncrementalSubset[T](k, matroid, inner)
+      new PartitionDelegateSet[T](k, matroid, inner)
     case _ => throw new RuntimeException("Unsupported merge")
   }
 
   override def toSeq: Seq[T] = matroid.coreSetPoints(inner.values.flatten.toSeq, k)
 }
 
-class TransversalIncrementalSubset[T, S](val k: Int,
-                                         val matroid: TransversalMatroid[T, S],
-                                         val inner: mutable.HashMap[S, ArrayBuffer[T]]) extends IncrementalSubset[T] {
+class TransversalDelegateSet[T, S](val k: Int,
+                                   val matroid: TransversalMatroid[T, S],
+                                   val inner: mutable.HashMap[S, ArrayBuffer[T]]) extends DelegateSet[T] {
   override def add(point: T): Boolean = {
     for (s <- matroid.getSets(point)) {
       if (inner(s).size < k) {
@@ -75,8 +75,8 @@ class TransversalIncrementalSubset[T, S](val k: Int,
     false
   }
 
-  override def merge(other: IncrementalSubset[T]): IncrementalSubset[T] = other match {
-    case other: TransversalIncrementalSubset[T, S] =>
+  override def merge(other: DelegateSet[T]): DelegateSet[T] = other match {
+    case other: TransversalDelegateSet[T, S] =>
       val inner = new mutable.HashMap[S, ArrayBuffer[T]]()
       for (cat <- this.matroid.sets) {
         val set = new ArrayBuffer[T]()
@@ -86,7 +86,7 @@ class TransversalIncrementalSubset[T, S](val k: Int,
         )
         inner(cat) = set
       }
-      new TransversalIncrementalSubset[T, S](k, matroid, inner)
+      new TransversalDelegateSet[T, S](k, matroid, inner)
     case _ => throw new RuntimeException("Unsupported merge")
   }
 

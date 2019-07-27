@@ -46,7 +46,7 @@ trait Matroid[T] extends Serializable {
     is
   }
 
-  def incrementalSubset(k: Int): IncrementalSubset[T]
+  def incrementalSubset(k: Int): DelegateSet[T]
 
 }
 
@@ -57,7 +57,7 @@ class UniformMatroid[T](val cardinality: Int) extends Matroid[T]{
 
   override def coreSetPoints(elements: Seq[T], k: Int): Seq[T] = independentSetOfSize(elements, k)
 
-  override def incrementalSubset(k: Int): IncrementalSubset[T] = new UniformIncrementalSubset[T](cardinality, new ArrayBuffer())
+  override def incrementalSubset(k: Int): DelegateSet[T] = new UniformDelegateSet[T](cardinality, new ArrayBuffer())
 }
 
 /**
@@ -107,12 +107,12 @@ class PartitionMatroid[T](val categories: Map[String, Int],
 
   override def coreSetPoints(elements: Seq[T], k: Int): Seq[T] = independentSetOfSize(elements, k)
 
-  override def incrementalSubset(k: Int): IncrementalSubset[T] = {
+  override def incrementalSubset(k: Int): DelegateSet[T] = {
     val inner = new mutable.HashMap[String, ArrayBuffer[T]]()
     for (c <- categories.keysIterator) {
       inner(c) = new ArrayBuffer[T]()
     }
-    new PartitionIncrementalSubset[T](k, this, inner)
+    new PartitionDelegateSet[T](k, this, inner)
   }
 }
 
@@ -169,12 +169,12 @@ class TransversalMatroid[T:ClassTag, S](val sets: Array[S],
     }
   }
 
-  override def incrementalSubset(k: Int): IncrementalSubset[T] = {
+  override def incrementalSubset(k: Int): DelegateSet[T] = {
     val inner = new mutable.HashMap[S, ArrayBuffer[T]]()
     for (c <- sets) {
       inner(c) = new ArrayBuffer[T]()
     }
-    new TransversalIncrementalSubset[T, S](k, this, inner)
+    new TransversalDelegateSet[T, S](k, this, inner)
   }
 
 

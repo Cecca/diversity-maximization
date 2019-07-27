@@ -85,7 +85,7 @@ extends Coreset[T] {
 
   private val _kernel = Array.ofDim[T](kernelSize + 1)
 
-  private val _incrementalSubsets: Array[IncrementalSubset[T]] = Array.ofDim(_kernel.length)
+  private val _incrementalSubsets: Array[DelegateSet[T]] = Array.ofDim(_kernel.length)
 
   private[diversity]
   def initializing: Boolean = _initializing
