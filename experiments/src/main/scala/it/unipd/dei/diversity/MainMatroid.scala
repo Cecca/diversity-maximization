@@ -49,7 +49,7 @@ object MainMatroid {
     val opts = new Opts(args)
     opts.verify()
 
-    require(opts.categories.isDefined ^ opts.genres.isDefined ^ opts.topics.isDefined ^ opts.cardinality.isDefined,
+    require(opts.categories.isDefined ^ opts.genres.isDefined ^ opts.topics.isDefined ^ opts.uniform.isDefined,
       "exactly one between categories, genres, cardinalit, and topics can be defined")
 
     val experiment = new Experiment()
@@ -71,8 +71,8 @@ object MainMatroid {
         new SongExperiment(spark, opts.input(), opts.genres())
       } else if (opts.topics.isDefined) {
         new WikipediaLDAExperiment(spark, opts.input())
-      } else if (opts.cardinality.isDefined) {
-        opts.cardinality() match {
+      } else if (opts.uniform.isDefined) {
+        opts.uniform() match {
           case "glove" => new GloVeExperiment(spark, opts.input(), opts.k())
         }
       } else {
@@ -282,7 +282,7 @@ object MainMatroid {
 
     lazy val topics = toggle()
 
-    lazy val cardinality = opt[String](argName = "DATA TYPE", validate = Set("glove").contains,
+    lazy val uniform = opt[String](argName = "DATA TYPE", validate = Set("glove").contains,
                                        descr = "Use a cardinality matroid, and specify the data type")
 
     lazy val diameter = opt[Double](required = false, argName = "DELTA")

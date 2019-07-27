@@ -49,7 +49,7 @@ class GloVeExperiment(override val spark: SparkSession,
   import spark.implicits._
 
   override val distance: (GloVePoint, GloVePoint) => Double = GloVePoint.distance
-  override val matroid: Matroid[GloVePoint] = new CardinalityMatroid[GloVePoint](cardinality)
+  override val matroid: Matroid[GloVePoint] = new UniformMatroid[GloVePoint](cardinality)
   override def pointToMap(point: GloVePoint): Map[String, Any] = Map("word" -> point.word)
 
   private lazy val rawData: Dataset[GloVePoint] = spark.read.parquet(dataPath).as[GloVePoint].cache()

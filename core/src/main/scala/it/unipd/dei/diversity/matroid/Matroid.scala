@@ -50,7 +50,7 @@ trait Matroid[T] extends Serializable {
 
 }
 
-class CardinalityMatroid[T](val cardinality: Int) extends Matroid[T]{
+class UniformMatroid[T](val cardinality: Int) extends Matroid[T]{
   override def isIndependent(elements: Seq[T]): Boolean = elements.size <= cardinality
 
   override def isIndependent(elements: IndexedSubset[T]): Boolean = elements.size <= cardinality
