@@ -5,11 +5,20 @@ import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.sql.{Dataset, SparkSession}
 import org.rogach.scallop.ScallopConf
 
+import scala.io.Source
+
 case class GloVePoint(word: String, vector: Vector) {
   override def toString: String = word
 }
 
 object GloVePoint {
+  def fromString(str: String): GloVePoint = {
+    val tokens = str.split(" ")
+    val word = tokens(0)
+    val vector = Vectors.dense(tokens.tail.map(_.toDouble))
+    GloVePoint(word, vector)
+  }
+
   def distance(a: GloVePoint, b: GloVePoint): Double = MlLibDistances.cosineDistanceFull(a. vector, b.vector)
 
   def main(args: Array[String]): Unit = {
@@ -24,12 +33,7 @@ object GloVePoint {
         .getOrCreate()
       import spark.implicits._
       val data = spark.sparkContext.textFile(opts.input())
-        .map({line =>
-          val tokens = line.split(" ")
-          val word = tokens(0)
-          val vector = Vectors.dense(tokens.tail.map(_.toDouble))
-          GloVePoint(word, vector)
-        })
+        .map(GloVePoint.fromString)
       spark.createDataset(data).write.parquet(opts.output())
     } else {
       println("Nothing to do, quitting.")
@@ -55,4 +59,17 @@ class GloVeExperiment(override val spark: SparkSession,
   private lazy val rawData: Dataset[GloVePoint] = spark.read.parquet(dataPath).as[GloVePoint].cache()
 
   override def loadDataset(): Dataset[GloVePoint] = rawData
+}
+
+class GloVeMap(val path: String) extends Serializable {
+  private val map = Source.fromFile(path).getLines().map({ line =>
+    val point = GloVePoint.fromString(line)
+    (point.word, point.vector)
+  }).toMap
+
+  val dimension: Int = map.head._2.size
+
+  def apply(word: String): Option[Vector] = {
+    map.get(word)
+  }
 }

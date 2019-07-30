@@ -3,7 +3,7 @@ package it.unipd.dei.diversity.matroid
 import it.unipd.dei.diversity.ExperimentUtil._
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.SparkConf
-import org.apache.spark.ml.linalg.Vector
+import org.apache.spark.ml.linalg.{BLAS, Vector, Vectors}
 import org.apache.spark.sql.{Dataset, SparkSession}
 import org.rogach.scallop.ScallopConf
 
@@ -35,6 +35,45 @@ object Song {
       .config(conf)
       .getOrCreate()
     import spark.implicits._
+
+    if (opts.output.isDefined) {
+      require(opts.glove.isDefined, "--glove must be provided")
+      val wordMap = spark.sparkContext.broadcast(new GloVeMap(opts.glove()))
+      val raw = spark.read
+        .option("header", true)
+        .format("csv")
+        .load(opts.input())
+      raw.map({row =>
+        println(row)
+        val text = row.getString(row.fieldIndex("lyrics"))
+        val array = Array.fill(wordMap.value.dimension)(0.0)
+        var cnt = 0
+        for (word <- text.split(' ')) {
+          wordMap.value.apply(word.toLowerCase) match {
+            case None => // do nothing
+            case Some(v) =>
+              for (i <- 0 until v.size) {
+                array(i) += v(i)
+              }
+              cnt += 1
+          }
+        }
+        for (i <- 0 until array.length) {
+          array(i) /= cnt
+        }
+        val vector = Vectors.dense(array)
+        Song(
+          Integer.parseInt(row.getString(row.fieldIndex("index"))),
+          row.getString(row.fieldIndex("song")),
+          row.getString(row.fieldIndex("artist")),
+          row.getString(row.fieldIndex("genre")),
+          vector)
+      }).count()
+//        .write
+//        .parquet(opts.output())
+      System.exit(0)
+    }
+
     val data = spark.read.parquet(opts.input()).as[Song].cache()
 
     if (opts.genres()) {
@@ -94,6 +133,9 @@ object Song {
 
     val sampleSize = opt[Long](default = Some(1000L))
 
+    val output = opt[String](descr = "When provided, converts the file to binary format")
+
+    val glove = opt[String](descr = "Required when --output is provided")
   }
 
 }
