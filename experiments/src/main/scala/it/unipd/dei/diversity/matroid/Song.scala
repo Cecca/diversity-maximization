@@ -11,12 +11,14 @@ import scala.io.Source
 
 
 /**
-  * Class to hold data from the metrolyrics dataset
+  * Class to hold data from the MusiXMatch dataset.
+  * Genres come from the tagtraum dataset.
   *
-  * @see https://www.kaggle.com/gyani95/380000-lyrics-from-metrolyrics
+  * http://millionsongdataset.com/musixmatch/
+  * http://www.tagtraum.com/msd_genre_datasets.html
   */
-case class Song(index: Long, song: String, artist: String, genre: String, vector: Vector) {
-  override def toString: String = s"($index) `$song` $genre"
+case class Song(trackId: String, genre: String, vector: Vector) {
+  override def toString: String = s"($trackId) $genre"
 }
 
 object Song {
@@ -37,52 +39,45 @@ object Song {
     import spark.implicits._
 
     if (opts.output.isDefined) {
-      require(opts.glove.isDefined, "--glove must be provided")
-      val wordMap = spark.sparkContext.broadcast(new GloVeMap(opts.glove()))
-      val raw = spark.read
-        .option("header", true)
-        .format("csv")
-        .load(opts.input())
-      raw.map({row =>
-        println(row)
-        val text = row.getString(row.fieldIndex("lyrics"))
-        val array = Array.fill(wordMap.value.dimension)(0.0)
-        var cnt = 0
-        for (word <- text.split(' ')) {
-          wordMap.value.apply(word.toLowerCase) match {
-            case None => // do nothing
-            case Some(v) =>
-              for (i <- 0 until v.size) {
-                array(i) += v(i)
-              }
-              cnt += 1
+      val totalSongs = spark.sparkContext.longAccumulator("total songs")
+      val missingGenres = spark.sparkContext.longAccumulator("missing genre")
+      require(opts.genres.isDefined, "--genres must be provided")
+      val genres = spark.sparkContext.broadcast(new GenresMap(opts.genres()))
+      val rdd = spark.sparkContext.textFile(opts.input())
+        .filter(l => !(l.startsWith("#") || l.startsWith("%")))
+        .map({line =>
+          totalSongs.add(1)
+          val tokens = line.split(',')
+          val trackId = tokens(0)
+          val genre = genres.value.get(trackId) match {
+            case Some(g) => g
+            case None =>
+              missingGenres.add(1)
+              "Unknown"
           }
-        }
-        for (i <- 0 until array.length) {
-          array(i) /= cnt
-        }
-        val vector = Vectors.dense(array)
-        Song(
-          Integer.parseInt(row.getString(row.fieldIndex("index"))),
-          row.getString(row.fieldIndex("song")),
-          row.getString(row.fieldIndex("artist")),
-          row.getString(row.fieldIndex("genre")),
-          vector)
-      }).count()
-//        .write
-//        .parquet(opts.output())
+          val coordinates = tokens.view(2, tokens.length).map({coord =>
+            val parts = coord.split(':')
+            // We offset by 1 because they start counting from 1 the tokens
+            (parts(0).toInt - 1, parts(1).toDouble)
+          })
+          // 5000 is the size of the vocabulary, as described in the dataset's website
+          val vector = Vectors.sparse(5000, coordinates)
+          Song(trackId, genre, vector)
+        })
+
+      spark.createDataset(rdd).write.parquet(opts.output())
+
+      println(s"Total songs: ${totalSongs.value}, missing genre: ${missingGenres.value}")
+
       System.exit(0)
     }
 
     val data = spark.read.parquet(opts.input()).as[Song].cache()
 
-    if (opts.genres()) {
-      val genres = data.map(_.genre).rdd.countByValue()
-      for ((g, cnt) <- genres) {
-        experiment.append("genres", jMap(
-          "genre" -> g,
-          "count" -> cnt
-        ))
+    if (opts.genresHist()) {
+      val counts = data.map(song => song.genre).rdd.countByValue().toSeq.sortBy(_._2)
+      for ((genre, count) <- counts) {
+        println(s"$genre $count")
       }
     }
 
@@ -101,7 +96,7 @@ object Song {
 
       val distances = sample.rdd.cartesian(sample.rdd)
         .flatMap{ case (a, b) =>
-          if (a.index < b.index) Iterator(Song.distance(a, b))
+          if (a.trackId < b.trackId) Iterator(Song.distance(a, b))
           else Iterator.empty
         }
         .repartition(spark.sparkContext.defaultParallelism)
@@ -127,15 +122,15 @@ object Song {
   private class Opts(args: Array[String]) extends ScallopConf(args) {
     val input = opt[String](required=true)
 
-    val genres = toggle(default=Some(false))
+    val genres = opt[String](descr = "Required when --output is provided. Contains the list of genres")
+
+    val genresHist = toggle(default=Some(false))
 
     val distances = toggle(default=Some(false))
 
     val sampleSize = opt[Long](default = Some(1000L))
 
     val output = opt[String](descr = "When provided, converts the file to binary format")
-
-    val glove = opt[String](descr = "Required when --output is provided")
   }
 
 }
@@ -148,8 +143,7 @@ class SongExperiment(override val spark: SparkSession,
   override val distance: (Song, Song) => Double = Song.distance
 
   override def pointToMap(point: Song): Map[String, Any] = Map(
-    "song" -> point.song,
-    "index" -> point.index,
+    "trackId" -> point.trackId,
     "genre" -> point.genre
   )
 
@@ -169,5 +163,23 @@ class SongExperiment(override val spark: SparkSession,
   }
 
   override val matroid: Matroid[Song] = new PartitionMatroid[Song](genresCounts, _.genre)
+
+}
+
+private class GenresMap(val path: String) extends Serializable {
+  private val map = {
+    Source.fromFile(path).getLines()
+      .filter(l => !l.startsWith("#"))
+      .map({line =>
+        val tokens = line.split("\t")
+        val trackId = tokens(0)
+        val genre = tokens(1) // We ignore the ambiguous genres
+        (trackId, genre)
+      }).toMap
+  }
+
+  println(s"Loaded genres map with ${map.size} songs")
+
+  def get(trackId: String): Option[String] = map.get(trackId)
 
 }
