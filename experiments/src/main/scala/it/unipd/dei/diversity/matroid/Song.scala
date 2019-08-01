@@ -26,6 +26,7 @@ object Song {
   def distance(a: Song, b: Song): Double = MlLibDistances.cosineDistanceFull(a.vector, b.vector)
 
   def main(args: Array[String]) {
+    println("here")
     val opts = new Opts(args)
     opts.verify()
 
@@ -39,6 +40,7 @@ object Song {
     import spark.implicits._
 
     if (opts.output.isDefined) {
+      println("Converting dataset")
       val totalSongs = spark.sparkContext.longAccumulator("total songs")
       val missingGenres = spark.sparkContext.longAccumulator("missing genre")
       require(opts.genres.isDefined, "--genres must be provided")
