@@ -26,7 +26,6 @@ object Song {
   def distance(a: Song, b: Song): Double = MlLibDistances.cosineDistanceFull(a.vector, b.vector)
 
   def main(args: Array[String]) {
-    println("here")
     val opts = new Opts(args)
     opts.verify()
 

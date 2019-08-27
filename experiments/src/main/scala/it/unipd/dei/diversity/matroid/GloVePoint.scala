@@ -62,7 +62,7 @@ class GloVeExperiment(override val spark: SparkSession,
 }
 
 class GloVeMap(val path: String) extends Serializable {
-  private val map = Source.fromFile(path).getLines().map({ line =>
+  private val map = Source.fromFile(path, "UTF-8").getLines().map({ line =>
     val point = GloVePoint.fromString(line)
     (point.word, point.vector)
   }).toMap

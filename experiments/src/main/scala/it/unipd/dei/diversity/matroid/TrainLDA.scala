@@ -85,7 +85,6 @@ object TrainLDA {
     require(opts.numTopics.isDefined)
     val (counts, vectorizer) = loadData(opts, spark)
 
-
     val model = new LDA()
       .setK(opts.numTopics())
       .setMaxIter(opts.numIterations())
