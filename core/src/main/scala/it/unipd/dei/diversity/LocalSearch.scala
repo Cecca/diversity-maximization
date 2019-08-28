@@ -258,7 +258,7 @@ object LocalSearch {
       val n = input.size
       val pl = new ProgressLogger(LoggerFactory.getLogger("progress"), "swaps")
       val is = matroid.independentSetOfSize(input, k)
-      require(is.size == k, s"No idependent set of size $k in the input of LocalSearch")
+      require(is.size == k, s"No idependent set of size $k in the input of LocalSearch, the size is ${is.size}")
 
       // initialize contribution map
       val contribs = new Int2DoubleOpenHashMap(k)

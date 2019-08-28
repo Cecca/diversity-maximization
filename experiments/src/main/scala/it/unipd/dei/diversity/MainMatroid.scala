@@ -9,6 +9,7 @@ import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import org.rogach.scallop.ScallopConf
 
+import scala.collection.mutable
 import scala.reflect.ClassTag
 import scala.util.Random
 
@@ -158,6 +159,7 @@ object MainMatroid {
         val dataset = setup.loadDataset().collect()
         val coreset = Algorithm.streaming(
           dataset.iterator, opts.k(), tau, setup.matroid, setup.distance, experiment)
+        println(s"Coreset delegate points: ${coreset.delegates.size}")
 
         val (solution, lsTime) = timed {
           LocalSearch.remoteClique[T](

@@ -151,7 +151,7 @@ class SongExperiment(override val spark: SparkSession,
   lazy val genresCounts =
     Source.fromFile(genresPath).getLines().map(s => {
       val Array(g, c) = s.split("\\s+")
-      (g, c.toInt)
+      (g.replace("_", " "), c.toInt)
     }).toMap
 
   private lazy val rawData: Dataset[Song] = spark.read.parquet(dataPath).as[Song].cache()

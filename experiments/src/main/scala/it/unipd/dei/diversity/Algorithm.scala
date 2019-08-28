@@ -17,10 +17,11 @@
 package it.unipd.dei.diversity
 
 import it.unipd.dei.diversity.ExperimentUtil._
-import it.unipd.dei.diversity.matroid.Matroid
+import it.unipd.dei.diversity.matroid.{Matroid, Song}
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.rdd.RDD
 
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.reflect.ClassTag
 import scala.util.Random
