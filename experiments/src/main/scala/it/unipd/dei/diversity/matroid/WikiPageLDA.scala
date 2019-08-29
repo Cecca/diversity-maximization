@@ -148,6 +148,9 @@ object WikiPageLDA {
       )
     })
 
+    val numActualCategories = pages.flatMap(_.topic).distinct().count()
+    require(numActualCategories == opts.numTopics(), s"The actual topics are $numActualCategories, not ${opts.numTopics()}")
+
     pages.write.parquet(opts.output())
     println(s"Discarded ${countMayReferTo.value} 'may refer to' pages")
   }
@@ -187,7 +190,8 @@ class WikipediaLDAExperiment(override val spark: SparkSession,
       .filter(page => page.vector.numNonzeros > 0 && page.topic.length > 0)
       .cache()
 
-  lazy val topics: Array[Int] = rawData.select("topic").as[Seq[Int]].flatMap(identity).distinct().collect()
+  lazy val topics: Array[Int] =
+    rawData.select("topic").as[Seq[Int]].flatMap(identity).distinct().collect()
 
   override def loadDataset(): Dataset[WikiPageLDA] =
     rawData

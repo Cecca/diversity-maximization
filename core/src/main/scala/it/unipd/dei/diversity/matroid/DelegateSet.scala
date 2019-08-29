@@ -95,6 +95,7 @@ class TransversalDelegateSet[T, S](val k: Int,
   }
 
   override def toSeq: Seq[T] = {
+    println(s"Categories cardinalities (there are ${inner.size} categories) ${inner.values.map(_.size).mkString(", ")}")
     val delegates = inner.values.flatten.toSeq
 //    val is = matroid.independentSetOfSize(delegates, k)
 //    if (is.length == k) {
