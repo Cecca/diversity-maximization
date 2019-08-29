@@ -33,11 +33,13 @@ object WikiPageLDA {
   }
 
   def distanceArbitraryComponents(aPage: WikiPageLDA, bPage: WikiPageLDA): Double = {
+    require(aPage.vector.numNonzeros > 0)
+    require(bPage.vector.numNonzeros > 0)
     PerformanceMetrics.distanceFnCounterInc()
     val cos = VectorUtils.cosine(aPage.vector, bPage.vector)
-    require(-1.0 <= cos && cos <= 1.0, s"Cosine out of range: $cos")
+    require(-1.0 <= cos && cos <= 1.0, s"Cosine out of range: $cos $aPage $bPage")
     val dist = VectorUtils.ONE_OVER_PI * math.acos(cos)
-    require(dist != Double.NaN, "Distance NaN")
+    require(dist != Double.NaN, s"Distance NaN")
     require(dist < Double.PositiveInfinity, "Points at infinite distance!!")
     require(dist > Double.NegativeInfinity, "Points at negative infinite distance!!")
     dist
@@ -93,7 +95,20 @@ object WikiPageLDA {
 
     val gloveMap = spark.sparkContext.broadcast(new GloVeMap(opts.glove()))
 
-    val textData = spark.read.json(opts.input())
+    val countMayReferTo = spark.sparkContext.longAccumulator("may refer to")
+    val textData = spark.read
+      .json(opts.input())
+      .filter(row => {
+        val text = row.getString(row.fieldIndex("text")).trim
+        val keep = !(text.contains("may refer to:") || text.contains("can refer to:") || text.contains("may mean:"))
+        if (!keep) countMayReferTo.add(1)
+        keep
+      })
+      .filter(row => { // remove pages with just the title
+        val text = row.getString(row.fieldIndex("text")).trim
+        val title = row.getString(row.fieldIndex("title")).trim
+        !text.equals(title)
+      })
     val counts = loadCounts(textData, opts, spark)
     val ldaModelFile = s"${opts.input()}.lda"
     val model = if (FileSystem.get(spark.sparkContext.hadoopConfiguration).exists(new Path(ldaModelFile))) {
@@ -113,7 +128,7 @@ object WikiPageLDA {
       for (word <- text.split(' ')) {
         val lowerCase = word.toLowerCase()
         gloveMap.value.apply(lowerCase) match {
-          case None => // do nothing
+          case None => println(s"Missing word $lowerCase")
           case Some(v) =>
             for (i <- 0 until vector.length) {
               vector(i) += v(i)
@@ -134,6 +149,7 @@ object WikiPageLDA {
     })
 
     pages.write.parquet(opts.output())
+    println(s"Discarded ${countMayReferTo.value} 'may refer to' pages")
   }
 
   private def transform(counts: DataFrame, model: LDAModel, threshold: Double): DataFrame = {
@@ -167,7 +183,9 @@ class WikipediaLDAExperiment(override val spark: SparkSession,
   private lazy val rawData: Dataset[WikiPageLDA] =
     spark.read.parquet(dataPath)
       .select("id", "title", "topic", "vector")
-      .as[WikiPageLDA].cache()
+      .as[WikiPageLDA]
+      .filter(page => page.vector.numNonzeros > 0 && page.topic.length > 0)
+      .cache()
 
   lazy val topics: Array[Int] = rawData.select("topic").as[Seq[Int]].flatMap(identity).distinct().collect()
 

@@ -163,7 +163,7 @@ object MainMatroid {
 
         val (solution, lsTime) = timed {
           LocalSearch.remoteClique[T](
-            coreset.delegates, // We consider just delegates because they already contain the kernel points
+            coreset.points,
             opts.k(), 0.0, setup.matroid, setup.distance)
         }
         require(solution.size == opts.k(), "Solution of wrong size")

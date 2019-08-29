@@ -55,6 +55,7 @@ class PartitionDelegateSet[T](val k: Int,
         )
         inner(cat) = set
       }
+      println(s"After the merge, delegate set of size ${inner.size} (before ${this.inner.size}, ${other.inner.size})")
       new PartitionDelegateSet[T](k, matroid, inner)
     case _ => throw new RuntimeException("Unsupported merge")
   }
@@ -65,6 +66,8 @@ class PartitionDelegateSet[T](val k: Int,
 class TransversalDelegateSet[T, S](val k: Int,
                                    val matroid: TransversalMatroid[T, S],
                                    val inner: mutable.HashMap[S, ArrayBuffer[T]]) extends DelegateSet[T] {
+  override def toString: String = inner.values.flatten.mkString("{", ", ", "}")
+
   override def add(point: T): Boolean = {
     for (s <- matroid.getSets(point)) {
       if (inner(s).size < k) {
@@ -82,13 +85,23 @@ class TransversalDelegateSet[T, S](val k: Int,
         val set = new ArrayBuffer[T]()
         set.appendAll(
           (this.inner.getOrElse(cat, ArrayBuffer.empty).iterator ++
-          other.inner.getOrElse(cat, ArrayBuffer.empty)).take(k)
+          other.inner.getOrElse(cat, ArrayBuffer.empty).iterator).take(k)
         )
         inner(cat) = set
       }
-      new TransversalDelegateSet[T, S](k, matroid, inner)
+      val ret = new TransversalDelegateSet[T, S](k, matroid, inner)
+      ret
     case _ => throw new RuntimeException("Unsupported merge")
   }
 
-  override def toSeq: Seq[T] = matroid.coreSetPoints(inner.values.flatten.toSeq, k)
+  override def toSeq: Seq[T] = {
+    val delegates = inner.values.flatten.toSeq
+//    val is = matroid.independentSetOfSize(delegates, k)
+//    if (is.length == k) {
+//      matroid.coreSetPoints(delegates, k)
+//    } else {
+//      delegates
+//    }
+    delegates
+  }
 }

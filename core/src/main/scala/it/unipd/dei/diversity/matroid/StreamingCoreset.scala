@@ -110,8 +110,10 @@ extends Coreset[T] {
 
   private[diversity]
   def addKernelPoint(point: T): Unit = {
+    println("Adding kernel point")
     _kernel(_insertionIdx) = point
     _incrementalSubsets(_insertionIdx) = matroid.incrementalSubset(k)
+    _incrementalSubsets(_insertionIdx).add(point)
     _insertionIdx += 1
   }
 
@@ -155,11 +157,13 @@ extends Coreset[T] {
   def initializationStep(point: T): Unit = {
     require(_initializing)
     val minDist = closestKernelDistance(point)
+    require(minDist > 0.0, s"Possible duplicate point!\npoint: $point\nclosest ${_kernel(closestKernelPoint(point)._1)}")
     if (minDist < _threshold) {
       _threshold = minDist
     }
     addKernelPoint(point)
     if (_insertionIdx == _kernel.length) {
+      require(_threshold > 0.0)
       _initializing = false
     }
   }
@@ -211,6 +215,7 @@ extends Coreset[T] {
 
   private[diversity]
   def merge(): Unit = {
+    println(s"Kernel size before merge: ${_insertionIdx}, radius: ${_threshold}")
     // Use the `kernel` array as if divided in 3 zones:
     //
     //  - selected: initially empty, stores all the selected nodes.
@@ -251,6 +256,7 @@ extends Coreset[T] {
 
     // Check the invariant of the minimum distance between kernel points
     assert(farnessInvariant, "Farness after merge")
+    println(s"Kernel size after merge: ${_insertionIdx}, threshold ${_threshold}")
   }
 
   /**
@@ -274,8 +280,20 @@ extends Coreset[T] {
     res
   }
 
-  override def kernel: Vector[T] = kernelPointsIterator.toVector
+  override def kernel: Vector[T] = {
+    while (_insertionIdx == _kernel.length) {
+      merge()
+    }
+    kernelPointsIterator.toVector
+  }
 
-  override def delegates: Vector[T] = _incrementalSubsets.iterator.take(_insertionIdx).flatMap(_.toSeq).toVector
+  override def delegates: Vector[T] = {
+    while (_insertionIdx == _kernel.length) {
+      merge()
+    }
+    _incrementalSubsets.iterator.take(_insertionIdx).flatMap(_.toSeq).toVector
+  }
+
+  override def points: Vector[T] = delegates // We consider just delegates because they already contain the kernel points
 
 }
