@@ -184,9 +184,21 @@ class WikipediaLDAExperiment(override val spark: SparkSession,
   override val distance: (WikiPageLDA, WikiPageLDA) => Double = WikiPageLDA.distanceArbitraryComponents
 
   private lazy val rawData: Dataset[WikiPageLDA] =
-    spark.read.parquet(dataPath)
+    spark.read.json(dataPath)
       .select("id", "title", "topic", "vector")
-      .as[WikiPageLDA]
+      .map({ row =>
+        val vector = row.getString(row.fieldIndex("vector"))
+          .split(" ")
+          .map(_.toDouble)
+          .toArray
+        WikiPageLDA(
+          row.getLong(row.fieldIndex("id")),
+          row.getString(row.fieldIndex("title")),
+          row.getSeq[Long](row.fieldIndex("topic")).map(_.toInt).toArray,
+          Vectors.dense(vector)
+        )
+      })
+      // .as[WikiPageLDA]
       .filter(page => page.vector.numNonzeros > 0 && page.topic.length > 0)
       .cache()
 
