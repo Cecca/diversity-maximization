@@ -34,6 +34,7 @@ class PartitionDelegateSet[T](val k: Int,
                               matroid: PartitionMatroid[T],
                               val inner: mutable.HashMap[String, ArrayBuffer[T]]) extends DelegateSet[T] {
   override def add(point: T): Boolean = {
+    if (inner.values.map(_.size).sum >= k) return false
     val cat = matroid.getCategory(point)
     val set = inner(cat)
     if (set.size < matroid.categories(cat)) {
