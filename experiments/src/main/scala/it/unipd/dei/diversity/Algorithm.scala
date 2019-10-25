@@ -93,9 +93,9 @@ object Algorithm {
     // actual kernel size may be smaller than the parameter kernelSize
     require(coreset.kernel.size <= kernelSize,
       s"Unexpected kernel size: ${coreset.kernel.size} > ${kernelSize}")
-    require(coreset.delegates.size <= kernelSize*(1+k),
-      "Unexpected coreset size " +
-        s"${coreset.delegates.size} > ${kernelSize*(k+1)}")
+    // require(coreset.delegates.size <= kernelSize*(1+k),
+    //   "Unexpected coreset size " +
+    //     s"${coreset.delegates.size} > ${kernelSize*(k+1)}")
 
     experiment.append("times",
       jMap(

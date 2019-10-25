@@ -157,14 +157,16 @@ extends Coreset[T] {
   def initializationStep(point: T): Unit = {
     require(_initializing)
     val minDist = closestKernelDistance(point)
-    require(minDist > 0.0, s"Possible duplicate point!\npoint: $point\nclosest ${_kernel(closestKernelPoint(point)._1)}")
-    if (minDist < _threshold) {
-      _threshold = minDist
-    }
-    addKernelPoint(point)
-    if (_insertionIdx == _kernel.length) {
-      require(_threshold > 0.0)
-      _initializing = false
+    if (minDist > 0.0) {
+      require(minDist > 0.0, s"Possible duplicate point!\npoint: $point\nclosest ${_kernel(closestKernelPoint(point)._1)}")
+      if (minDist < _threshold) {
+        _threshold = minDist
+      }
+      addKernelPoint(point)
+      if (_insertionIdx == _kernel.length) {
+        require(_threshold > 0.0)
+        _initializing = false
+      }
     }
   }
 
@@ -295,5 +297,10 @@ extends Coreset[T] {
   }
 
   override def points: Vector[T] = delegates // We consider just delegates because they already contain the kernel points
+
+  /// Debugging method to inspect the sizes of the delegate sets
+  def delegateSizes: Seq[Int] = {
+    _incrementalSubsets.take(_insertionIdx).map(_.toSeq.size)
+  }
 
 }

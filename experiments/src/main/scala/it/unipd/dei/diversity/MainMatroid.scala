@@ -156,15 +156,45 @@ object MainMatroid {
         val parallelism = opts.parallelism.get.getOrElse(spark.sparkContext.defaultParallelism)
         experiment.tag("tau", tau)
         var coresetSize: Option[Long] = None
-        val dataset = setup.loadDataset().collect()
-        val coreset = Algorithm.streaming(
+        val datasetIter = setup.loadDataset().toLocalIterator()
+        val dataset: mutable.ArrayBuffer[T] = mutable.ArrayBuffer()
+        while (datasetIter.hasNext()) {
+          dataset.append(datasetIter.next())
+        }
+        val streamingCoreset = Algorithm.streaming(
           dataset.iterator, opts.k(), tau, setup.matroid, setup.distance, experiment)
-        println(s"Coreset delegate points: ${coreset.delegates.size}")
+        val sizes = streamingCoreset.delegateSizes
+        println(s"Delegate set sizes:\n${sizes.mkString("\n")}")
+        for ((size, i) <- sizes.zipWithIndex) {
+          experiment.append("delegates",
+            jMap(
+              "componentId" -> i,
+              "size" -> size
+            )    
+          )
+        }
+
+        val coreset =
+          if (opts.sparsify()) {
+            val (_c, _t) = timed {
+              MapReduceCoreset.run(
+                streamingCoreset.points.toArray, 
+                tau, opts.k(), setup.matroid, setup.distance)
+            }
+            experiment.append("times",
+              jMap(
+                "component" -> "sparsification",
+                "time"      -> ExperimentUtil.convertDuration(_t, TimeUnit.MILLISECONDS)))
+            println(s"Sparsified coreset has ${_c.length} points")
+            _c
+          } else {
+            streamingCoreset
+          }
 
         val (solution, lsTime) = timed {
           LocalSearch.remoteClique[T](
             coreset.points,
-            opts.k(), 0.0, setup.matroid, setup.distance)
+            opts.k(), opts.gamma(), setup.matroid, setup.distance)
         }
         require(solution.size == opts.k(), "Solution of wrong size")
         require(setup.matroid.isIndependent(solution), "The solution is not an independent set!")
