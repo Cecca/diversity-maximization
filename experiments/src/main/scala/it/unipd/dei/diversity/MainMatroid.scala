@@ -164,6 +164,7 @@ object MainMatroid {
         val streamingCoreset = Algorithm.streaming(
           dataset.iterator, opts.k(), tau, setup.matroid, setup.distance, experiment)
         val sizes = streamingCoreset.delegateSizes
+        val originalCoresetSize: Int = sizes.sum
         println(s"Delegate set sizes:\n${sizes.mkString("\n")}")
         for ((size, i) <- sizes.zipWithIndex) {
           experiment.append("delegates",
@@ -204,6 +205,7 @@ object MainMatroid {
             "time"      -> ExperimentUtil.convertDuration(lsTime, TimeUnit.MILLISECONDS)))
         experiment.append("result",
           jMap(
+            "coreset-size" -> originalCoresetSize,
             "diversity" -> Diversity.clique(solution, setup.distance)))
 
         for (wp <- solution) {

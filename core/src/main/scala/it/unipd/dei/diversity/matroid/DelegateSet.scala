@@ -33,8 +33,13 @@ class UniformDelegateSet[T](val k: Int, val inner: ArrayBuffer[T]) extends Deleg
 class PartitionDelegateSet[T](val k: Int,
                               matroid: PartitionMatroid[T],
                               val inner: mutable.HashMap[String, ArrayBuffer[T]]) extends DelegateSet[T] {
+  private var _frozen = false
+
   override def add(point: T): Boolean = {
-    if (inner.values.map(_.size).sum >= k) return false
+    if (_frozen || matroid.hasIndependentSetOfSize(inner.values.flatten.toSeq, k)) {
+      _frozen = true
+      return true
+    }
     val cat = matroid.getCategory(point)
     val set = inner(cat)
     if (set.size < matroid.categories(cat)) {
@@ -67,9 +72,16 @@ class PartitionDelegateSet[T](val k: Int,
 class TransversalDelegateSet[T, S](val k: Int,
                                    val matroid: TransversalMatroid[T, S],
                                    val inner: mutable.HashMap[S, ArrayBuffer[T]]) extends DelegateSet[T] {
+
+  private var _frozen = false
+
   override def toString: String = inner.values.flatten.mkString("{", ", ", "}")
 
   override def add(point: T): Boolean = {
+    if (_frozen || matroid.hasIndependentSetOfSize(inner.values.flatten.toSeq, k)) {
+      _frozen = true
+      return true
+    }
     for (s <- matroid.getSets(point)) {
       if (inner(s).size < k) {
         inner(s).append(point)

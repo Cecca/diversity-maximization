@@ -20,6 +20,20 @@ trait Matroid[T] extends Serializable {
 
   def coreSetPoints(elements: Seq[T], k: Int): Seq[T]
 
+  def hasIndependentSetOfSize(elements: Seq[T], k: Int): Boolean = {
+    // FIXME optimize
+    var is = Vector[T]()
+    val elemIterator = elements.iterator
+    while(is.size < k && elemIterator.hasNext) {
+      val e = elemIterator.next()
+      if (isIndependent(is :+ e)) {
+        is = is :+ e
+      }
+    }
+    is.size == k
+  }
+
+
   def independentSetOfSize(elements: Seq[T], k: Int): Seq[T] = {
     // FIXME optimize
     var is = Vector[T]()
@@ -31,6 +45,19 @@ trait Matroid[T] extends Serializable {
       }
     }
     is
+  }
+
+  def hasIndependentSetOfSize(elements: IndexedSeq[T], k: Int): Boolean = {
+    val is = IndexedSubset(elements)
+    var i = 0
+    while (i < elements.size && is.size < k) {
+      is.add(i)
+      if(!isIndependent(is)) {
+        is.remove(i)
+      }
+      i += 1
+    }
+    is.size == k
   }
 
   def independentSetOfSize(elements: IndexedSeq[T], k: Int): IndexedSubset[T] = {
