@@ -198,12 +198,13 @@ class WikipediaLDAExperiment(override val spark: SparkSession,
           Vectors.dense(vector)
         )
       })
-      // .as[WikiPageLDA]
       .filter(page => page.vector.numNonzeros > 0 && page.topic.length > 0)
+      //.as[WikiPageLDA]
       .cache()
 
   lazy val topics: Array[Int] =
-    rawData.select("topic").as[Seq[Int]].flatMap(identity).distinct().collect()
+    //rawData.select("topic").as[Seq[Int]].flatMap(identity).distinct().collect()
+    rawData.flatMap(_.topic).distinct().collect
 
   override def loadDataset(): Dataset[WikiPageLDA] =
     rawData

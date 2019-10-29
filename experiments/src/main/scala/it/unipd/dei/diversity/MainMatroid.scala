@@ -161,8 +161,9 @@ object MainMatroid {
         while (datasetIter.hasNext()) {
           dataset.append(datasetIter.next())
         }
+        val shuffledDataset = Random.shuffle(dataset)
         val streamingCoreset = Algorithm.streaming(
-          dataset.iterator, opts.k(), tau, setup.matroid, setup.distance, experiment)
+          shuffledDataset.iterator, opts.k(), tau, setup.matroid, setup.distance, experiment)
         val sizes = streamingCoreset.delegateSizes
         val originalCoresetSize: Int = sizes.sum
         println(s"Delegate set sizes:\n${sizes.mkString("\n")}")
