@@ -3,6 +3,7 @@ package it.unipd.dei.diversity.matroid
 import it.unipd.dei.diversity.SerializationUtils
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.rogach.scallop.ScallopConf
 
 /**
@@ -40,7 +41,13 @@ object Sample {
     val sampleSize = sample.count()
     println(s"Sampled $sampleSize elements")
     if (opts.topics.isDefined) {
-      sample.write.json(opts.output())
+      import org.apache.spark.sql.functions.udf
+      import org.apache.spark.sql.functions.col
+      val vecStr = udf { vec: Vector => vec.toArray.mkString(" ") }
+      sample
+        .toDF()
+        .withColumn("vector", vecStr(col("vector")))
+        .write.json(opts.output())
     } else {
       sample.write.parquet(opts.output())
     }
