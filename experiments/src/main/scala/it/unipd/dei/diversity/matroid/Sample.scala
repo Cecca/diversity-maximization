@@ -22,10 +22,15 @@ object Sample {
 
 
     val data =
-      if (opts.categories.isDefined) {
-        new WikipediaExperiment(spark, opts.input(), opts.categories.get).loadDataset()
+      if (opts.topics.isDefined) {
+        new WikipediaLDAExperiment(spark, opts.input()).loadDataset()
       } else if (opts.genres.isDefined) {
         new SongExperiment(spark, opts.input(), opts.genres()).loadDataset()
+      } else if (opts.uniform.isDefined) {
+        opts.uniform() match {
+          // The value of k==10 is a dummy one, it is not actually used
+          case "glove" => new GloVeExperiment(spark, opts.input(), 10).loadDataset()
+        }
       } else {
         spark.read.parquet(opts.input())
       }
@@ -52,7 +57,9 @@ object Sample {
 
     lazy val categories = opt[String]()
     lazy val genres = opt[String]()
-    // TODO Topics
+    lazy val uniform = opt[String](argName = "DATA TYPE", validate = Set("glove").contains,
+                                   descr = "Use a cardinality matroid, and specify the data type")
+    lazy val topics = toggle()
 
   }
 
