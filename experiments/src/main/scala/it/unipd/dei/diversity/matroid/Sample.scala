@@ -39,7 +39,11 @@ object Sample {
     val sample = data.sample(withReplacement = false, opts.numElements() / cnt.toDouble).cache()
     val sampleSize = sample.count()
     println(s"Sampled $sampleSize elements")
-    sample.write.parquet(opts.output())
+    if (opts.topics.isDefined) {
+      sample.write.json(opts.output())
+    } else {
+      sample.write.parquet(opts.output())
+    }
 
     val meta = SerializationUtils.metadata(opts.input()) ++ Map(
       "sampled-elements" -> sampleSize,
