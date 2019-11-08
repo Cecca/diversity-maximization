@@ -130,9 +130,10 @@ object MainMatroid {
         experiment.tag("gamma", opts.gamma())
 
         val localDataset: Array[T] = setup.loadLocally()
+        val shuffledDataset = Random.shuffle(localDataset.toVector).toArray
         val (solution, t) = timed {
           LocalSearch.remoteClique[T](
-            localDataset, opts.k(), opts.gamma(), setup.matroid, setup.distance)
+            shuffledDataset, opts.k(), opts.gamma(), setup.matroid, setup.distance)
         }
         require(solution.size == opts.k(), "Solution of wrong size")
 
@@ -222,7 +223,7 @@ object MainMatroid {
         experiment.tag("tau", tau)
         experiment.tag("tau-parallel", tauParallel)
         experiment.tag("num-partitions", parallelism)
-        experiment.tag("sparsify", opts.sparsify.isDefined)
+        experiment.tag("sparsify", opts.sparsify())
         var coresetSize: Option[Long] = None
         val dataset = setup.loadDataset().rdd.repartition(parallelism).glom()
         val mrCoreset = Algorithm.mapReduce(
@@ -271,11 +272,12 @@ object MainMatroid {
         experiment.tag("ls-subroutine-gamma", gamma)
         var coresetSize: Option[Long] = None
         val localDataset: Array[T] = setup.loadLocally()
+        val shuffledDataset = Random.shuffle(localDataset.toVector).toArray
         val ((solution, coresetTime, localSearchTime), totalTime) =
           timed {
             val (coreset, _coresetTime) = timed  {
               MapReduceCoreset.run(
-                localDataset, opts.tau(), opts.k(), setup.matroid, setup.distance)
+                shuffledDataset, opts.tau(), opts.k(), setup.matroid, setup.distance)
             }
             coresetSize = Some(coreset.length)
             println(s"Built coreset with ${coreset.length} over ${localDataset.length} points")
@@ -336,7 +338,7 @@ object MainMatroid {
     lazy val epsilon = opt[Double]()
 
     lazy val sparsify = toggle(
-      default=Some(true),
+      default=Some(false),
       descrYes = "whether to sparsify the coreset resulting from the MapReduce algorithm")
 
     lazy val input = opt[String](required = true)

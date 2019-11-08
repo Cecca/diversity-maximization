@@ -69,7 +69,9 @@ object MapReduceCoreset {
 
       println("Found clustering, building coreset")
       val coreset = clusters.values.par.flatMap { cluster =>
-        matroid.coreSetPoints(cluster, k)
+        val dels = matroid.coreSetPoints(cluster, k)
+        println(s"Extracted ${dels.size} from cluster of size ${cluster.size}")
+        dels
       }
 
       new MapReduceCoreset[T](coreset.toVector, Vector.empty, r)
@@ -88,7 +90,9 @@ object MapReduceCoreset {
       }.groupBy(_._1).mapValues(_.map(_._2))
 
       val coreset = clusters.values.flatMap { cluster =>
-        matroid.coreSetPoints(cluster, k)
+        val dels = matroid.coreSetPoints(cluster, k)
+        println(s"Extracted ${dels.size} from cluster of size ${cluster.size}")
+        dels
       }
 
       new MapReduceCoreset[T](coreset.toVector, Vector.empty, radius)
