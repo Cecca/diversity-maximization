@@ -23,6 +23,7 @@ import scala.reflect.ClassTag
 
 class MapReduceCoreset[T:ClassTag](val kernel: Vector[T],
                                    val delegates: Vector[T],
+                                   val sizes: Vector[Int],
                                    val radius: Double)
 extends Coreset[T] with Serializable {
 
@@ -39,12 +40,14 @@ object MapReduceCoreset {
     new MapReduceCoreset(
       (a.kernel ++ b.kernel).distinct,
       (a.delegates ++ b.delegates).distinct,
+      (a.sizes ++ b.sizes),
       math.max(a.radius, b.radius))
 
   def compose[T:ClassTag](a: MapReduceCoreset[T], b: MapReduceCoreset[T]): MapReduceCoreset[T] =
     new MapReduceCoreset(
       a.kernel ++ b.kernel,
       a.delegates ++ b.delegates,
+      (a.sizes ++ b.sizes),
       math.max(a.radius, b.radius))
 
 
@@ -54,7 +57,7 @@ object MapReduceCoreset {
                       matroid: Matroid[T],
                       distance: (T, T) => Double): MapReduceCoreset[T] = {
     if (points.length < kernelSize) {
-      new MapReduceCoreset(points.toVector, Vector.empty[T], 0.0)
+      new MapReduceCoreset(points.toVector, Vector.empty[T], points.map(_ => 1).toVector, 0.0)
     } else {
       // FIXME Optimize
       val kernel = FarthestPointHeuristic.run(points, kernelSize, distance)
@@ -68,13 +71,16 @@ object MapReduceCoreset {
       require(clusters.size == kernel.size, "The number of clusters should be equal to the number of kernel points")
 
       println("Found clustering, building coreset")
-      val coreset = clusters.values.par.flatMap { cluster =>
+      val coresetPoints = clusters.values.par.map { cluster =>
         val dels = matroid.coreSetPoints(cluster, k)
         println(s"Extracted ${dels.size} from cluster of size ${cluster.size}")
         dels
       }
 
-      new MapReduceCoreset[T](coreset.toVector, Vector.empty, r)
+      val sizes = coresetPoints.map(_.size)
+      val coreset = coresetPoints.flatten
+
+      new MapReduceCoreset[T](coreset.toVector, Vector.empty, sizes.toVector, r)
     }
   }
 
@@ -89,13 +95,13 @@ object MapReduceCoreset {
         (c, p)
       }.groupBy(_._1).mapValues(_.map(_._2))
 
-      val coreset = clusters.values.flatMap { cluster =>
+      val coreset = clusters.values.map { cluster =>
         val dels = matroid.coreSetPoints(cluster, k)
         println(s"Extracted ${dels.size} from cluster of size ${cluster.size}")
         dels
       }
 
-      new MapReduceCoreset[T](coreset.toVector, Vector.empty, radius)
+      new MapReduceCoreset[T](coreset.flatten.toVector, Vector.empty, coreset.map(_.size).toVector, radius)
   }
 
 
@@ -105,7 +111,7 @@ object MapReduceCoreset {
                       distance: (T, T) => Double): MapReduceCoreset[T] = {
     val resultSize = kernelSize * numDelegates
     if (points.length < kernelSize) {
-      new MapReduceCoreset(points.toVector, Vector.empty[T], 0.0)
+      new MapReduceCoreset(points.toVector, Vector.empty[T], points.map(_ => 1).toVector, 0.0)
     } else {
       val kernel = FarthestPointHeuristic.run(points, kernelSize, distance)
       val delegates = ArrayBuffer[T]()
@@ -142,7 +148,7 @@ object MapReduceCoreset {
       }
       assert(Utils.maxMinDistance(delegates, kernel, distance) <= Utils.minDistance(kernel, distance),
         "Anticover property failing")
-      new MapReduceCoreset(kernel.toVector, delegates.toVector, radius)
+      new MapReduceCoreset(kernel.toVector, delegates.toVector, Vector.empty, radius)
     }
   }
 

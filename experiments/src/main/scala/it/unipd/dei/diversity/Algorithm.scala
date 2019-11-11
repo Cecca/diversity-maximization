@@ -20,6 +20,7 @@ import it.unipd.dei.diversity.ExperimentUtil._
 import it.unipd.dei.diversity.matroid.{Matroid, Song}
 import it.unipd.dei.experiment.Experiment
 import org.apache.spark.rdd.RDD
+import org.apache.spark.util.CollectionAccumulator
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -205,6 +206,12 @@ object Algorithm {
         "component" -> "coreset",
         "time"      -> convertDuration(mrTime, reportTimeUnit)
       ))
+    for (s <- coreset.sizes) {
+      experiment.append("sizes",
+        jMap(
+          "size" -> s
+        ))
+    }
 
     coreset
   }
