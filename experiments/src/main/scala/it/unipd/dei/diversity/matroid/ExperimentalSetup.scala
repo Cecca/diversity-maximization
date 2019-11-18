@@ -14,20 +14,21 @@ abstract class ExperimentalSetup[T:ClassTag] {
   def loadDataset(): Dataset[T]
 
   def loadLocally(): Array[T] = {
-    val data = loadDataset()
-    val cnt = data.count
-    require(cnt < Int.MaxValue.toLong)
-    println(s"Trying to allocate $cnt elements")
-    val localDataset: Array[T] = Array.ofDim[T](cnt.toInt)
-    println("Allocation successful")
-    val dataIt = data.toLocalIterator
-    var i = 0
-    while (dataIt.hasNext) {
-      localDataset(i) = dataIt.next()
-      i += 1
-    }
-    println("Collected data locally")
-    localDataset
+    loadDataset().rdd.collect()
+    // val data = loadDataset()
+    // val cnt = data.count
+    // require(cnt < Int.MaxValue.toLong)
+    // println(s"Trying to allocate $cnt elements")
+    // val localDataset: Array[T] = Array.ofDim[T](cnt.toInt)
+    // println("Allocation successful")
+    // val dataIt = data.toLocalIterator
+    // var i = 0
+    // while (dataIt.hasNext) {
+    //   localDataset(i) = dataIt.next()
+    //   i += 1
+    // }
+    // println("Collected data locally")
+    // localDataset
   }
 
 }

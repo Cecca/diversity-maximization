@@ -126,7 +126,7 @@ object Algorithm {
     val parallelism = points.sparkContext.defaultParallelism
     require(points.partitions.length == parallelism)
 
-    println("Run MapReduce algorithm!")
+    println(s"Run MapReduce algorithm with tau=$kernelSize and k=$k")
     val partitionCnt = points.sparkContext.accumulator(0L, "partition counter")
     val pointsCnt = points.sparkContext.accumulator(0L, "points counter")
     val (coreset, mrTime) = timed {
@@ -180,7 +180,7 @@ object Algorithm {
 //    val parallelism = points.sparkContext.defaultParallelism
 //    require(points.partitions.length == parallelism, "Wrong number of partitions")
 
-    println("Run MapReduce algorithm!")
+    println(s"Run MapReduce algorithm with tau=$kernelSize and k=$k")
     val partitionCnt = points.sparkContext.longAccumulator("partition counter")
     val pointsCnt = points.sparkContext.longAccumulator("points counter")
     val bMatroid = points.sparkContext.broadcast(matroid)
@@ -199,7 +199,7 @@ object Algorithm {
         MapReduceCoreset.compose(a, b)
       }
     }
-    println(s"Processed ${pointsCnt.value} points")
+    println(s"Processed ${pointsCnt.value} points on ${partitionCnt.value} partitions")
 
     experiment.append("times",
       jMap(

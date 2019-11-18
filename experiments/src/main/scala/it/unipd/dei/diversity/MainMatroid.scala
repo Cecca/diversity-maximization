@@ -225,7 +225,8 @@ object MainMatroid {
         experiment.tag("num-partitions", parallelism)
         experiment.tag("sparsify", opts.sparsify())
         var coresetSize: Option[Long] = None
-        val dataset = setup.loadDataset().rdd.repartition(parallelism).glom()
+        val dataset = setup.loadDataset().rdd.repartition(parallelism).glom().cache()
+        dataset.count()
         val mrCoreset = Algorithm.mapReduce(
           dataset, tauParallel, opts.k(), setup.matroid, setup.distance, experiment)
         println(s"Computed coreset with ${mrCoreset.length} points and radius ${mrCoreset.radius}")
@@ -267,17 +268,39 @@ object MainMatroid {
 
 
       case "sequential-coreset" =>
+        // To build the sequential coreset we are running the algorithm on the
+        // dataset coalesced to a single partition, on a worker node. This is
+        // in contrast to the natural approach of loading the entire dataset
+        // locally and then running the algorithm directly on it. In our
+        // experimental setup, doing the awkward thing is some 20% faster for
+        // some reason I still don't understand.
         val gamma = opts.gamma.get.getOrElse(0.0)
         experiment.tag("k'", opts.tau())
+        experiment.tag("tau", opts.tau())
         experiment.tag("ls-subroutine-gamma", gamma)
+        val tau = opts.tau()
+        val k = opts.k()
+        val distance = setup.distance
         var coresetSize: Option[Long] = None
+        val dataset = setup.loadDataset().rdd.repartition(1).glom().cache()
+        dataset.count()
+        val bMatroid = dataset.sparkContext.broadcast(setup.matroid)
         val localDataset: Array[T] = setup.loadLocally()
-        val shuffledDataset = Random.shuffle(localDataset.toVector).toArray
+        //val shuffledDataset = Random.shuffle(localDataset.toVector).toArray
         val ((solution, coresetTime, localSearchTime), totalTime) =
           timed {
             val (coreset, _coresetTime) = timed  {
-              MapReduceCoreset.run(
-                shuffledDataset, opts.tau(), opts.k(), setup.matroid, setup.distance)
+              dataset.map { pointsArr =>
+                require(pointsArr.length > 0, "Cannot work on empty partitions!")
+                MapReduceCoreset.run(
+                  pointsArr,
+                  tau,
+                  k,
+                  bMatroid.value,
+                  distance)
+              }.collect().apply(0)
+              // MapReduceCoreset.run(
+              //   localDataset, opts.tau(), opts.k(), setup.matroid, setup.distance)
             }
             coresetSize = Some(coreset.length)
             println(s"Built coreset with ${coreset.length} over ${localDataset.length} points")

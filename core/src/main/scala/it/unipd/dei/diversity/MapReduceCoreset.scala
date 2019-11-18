@@ -59,6 +59,8 @@ object MapReduceCoreset {
     if (points.length < kernelSize) {
       new MapReduceCoreset(points.toVector, Vector.empty[T], points.map(_ => 1).toVector, 0.0)
     } else {
+      val start = System.currentTimeMillis
+      val startClustering = System.currentTimeMillis
       // FIXME Optimize
       val kernel = FarthestPointHeuristic.run(points, kernelSize, distance)
       var r = 0.0
@@ -70,7 +72,9 @@ object MapReduceCoreset {
 
       require(clusters.size == kernel.size, "The number of clusters should be equal to the number of kernel points")
 
-      println("Found clustering, building coreset")
+      val endClustering = System.currentTimeMillis
+      println(s"Found clustering of ${clusters.size} in ${endClustering - startClustering}, building coreset")
+      val startCoreset = System.currentTimeMillis
       val coresetPoints = clusters.values.par.map { cluster =>
         val dels = matroid.coreSetPoints(cluster, k)
         println(s"Extracted ${dels.size} from cluster of size ${cluster.size}")
@@ -79,6 +83,11 @@ object MapReduceCoreset {
 
       val sizes = coresetPoints.map(_.size)
       val coreset = coresetPoints.flatten
+      val endCoreset = System.currentTimeMillis
+      println(s"Built coreset in ${endCoreset - startCoreset}")
+
+      val end = System.currentTimeMillis
+      println(s"Coreset built in ${end - start}")
 
       new MapReduceCoreset[T](coreset.toVector, Vector.empty, sizes.toVector, r)
     }
