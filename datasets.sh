@@ -77,6 +77,48 @@ function Songs () {
   popd
 }
 
+function Wiki {
+  # Install a newer python
+  if [[ ! -f ~/.python-3.6/bin/python3 ]]
+  then
+    mkdir python-3.6
+    pushd python-3.6
+    wget https://www.python.org/ftp/python/3.6.9/Python-3.6.9.tgz
+    tar -zxvf Python-3.6.9.tgz
+    pushd Python-3.6.9
+    mkdir ~/.python-3.6
+    ./configure --prefix=$HOME/.python-3.6
+    make
+    make install
+    popd
+    popd
+  fi
+  # Create the virtualenv
+  ~/.python-3.6/bin/python3 -m venv python-env
+  source python-env/bin/activate
+  #pip install gensim
+  pip install -r requirements.txt
+  SCRIPT=$(pwd)/wiki_preprocess.py
+
+  Glove # Gets the vectors for the remapping
+  pushd $DATASETS_DIR
+  URL="https://dumps.wikimedia.org/enwiki/20190720/enwiki-20190720-pages-articles-multistream.xml.bz2"
+  EXTRACTOR_URL="https://raw.githubusercontent.com/attardi/wikiextractor/3162bb6c3c9ebd2d15be507aa11d6fa818a454ac/WikiExtractor.py"
+  WIKI_DIR="wiki-raw"
+  WIKI_OUTPUT="wikipedia-25.json.bz2"
+
+  test -f $(basename $EXTRACTOR_URL) || wget $EXTRACTOR_URL
+  test -f $(basename $URL) || wget $URL
+  test -d $WIKI_DIR || bzcat $(basename $URL) | python ./WikiExtractor.py \
+    --json --no_templates \
+    -c -o $WIKI_DIR -
+  test -f $WIKI_OUTPUT || python $SCRIPT $WIKI_DIR glove.twitter.27B.100d.txt $WIKI_OUTPUT
+  hdfs dfs -put $WIKI_OUTPUT
+  touch $WIKI_OUTPUT.metadata
+  hdfs dfs -put $WIKI_OUTPUT.metadata
+}
+
 MusixMatch
 # Glove
+Wiki
 
