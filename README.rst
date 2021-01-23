@@ -1,9 +1,6 @@
 ========================
  Diversity maximization
-========================
-
-.. image:: https://travis-ci.org/Cecca/diversity-maximization.svg?branch=master
-   :target: https://travis-ci.org/Cecca/diversity-maximization
+=======================
 
 This repository contains code implementing the algorithms presented in
 *A General Coreset-Based Approach to Diversity Maximization under Matroid Constraints*. From the abstract of the paper
@@ -106,38 +103,16 @@ Reproducing the results
 
 .. highlight:: bash
 
-To reproduce the experimental results in the paper, you can generate
-the synthetic datasets with the following commands::
+You can generate the datasets used in the paper with the following command::
 
-  DATASETS_DIR=hdfs://hdfs-master/path/to/datasets/directory
-  
-  for SIZE in 100 200 400 800 1600
-  do
-    spark-submit \
-        --driver-library-path /path/to/hadoop/native/libs \
-        --properties-file path/to/spark/config/file \
-        --class it.unipd.dei.diversity.DatasetGenerator \
-        diversity-maximization-experiments-assembly-0.1.0.jar \
-        --source chasm-random-uniform-sphere -k 128 --directory $DATASETS_DIR -n ${SIZE}000000 --space-dimension 3
-  done
+    ./datasets.sh
 
-As for the _musiXmatch_ dataset, which can be downloaded from `here <http://labrosa.ee.columbia.edu/millionsong/musixmatch>`_,
-you can preprocess it so to obtain the one used in the paper with the following commands::
+Pre-processed versions of the datasets are available at `figshare <https://figshare.com/projects/A_General_Coreset-Based_Approach_to_Diversity_Maximization_under_Matroid_Constraints/80471>_`
 
-  wget http://labrosa.ee.columbia.edu/millionsong/sites/default/files/AdditionalFiles/mxm_dataset_train.txt.zip
-  wget http://labrosa.ee.columbia.edu/millionsong/sites/default/files/AdditionalFiles/mxm_dataset_test.txt.zip
-  unzip mxm_dataset_train.txt.zip
-  unzip mxm_dataset_test.txt.zip
-  cat mxm_dataset_train.txt mxm_dataset_test.txt > mxm.txt
+The experiments are then run with::
 
-  DATASETS_DIR=hdfs://hdfs-master/path/to/datasets/directory
-  
-  spark-submit \
-      --driver-library-path /path/to/hadoop/native/libs \
-      --properties-file path/to/spark/config/file \
-      --class it.unipd.dei.diversity.BagOfWordsDataset \
-      diversity-maximization-experiments-assembly-0.1.0.jar \
-      --format mxm --input mxm.txt --output $DATASETS_DIR/mxm-bigger10.bow --transform "bigger(10)"
-
-
+    ./experiments.sh
+    
+the execution relies on a working configuration of a Spark cluster,
+which is not included in this repository.
 
