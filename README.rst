@@ -1,6 +1,6 @@
 ========================
  Diversity maximization
-=======================
+========================
 
 This repository contains code implementing the algorithms presented in
 *A General Coreset-Based Approach to Diversity Maximization under Matroid Constraints*. From the abstract of the paper
@@ -81,7 +81,7 @@ on your Spark cluster::
 Implemented algorithms
 ======================
 
-The paper [CeccarelloPPU16]_ describes algorithms in the MapReduce and
+The paper describes algorithms in the MapReduce and
 Streaming setting for several diversity maximization problems. This
 repository includes an implementation in the ``core`` subproject. In
 particular
@@ -107,7 +107,7 @@ You can generate the datasets used in the paper with the following command::
 
     ./datasets.sh
 
-Pre-processed versions of the datasets are available at `figshare <https://figshare.com/projects/A_General_Coreset-Based_Approach_to_Diversity_Maximization_under_Matroid_Constraints/80471>_`
+Pre-processed versions of the datasets are available at `figshare <https://figshare.com/projects/A_General_Coreset-Based_Approach_to_Diversity_Maximization_under_Matroid_Constraints/80471>`_
 
 The experiments are then run with::
 
